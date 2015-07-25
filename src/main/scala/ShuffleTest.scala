@@ -45,6 +45,9 @@ object ShuffleGenerator extends App {
     // Create cyclic group for random safe prime (20 bits) 1024 takes forever
     val group = GStarModSafePrime.getRandomInstance(20)
 
+    println(group.getModulus())
+    println(group.getOrder())
+
     // Create ElGamal encryption scheme and select random public key pk
     val elGamal = ElGamalEncryptionScheme.getInstance(group.getDefaultGenerator())
 
@@ -68,14 +71,14 @@ object ShuffleGenerator extends App {
 
       System.out.println("plaintext " + element)
       val c = elGamal.encrypt(pk, element)
-      // Console.println("ciphertext " + c)
+      // println("ciphertext " + c)
       // val decryption = elGamal.decrypt(privateKey, c)
-      // Console.println("decrypted " + decryption)
+      // println("decrypted " + decryption)
       ciphertexts = ciphertexts.add(c)
     }
 
-    Console.println("******** CIPHERTEXTS ********")
-    Console.println(ciphertexts)
+    println("******** CIPHERTEXTS ********")
+    println(ciphertexts)
 
     // Create mixer, a random permutation pi , and randomizations r
     val mixer = ReEncryptionMixer.getInstance(elGamal, pk, n)
@@ -84,8 +87,8 @@ object ShuffleGenerator extends App {
     // Shuffle cipher texts using pi and r
     val shuffledCiphertexts = mixer.shuffle(ciphertexts, pi, r)
 
-    Console.println("******** SHUFFLED ********")
-    Console.println(shuffledCiphertexts)
+    println("******** SHUFFLED ********")
+    println(shuffledCiphertexts)
 
     // Create permutation commitment cpi based on pi and randomizations s
     val pcs =
@@ -121,13 +124,13 @@ object ShuffleGenerator extends App {
     val v3 =
       offlinePublicInput.isEquivalent(onlinePublicInput.getFirst())
     // if (v1 && v2 && v3) success ( )
-    Console.println("Verification ok: " + (v1 && v2 && v3))
+    println("Verification ok: " + (v1 && v2 && v3))
     assert(v1 && v2 && v3)
 
     for(i <- 0 until n) {
       val next = shuffledCiphertexts.getAt(i)
       val decryption = elGamal.decrypt(privateKey, next)
-      Console.println("decrypted " + decryption)
+      println("decrypted " + decryption)
     }
   }
 }
