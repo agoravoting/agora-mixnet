@@ -57,12 +57,16 @@ import ch.bfh.unicrypt.math.function.interfaces.Function;
 import java.nio.ByteOrder
 import java.nio.charset.Charset
 
-object Verifier {
+trait ProofSettings {
   val convertMethod = ConvertMethod.getInstance(
         BigIntegerToByteArray.getInstance(ByteOrder.BIG_ENDIAN),
         StringToByteArray.getInstance(Charset.forName("UTF-8")))
   val hashAlgorithm: HashAlgorithm = HashAlgorithm.SHA256
+  val hashMethod = HashMethod.getInstance(hashAlgorithm)
   val converter = ByteArrayToBigInteger.getInstance(hashAlgorithm.getByteLength(), 1)
+}
+
+object Verifier extends ProofSettings {
 
   def verifyKeyShare(share: EncryptionKeyShareDTO, Csettings: CryptoSettings, proverId: String) = {
     println("Verifier: verifyKeyShare......")
@@ -72,8 +76,6 @@ object Verifier {
     val proofFunction = keyPairGen.getPublicKeyGenerationFunction()
 
     val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
-
-    val hashMethod = HashMethod.getInstance(hashAlgorithm)
 
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
@@ -88,9 +90,9 @@ object Verifier {
     val response
         = pg.getResponseSpace().getElementFrom(share.sigmaProofDTO.response)
 
-    val proofTriple: Triple = Triple.getInstance(commitment, challenge, response);
-    println("Commitment: " + commitment + " challenge:" + challenge + " response: " + response);
-    println("ZKP for shared key: Challenge-Space: " + pg.getChallengeSpace() + "Commitment-Space: " + pg.getCommitmentSpace() + "public Key:" + publicKey);
+    val proofTriple: Triple = Triple.getInstance(commitment, challenge, response)
+    println("Commitment: " + commitment + " challenge:" + challenge + " response: " + response)
+    println("ZKP for shared key: Challenge-Space: " + pg.getChallengeSpace() + "Commitment-Space: " + pg.getCommitmentSpace() + "public Key:" + publicKey)
     val result = pg.verify(proofTriple, publicKey)
     println(s"Verifier: verifyKeyShare......$result")
     result
@@ -113,7 +115,6 @@ object Verifier {
 
     val publicInput: Pair = Pair.getInstance(publicKey, Tuple.getInstance(pd.partialDecryptions:_*))
     val otherInput = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
-    val hashMethod = HashMethod.getInstance(hashAlgorithm)
 
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
@@ -136,7 +137,6 @@ object Verifier {
 
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
     val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
-    val hashMethod = HashMethod.getInstance(hashAlgorithm)
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
 
@@ -144,10 +144,10 @@ object Verifier {
     val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
         Csettings.group.getZModOrder(), votes.getArity())
     val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
-      Csettings.group.asInstanceOf[GStarModSafePrime], votes.getArity())
+      Csettings.group, votes.getArity())
     val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, votes.getArity(), elGamal, publicKey)
 
-    val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group.asInstanceOf[GStarModSafePrime], votes.getArity())
+    val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, votes.getArity())
     val permutationCommitment = pcs.getCommitmentSpace().getElementFrom(shuffleProof.permutationCommitment)
 
     val commitment1
@@ -164,8 +164,6 @@ object Verifier {
     val response2
         = spg.getResponseSpace().getElementFrom(shuffleProof.mixProof.response)
 
-    // println(pcps.getCommitmentSpace().getElementFrom)
-    // println(pcps.getResponseSpace())
     val permutationProofDTO = shuffleProof.permutationProof
     val mixProofDTO = shuffleProof.mixProof
 
@@ -190,7 +188,7 @@ object Verifier {
     println(">>>>>>>>>>")
     println(mixProof)
 
-    val publicInputShuffle: Tuple = Tuple.getInstance(permutationCommitment, votes, shuffledVotes);
+    val publicInputShuffle: Tuple = Tuple.getInstance(permutationCommitment, votes, shuffledVotes)
     val publicInputPermutation = permutationCommitment
 
     val v1 = pcps.verify(permutationProof, publicInputPermutation)
@@ -200,7 +198,8 @@ object Verifier {
     val v3 =
       publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
 
-    println("Verification ok: " + (v1 && v2 && v3))
+    val result = v1 && v2 && v3
+    println(s"Verifier: verifyShuffle: $result")
   }
 
   def tupleFromSeq(items: Seq[Element[_]]) = {
