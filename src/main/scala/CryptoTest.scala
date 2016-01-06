@@ -62,11 +62,12 @@ case class CryptoSettings(group: Group[_], generator: Element[_])
 case class PermutationProofDTO(commitment: String, challenge: String, response: String,
   bridingCommitments: Seq[String], eValues: Seq[String])
 case class MixProofDTO(commitment: String, challenge: String, response: String, eValues: Seq[String])
-case class ShuffleProofDTO(mixProof: MixProofDTO, permutationProof: PermutationProofDTO)
+case class ShuffleProofDTO(mixProof: MixProofDTO, permutationProof: PermutationProofDTO, permutationCommitment: String)
 
 object CryptoTest extends App {
 
   val group = GStarModSafePrime.getInstance(167)
+  val hashAlgorithm: HashAlgorithm = HashAlgorithm.SHA256
   println(s"group ${group.getModulus()}")
   println(s"modulus ${group.getZModOrder()}")
   // val group = GStarModSafePrime.getInstance(new BigInteger("170141183460469231731687303715884114527"))
@@ -77,8 +78,8 @@ object CryptoTest extends App {
   val shares = scala.collection.mutable.ArrayBuffer.empty[Element[_]]
   val privates = scala.collection.mutable.ArrayBuffer.empty[Element[_]]
 
-  // testDkgAndJointDecryption()
-  testShuffle()
+  testDkgAndJointDecryption()
+  testShuffle("proverId")
 
   def getRandomVotes(size: Number, generator: Element[_], publicKey: Element[_]) = {
     val elGamal = ElGamalEncryptionScheme.getInstance(generator)
@@ -91,22 +92,6 @@ object CryptoTest extends App {
       System.out.println(s"getRandomVotes: plaintext $element")
       elGamal.encrypt(publicKey, element)
     }
-  }
-
-  def tupleFromSeq(votes: Seq[Element[_]]) = {
-    var ciphertexts = Tuple.getInstance()
-    votes.foreach( v => ciphertexts.add(v))
-
-    ciphertexts
-  }
-
-  def seqFromTuple(tuple: Tuple): Seq[Element[_]] = {
-    import scala.collection.JavaConversions._
-
-    /*for(v <- tuple) {
-
-    }*/
-    tuple.map{ x => x}.toSeq
   }
 
   def testDkgAndJointDecryption() = {
@@ -212,7 +197,7 @@ object CryptoTest extends App {
       BigIntegerToByteArray.getInstance(ByteOrder.BIG_ENDIAN),
       StringToByteArray.getInstance(Charset.forName("UTF-8")));
 
-    val converter = ByteArrayToBigInteger.getInstance(HashAlgorithm.SHA256.getByteLength(), 1);
+    val converter = ByteArrayToBigInteger.getInstance(hashAlgorithm.getByteLength(), 1);
 
     val challengeGenerator: SigmaChallengeGenerator  = FiatShamirSigmaChallengeGenerator.getInstance(
       Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter);
@@ -234,7 +219,7 @@ object CryptoTest extends App {
   }
 
   // see also MixAndProofExample.example5
-  def testShuffle() = {
+  def testShuffle(proverId: String) = {
     import scala.collection.JavaConversions._
 
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
@@ -269,14 +254,14 @@ object CryptoTest extends App {
     val shuffledVs: Tuple = mixer.shuffle(ciphertexts, psi, rs);
 
     // Create sigma challenge generator
-    val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement("asdfasdfasdf");
+    val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId);
     val hashMethod = HashMethod.getInstance(HashAlgorithm.SHA256);
     val convertMethod = ConvertMethod.getInstance(
         BigIntegerToByteArray.getInstance(ByteOrder.BIG_ENDIAN),
         StringToByteArray.getInstance(Charset.forName("UTF-8")))
 
     //val converter = ByteArrayToBigInteger.getInstance(HashAlgorithm.SHA256.getBitLength(), 1)
-    val converter = ByteArrayToBigInteger.getInstance(HashAlgorithm.SHA256.getByteLength())
+    val converter = ByteArrayToBigInteger.getInstance(hashAlgorithm.getByteLength(), 1);
 
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
@@ -314,24 +299,24 @@ object CryptoTest extends App {
     val bridgingCommitments = pcps.getBridingCommitment(permutationProof).asInstanceOf[Tuple]
     val eValues = pcps.getEValues(permutationProof).asInstanceOf[Tuple]
 
-    val permputationProofDTO = PermutationProofDTO(pcps.getChallenge(permutationProof).convertToString(),
-      pcps.getCommitment(permutationProof).convertToString(),
+    val permputationProofDTO = PermutationProofDTO(pcps.getCommitment(permutationProof).convertToString(),
+      pcps.getChallenge(permutationProof).convertToString(),
       pcps.getResponse(permutationProof).convertToString(),
       bridgingCommitments.map(x => x.convertToString).toSeq,
       eValues.map(x => x.convertToString).toSeq)
 
-    println(s"Permutation proof ****\n $permutationProof")
+    println(s"Permutation proof ****\n$permutationProof")
 
     val eValues2 = spg.getEValues(mixProof).asInstanceOf[Tuple]
 
-    val mixProofDTO = MixProofDTO(spg.getChallenge(mixProof).convertToString(),
-      spg.getCommitment(mixProof).convertToString(),
+    val mixProofDTO = MixProofDTO(spg.getCommitment(mixProof).convertToString(),
+      spg.getChallenge(mixProof).convertToString(),
       spg.getResponse(mixProof).convertToString(),
       eValues2.map(x => x.convertToString).toSeq)
 
-    val shuffleProofDTO = ShuffleProofDTO(mixProofDTO, permputationProofDTO)
+    val shuffleProofDTO = ShuffleProofDTO(mixProofDTO, permputationProofDTO, permutationCommitment.convertToString)
 
-    println(s"Mix proof *****\n $mixProof")
+    println(s"Mix proof *****\n$mixProof")
 
     println(shuffleProofDTO)
 
@@ -348,6 +333,9 @@ object CryptoTest extends App {
 
     println("Verification ok: " + (v1 && v2 && v3))
 
+    Verifier.verifyShuffle(ciphertexts, shuffledVs, shuffleProofDTO,
+      proverId: String, pk, Csettings)
+
     for(i <- 0 until n) {
       val next = shuffledVs.getAt(i)
       val decryption = elGamal.decrypt(privateKey, next)
@@ -359,7 +347,6 @@ object CryptoTest extends App {
       publicKey: Element[_], partialDecryptions: Seq[Element[_]], generatorFunctions: Seq[Function]) = {
 
     val encryptionGenerator = Csettings.generator
-    val hashAlgorithm: HashAlgorithm = HashAlgorithm.SHA256;
 
     // Create proof functions
     val f1: Function = GeneratorFunction.getInstance(encryptionGenerator);

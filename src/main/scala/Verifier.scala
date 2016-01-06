@@ -112,12 +112,12 @@ object Verifier {
         ProductFunction.getInstance(generatorFunctions :_*))
 
     val publicInput: Pair = Pair.getInstance(publicKey, Tuple.getInstance(pd.partialDecryptions:_*))
-    val otherInput = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId);
-    val hashMethod = HashMethod.getInstance(hashAlgorithm);
+    val otherInput = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
+    val hashMethod = HashMethod.getInstance(hashAlgorithm)
 
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
-        Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter);
-    val proofSystem: EqualityPreimageProofSystem = EqualityPreimageProofSystem.getInstance(challengeGenerator, f1, f2);
+        Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
+    val proofSystem: EqualityPreimageProofSystem = EqualityPreimageProofSystem.getInstance(challengeGenerator, f1, f2)
 
     val commitment
         = proofSystem.getCommitmentSpace().getElementFrom(pd.proofDTO.commitment)
@@ -131,18 +131,88 @@ object Verifier {
     println(s"Verifier: verifyPartialDecryptions $result")
   }
 
-  def verifyShuffle(votes: Tuple, votesShuffled: Tuple) = {
-    /* val pcps2: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
-      group, ciphertexts.getArity())
-    val spg2: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, ciphertexts.getArity(), elGamal, pk);
+  def verifyShuffle(votes: Tuple, shuffledVotes: Tuple, shuffleProof: ShuffleProofDTO,
+    proverId: String, publicKey: Element[_], Csettings: CryptoSettings) = {
 
-    val v1 = pcps2.verify(permutationProof, publicInputPermutation)
+    val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
+    val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
+    val hashMethod = HashMethod.getInstance(hashAlgorithm)
+    val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
+        Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
+
+    // Create e-values challenge generator
+    val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
+        Csettings.group.getZModOrder(), votes.getArity())
+    val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
+      Csettings.group.asInstanceOf[GStarModSafePrime], votes.getArity())
+    val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, votes.getArity(), elGamal, publicKey)
+
+    val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group.asInstanceOf[GStarModSafePrime], votes.getArity())
+    val permutationCommitment = pcs.getCommitmentSpace().getElementFrom(shuffleProof.permutationCommitment)
+
+    val commitment1
+        = pcps.getCommitmentSpace().getElementFrom(shuffleProof.permutationProof.commitment)
+    val challenge1
+        = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
+    val response1
+        = pcps.getResponseSpace().getElementFrom(shuffleProof.permutationProof.response)
+
+    val commitment2
+        = spg.getCommitmentSpace().getElementFrom(shuffleProof.mixProof.commitment)
+    val challenge2
+        = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
+    val response2
+        = spg.getResponseSpace().getElementFrom(shuffleProof.mixProof.response)
+
+    // println(pcps.getCommitmentSpace().getElementFrom)
+    // println(pcps.getResponseSpace())
+    val permutationProofDTO = shuffleProof.permutationProof
+    val mixProofDTO = shuffleProof.mixProof
+
+    // Assume bridging commitments: GStarmod
+    val bridgingCommitments = permutationProofDTO.bridingCommitments.map { x =>
+      Csettings.group.getElementFrom(x)
+    }
+    // Assume evalues: ZMod
+    val eValues = permutationProofDTO.eValues.map { x =>
+      Csettings.group.getZModOrder.getElementFrom(x)
+    }
+    val eValues2 = mixProofDTO.eValues.map { x =>
+      Csettings.group.getZModOrder.getElementFrom(x)
+    }
+
+    val permutationProof: Tuple = Tuple.getInstance(tupleFromSeq(eValues), tupleFromSeq(bridgingCommitments),
+      commitment1, challenge1, response1)
+    val mixProof: Tuple = Tuple.getInstance(tupleFromSeq(eValues2), commitment2, challenge2, response2)
+
+    println(">>>>>>>>>>")
+    println(permutationProof)
+    println(">>>>>>>>>>")
+    println(mixProof)
+
+    val publicInputShuffle: Tuple = Tuple.getInstance(permutationCommitment, votes, shuffledVotes);
+    val publicInputPermutation = permutationCommitment
+
+    val v1 = pcps.verify(permutationProof, publicInputPermutation)
     // Verify shuffle proof
-    val v2 = spg2.verify(mixProof, publicInputShuffle)
+    val v2 = spg.verify(mixProof, publicInputShuffle)
     // Verify equality of permutation commitments
     val v3 =
       publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
 
-    println("Verification ok: " + (v1 && v2 && v3))*/
+    println("Verification ok: " + (v1 && v2 && v3))
+  }
+
+  def tupleFromSeq(items: Seq[Element[_]]) = {
+    var tuple = Tuple.getInstance()
+    items.foreach(v => tuple = tuple.add(v))
+
+    tuple
+  }
+
+  def seqFromTuple(tuple: Tuple): Seq[Element[_]] = {
+    import scala.collection.JavaConversions._
+
+    tuple.map{ x => x }.toSeq
   }
 }
