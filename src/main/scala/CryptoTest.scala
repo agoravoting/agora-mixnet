@@ -7,7 +7,7 @@ import ch.bfh.unicrypt.crypto.proofsystem.classes.ReEncryptionShuffleProofSystem
 import ch.bfh.unicrypt.crypto.schemes.commitment.classes.PermutationCommitmentScheme
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.crypto.schemes.encryption.interfaces.ReEncryptionScheme
-import ch.bfh.unicrypt.helper.math.Alphabet;
+import ch.bfh.unicrypt.helper.math.Alphabet
 import ch.bfh.unicrypt.helper.math.Permutation
 import ch.bfh.unicrypt.math.algebra.additive.classes.ECZModPrime
 import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringMonoid
@@ -19,6 +19,7 @@ import ch.bfh.unicrypt.math.algebra.general.classes.ProductGroup
 import ch.bfh.unicrypt.math.algebra.general.classes.Triple
 import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
+import ch.bfh.unicrypt.math.algebra.general.interfaces.Group
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.classes.FiatShamirSigmaChallengeGenerator;
@@ -33,7 +34,6 @@ import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringElement
 import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringMonoid
 import ch.bfh.unicrypt.crypto.proofsystem.classes.PlainPreimageProofSystem
 import ch.bfh.unicrypt.crypto.proofsystem.classes.EqualityPreimageProofSystem
-
 import ch.bfh.unicrypt.math.algebra.params.classes.SECECCParamsFp
 import ch.bfh.unicrypt.math.function.classes.PermutationFunction
 import ch.bfh.unicrypt.random.classes.CounterModeRandomByteSequence
@@ -41,35 +41,73 @@ import ch.bfh.unicrypt.random.classes.PseudoRandomOracle
 import ch.bfh.unicrypt.random.classes.ReferenceRandomByteSequence
 import ch.bfh.unicrypt.random.interfaces.RandomByteSequence
 import ch.bfh.unicrypt.random.interfaces.RandomOracle
-
 import ch.bfh.unicrypt.math.algebra.general.interfaces.CyclicGroup
 import ch.bfh.unicrypt.crypto.mixer.classes.ReEncryptionMixer
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModElement
 import ch.bfh.unicrypt.crypto.keygenerator.interfaces.KeyPairGenerator
 import ch.bfh.unicrypt.math.function.classes.GeneratorFunction
-import ch.bfh.unicrypt.math.function.classes.CompositeFunction;
-import ch.bfh.unicrypt.math.function.classes.GeneratorFunction;
-import ch.bfh.unicrypt.math.function.classes.InvertFunction;
-import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction;
-import ch.bfh.unicrypt.math.function.classes.ProductFunction;
-import ch.bfh.unicrypt.math.function.interfaces.Function;
-
+import ch.bfh.unicrypt.math.function.classes.CompositeFunction
+import ch.bfh.unicrypt.math.function.classes.GeneratorFunction
+import ch.bfh.unicrypt.math.function.classes.InvertFunction
+import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
+import ch.bfh.unicrypt.math.function.classes.ProductFunction
+import ch.bfh.unicrypt.math.function.interfaces.Function
 import java.nio.ByteOrder
 import java.nio.charset.Charset
 
 case class EncryptionKeyShareDTO(sigmaProofDTO: SigmaProofDTO, keyShare: String, privateKey: String)
 case class SigmaProofDTO(commitment: String, challenge: String, response: String)
+case class PartialDecryptionDTO(partialDecryptions: Seq[Element[_]], proofDTO: SigmaProofDTO)
+case class CryptoSettings(group: Group[_], generator: Element[_])
+case class PermutationProofDTO(commitment: String, challenge: String, response: String,
+  bridingCommitments: Seq[String], eValues: Seq[String])
+case class MixProofDTO(commitment: String, challenge: String, response: String, eValues: Seq[String])
+case class ShuffleProofDTO(mixProof: MixProofDTO, permutationProof: PermutationProofDTO)
 
 object CryptoTest extends App {
 
   val group = GStarModSafePrime.getInstance(167)
   println(s"group ${group.getModulus()}")
   println(s"modulus ${group.getZModOrder()}")
+  // val group = GStarModSafePrime.getInstance(new BigInteger("170141183460469231731687303715884114527"))
+  // val group = GStarModSafePrime.getFirstInstance(102)
+  val generator = group.getDefaultGenerator()
+  val Csettings = CryptoSettings(group, generator)
+
   val shares = scala.collection.mutable.ArrayBuffer.empty[Element[_]]
   val privates = scala.collection.mutable.ArrayBuffer.empty[Element[_]]
 
-  testDkgAndJointDecryption()
+  // testDkgAndJointDecryption()
   testShuffle()
+
+  def getRandomVotes(size: Number, generator: Element[_], publicKey: Element[_]) = {
+    val elGamal = ElGamalEncryptionScheme.getInstance(generator)
+
+    (1 to 10).map { _ =>
+      // we are getting random elements from G_q, if we want to encode general elements we need to use an encoder
+      // see ElGamalEncryptionExample.example2
+      // val encoder = ZModToGStarModSafePrimeEncoder.getInstance(cyclicGroup)
+      val element = elGamal.getMessageSpace().getRandomElement()
+      System.out.println(s"getRandomVotes: plaintext $element")
+      elGamal.encrypt(publicKey, element)
+    }
+  }
+
+  def tupleFromSeq(votes: Seq[Element[_]]) = {
+    var ciphertexts = Tuple.getInstance()
+    votes.foreach( v => ciphertexts.add(v))
+
+    ciphertexts
+  }
+
+  def seqFromTuple(tuple: Tuple): Seq[Element[_]] = {
+    import scala.collection.JavaConversions._
+
+    /*for(v <- tuple) {
+
+    }*/
+    tuple.map{ x => x}.toSeq
+  }
 
   def testDkgAndJointDecryption() = {
     var share = createShare("1")
@@ -77,77 +115,45 @@ object CryptoTest extends App {
     share = createShare("2")
     addShare(share, "2")
     println(s"Shares $shares")
-    // val pks = privates.map { x: Element[_] => group.getDefaultGenerator.selfApply(x.convertToBigInteger) }
-    // println(s"Private keys $pks")
     val publicKey = combineShares(shares)
-    var ciphertexts = Tuple.getInstance()
-    val elGamal = ElGamalEncryptionScheme.getInstance(group.getDefaultGenerator())
 
-    for(i <- 0 until 10) {
-      val element = elGamal.getMessageSpace().getRandomElement()
-      System.out.println(s"Dkg and joint decrypt: plaintext $element")
-      val c = elGamal.encrypt(publicKey, element)
-      ciphertexts = ciphertexts.add(c)
-    }
+    val ciphertexts = getRandomVotes(10, Csettings.generator, publicKey)
+
+    // a^-x1
     val elementsOne = partialDecrypt(ciphertexts, privates(0).convertToBigInteger, "0")
+    Verifier.verifyPartialDecryptions(elementsOne, ciphertexts, Csettings, "0", shares(0))
+    // a^-x2
     val elementsTwo = partialDecrypt(ciphertexts, privates(1).convertToBigInteger, "1")
+    Verifier.verifyPartialDecryptions(elementsTwo, ciphertexts, Csettings, "1", shares(1))
+
     println(s"partial decrypts one ****\n$elementsOne")
     println(s"partial decrypts two ****\n $elementsTwo")
-    val combined = (elementsOne zip elementsTwo).map(c => c._1.apply(c._2))
+    // a^-x = a^-x1 * a^-x2 ...
+    val combined = (elementsOne.partialDecryptions zip elementsTwo.partialDecryptions).map(c => c._1.apply(c._2))
     println(s"a^-x ****\n$combined")
-    for(i <- 0 until 10) {
-      val next = ciphertexts.getAt(i).asInstanceOf[Pair]
-      val second = next.getSecond()
-      println(s"joint decryption ${second.apply(combined(i))}")
-    }
+    // a^-x * b = m
+    val decrypted = (ciphertexts zip combined).map(c => c._1.getSecond().apply(c._2))
+    println(s"Decrypted $decrypted")
   }
 
   def combineShares(shares: Seq[Element[_]]) = {
-    var encKey = group.getIdentityElement();
+    var encKey = Csettings.group.getIdentityElement();
 
+    // y = y1 * y2 * y3....
     for (keyShare <- shares) {
       encKey = encKey.apply(keyShare);
     }
 
     println(s"combineShares: public key $encKey")
-
     encKey
   }
 
-  def addShare(encryptionKeyShare: EncryptionKeyShareDTO, tallier: String) = {
-
-    val elGamal = ElGamalEncryptionScheme.getInstance(group.getDefaultGenerator())
-    val keyPairGen: KeyPairGenerator = elGamal.getKeyPairGenerator();
-    val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(encryptionKeyShare.keyShare)
-    val proofFunction = keyPairGen.getPublicKeyGenerationFunction();
-
-    val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(tallier)
-
-    val converter = ByteArrayToBigInteger.getInstance(HashAlgorithm.SHA256.getByteLength(), 1);
-
-    val hashMethod = HashMethod.getInstance(HashAlgorithm.SHA256);
-    val convertMethod = ConvertMethod.getInstance(
-      BigIntegerToByteArray.getInstance(ByteOrder.BIG_ENDIAN),
-      StringToByteArray.getInstance(Charset.forName("UTF-8")));
-
-    val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
-        group.getZModOrder(), otherInput, convertMethod, hashMethod, converter);
-
-    val pg: PlainPreimageProofSystem = PlainPreimageProofSystem.getInstance(challengeGenerator, proofFunction);
-
-    //Fill triple
-    val commitment
-        = pg.getCommitmentSpace().getElementFrom(encryptionKeyShare.sigmaProofDTO.commitment)
-    val challenge
-        = pg.getChallengeSpace().getElementFrom(encryptionKeyShare.sigmaProofDTO.challenge)
-    val response
-        = pg.getResponseSpace().getElementFrom(encryptionKeyShare.sigmaProofDTO.response)
-
-    val proofTriple: Triple = Triple.getInstance(commitment, challenge, response);
-    println("Commitment: " + commitment + " challenge:" + challenge + " response: " + response);
-    println("ZKP for shared key: Challenge-Space: " + pg.getChallengeSpace() + "Commitment-Space: " + pg.getCommitmentSpace() + "public Key:" + publicKey);
-    if (pg.verify(proofTriple, publicKey)) {
-
+  def addShare(encryptionKeyShare: EncryptionKeyShareDTO, proverId: String) = {
+    val result = Verifier.verifyKeyShare(encryptionKeyShare, Csettings, proverId: String)
+    if(result) {
+      val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
+      val keyPairGen: KeyPairGenerator = elGamal.getKeyPairGenerator();
+      val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(encryptionKeyShare.keyShare)
       shares += publicKey
       val privateKey = keyPairGen.getPrivateKeySpace().getElementFrom(encryptionKeyShare.privateKey)
 
@@ -156,44 +162,43 @@ object CryptoTest extends App {
     }
     else {
       //Remove tallier
-      println("Share failed verification")
+      throw new Exception("********** Share failed verification")
     }
   }
 
-  def partialDecrypt(votes: Tuple, privateKey: BigInteger, proverId: String) = {
-      import scala.collection.JavaConversions._
+  def partialDecrypt(votes: Seq[Pair], privateKey: BigInteger, proverId: String) = {
 
-      val encryptionGenerator = group.getDefaultGenerator()
+      val encryptionGenerator = Csettings.generator
 
-      val secretKey = group.getZModOrder().getElementFrom(privateKey);
-      println(s"PartialDecrypt: secretKey $secretKey, privateKey $privateKey")
+      val secretKey = Csettings.group.getZModOrder().getElementFrom(privateKey);
+      println(s"PartialDecrypt: secretKey $secretKey")
       val decryptionKey = secretKey.invert();
       val publicKey = encryptionGenerator.selfApply(secretKey);
 
-      val partialDecryptions = scala.collection.mutable.ArrayBuffer.empty[Element[_]]
+      val lists = votes.map { v =>
 
-
-      val generatorFunctions = scala.collection.mutable.ArrayBuffer.empty[Function]
-      for (v <- votes) {
-        val pair = v.asInstanceOf[Pair]
-
-        val element = pair.getFirst()
+        val element = v.getFirst()
+        if(element.convertToString == "1") {
+          // FIXME
+          println("********** Crash incoming!")
+        }
         // println(s"partial decryption: $element")
         val function: GeneratorFunction = GeneratorFunction.getInstance(element);
-        generatorFunctions += function;
-        val partialDecryption = function.apply(decryptionKey)
-        partialDecryptions.add(partialDecryption)
-      }
+        // generatorFunctions += function;
+        val partialDecryption = function.apply(decryptionKey).asInstanceOf[GStarModElement]
+        // partialDecryptions.add(partialDecryption)
+        (partialDecryption, function)
+      }.unzip
 
-      val proofDTO = createProof(proverId, secretKey, publicKey, partialDecryptions, generatorFunctions);
+      val proofDTO = createProof(proverId, secretKey, publicKey, lists._1, lists._2);
 
-      partialDecryptions
+      PartialDecryptionDTO(lists._1, proofDTO)
   }
 
 
   def createShare(tallier: String) = {
 
-    val elGamal = ElGamalEncryptionScheme.getInstance(group.getDefaultGenerator())
+    val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
 
     val kpg = elGamal.getKeyPairGenerator()
     val keyPair = kpg.generateKeyPair()
@@ -210,7 +215,7 @@ object CryptoTest extends App {
     val converter = ByteArrayToBigInteger.getInstance(HashAlgorithm.SHA256.getByteLength(), 1);
 
     val challengeGenerator: SigmaChallengeGenerator  = FiatShamirSigmaChallengeGenerator.getInstance(
-      group.getZModOrder(), otherInput, convertMethod, hashMethod, converter);
+      Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter);
 
     val pg: PlainPreimageProofSystem = PlainPreimageProofSystem.getInstance(challengeGenerator, function);
     val proof: Triple = pg.generate(privateKey, publicKey);
@@ -230,8 +235,9 @@ object CryptoTest extends App {
 
   // see also MixAndProofExample.example5
   def testShuffle() = {
+    import scala.collection.JavaConversions._
 
-    val elGamal = ElGamalEncryptionScheme.getInstance(group.getDefaultGenerator())
+    val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
 
     val keyPair = elGamal.getKeyPairGenerator().generateKeyPair()
     val privateKey = keyPair.getFirst()
@@ -242,10 +248,6 @@ object CryptoTest extends App {
     println("testShuffle")
     println("******** PLAINTEXTS ********")
     for(i <- 0 until n) {
-
-      // we are getting random elements from G_q, if we want to encode general elements we need to use an encoder
-      // see ElGamalEncryptionExample.example2
-      // val encoder = ZModToGStarModSafePrimeEncoder.getInstance(cyclicGroup)
 
       val element = elGamal.getMessageSpace().getRandomElement()
 
@@ -277,11 +279,11 @@ object CryptoTest extends App {
     val converter = ByteArrayToBigInteger.getInstance(HashAlgorithm.SHA256.getByteLength())
 
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
-        group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
+        Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
 
     // Create e-values challenge generator
     val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
-        group.getZModOrder(), ciphertexts.getArity())
+        Csettings.group.getZModOrder(), ciphertexts.getArity())
 
     // val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(group, ciphertexts.getArity());
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(group, ciphertexts.getArity())
@@ -307,23 +309,31 @@ object CryptoTest extends App {
     val publicInputShuffle: Tuple = Tuple.getInstance(permutationCommitment, ciphertexts, shuffledVs);
 
     // Create shuffle proof
-    val mixProof: Tuple = spg.generate(privateInputShuffle, publicInputShuffle);
+    val mixProof: Tuple = spg.generate(privateInputShuffle, publicInputShuffle)
 
-    println("challenge *****\n " + pcps.getChallenge(permutationProof).convertToString())
-    println("commitment *****\n " + pcps.getCommitment(permutationProof).convertToString())
-    println("response *****\n " + pcps.getResponse(permutationProof).convertToString())
+    val bridgingCommitments = pcps.getBridingCommitment(permutationProof).asInstanceOf[Tuple]
+    val eValues = pcps.getEValues(permutationProof).asInstanceOf[Tuple]
 
-    println("bridging commitments *****\n " + pcps.getBridingCommitment(permutationProof))
-    println("evalues *****\n " + pcps.getEValues(permutationProof))
+    val permputationProofDTO = PermutationProofDTO(pcps.getChallenge(permutationProof).convertToString(),
+      pcps.getCommitment(permutationProof).convertToString(),
+      pcps.getResponse(permutationProof).convertToString(),
+      bridgingCommitments.map(x => x.convertToString).toSeq,
+      eValues.map(x => x.convertToString).toSeq)
 
     println(s"Permutation proof ****\n $permutationProof")
 
-    println("challenge *****\n " + spg.getChallenge(mixProof).convertToString())
-    println("commitment *****\n " + spg.getCommitment(mixProof).convertToString())
-    println("response *****\n " + spg.getResponse(mixProof).convertToString())
-    println("evalues *****\n " + spg.getEValues(mixProof))
+    val eValues2 = spg.getEValues(mixProof).asInstanceOf[Tuple]
+
+    val mixProofDTO = MixProofDTO(spg.getChallenge(mixProof).convertToString(),
+      spg.getCommitment(mixProof).convertToString(),
+      spg.getResponse(mixProof).convertToString(),
+      eValues2.map(x => x.convertToString).toSeq)
+
+    val shuffleProofDTO = ShuffleProofDTO(mixProofDTO, permputationProofDTO)
 
     println(s"Mix proof *****\n $mixProof")
+
+    println(shuffleProofDTO)
 
     val pcps2: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
       group, ciphertexts.getArity())
@@ -346,16 +356,16 @@ object CryptoTest extends App {
   }
 
   def createProof(proverId: String, secretKey: Element[_],
-      publicKey: Element[_], partialDecryptions: Seq[Element[_]], generatorFunctions: Seq[Function]) {
+      publicKey: Element[_], partialDecryptions: Seq[Element[_]], generatorFunctions: Seq[Function]) = {
 
-    val encryptionGenerator = group.getDefaultGenerator()
+    val encryptionGenerator = Csettings.generator
     val hashAlgorithm: HashAlgorithm = HashAlgorithm.SHA256;
 
     // Create proof functions
     val f1: Function = GeneratorFunction.getInstance(encryptionGenerator);
     val f2: Function = CompositeFunction.getInstance(
-        InvertFunction.getInstance(group.getZModOrder()),
-        MultiIdentityFunction.getInstance(group.getZModOrder(), generatorFunctions.length),
+        InvertFunction.getInstance(Csettings.group.getZModOrder()),
+        MultiIdentityFunction.getInstance(Csettings.group.getZModOrder(), generatorFunctions.length),
         ProductFunction.getInstance(generatorFunctions :_*));
 
     // Private and public input and prover id
@@ -370,13 +380,13 @@ object CryptoTest extends App {
     val converter = ByteArrayToBigInteger.getInstance(hashAlgorithm.getByteLength(), 1);
 
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
-        group.getZModOrder(), otherInput, convertMethod, hashMethod, converter);
+        Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter);
     val proofSystem: EqualityPreimageProofSystem = EqualityPreimageProofSystem.getInstance(challengeGenerator, f1, f2);
     // Generate and verify proof
     val proof: Triple = proofSystem.generate(privateInput, publicInput);
     val result = proofSystem.verify(proof, publicInput);
-
-    println(s"Decryption proof $result")
+    // FIXME do something if verify broken
+    // println(s"Decryption proof $result")
 
     SigmaProofDTO(proofSystem.getCommitment(proof).convertToString(), proofSystem.getChallenge(proof).convertToString(), proofSystem.getResponse(proof).convertToString());
   }
