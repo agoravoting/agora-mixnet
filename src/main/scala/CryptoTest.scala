@@ -185,9 +185,9 @@ object KeyMaker extends ProofSettings {
 
     val success = pg.verify(proof, publicKey)
     if (!success) {
-      throw new Exception("Math for proof system broken.")
+      throw new Exception("Failed verifying proof")
     } else {
-      println("createShare: SigmaProof ok")
+      println("createShare: verified share ok")
       // println("Commitment: " + pg.getChallenge(proof) + " challenge:" + pg.getCommitment(proof) + " response: " + pg.getResponse(proof))
       // println("ZKP for shared key: Challenge-Space: " + pg.getChallengeSpace() + "Commitment-Space: " + pg.getCommitmentSpace() + "public Key:" + publicKey)
     }

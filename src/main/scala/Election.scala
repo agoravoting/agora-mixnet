@@ -10,93 +10,6 @@ import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
 import ch.bfh.unicrypt.math.algebra.general.classes.Pair
 
-/* class ElectionState(val id: String, val cSettings: CryptoSettings)
-class Created(override val id: String, override val cSettings: CryptoSettings) extends ElectionState(id, cSettings)
-class Shares[T <: Nat](val shares: Sized[List[String], T], prev: ElectionState) extends Created(prev.id, prev.cSettings)
-class Combined(val publicKey: String, val prev: ElectionState) extends ElectionState(prev.id, prev.cSettings)
-class Votes(val votes: List[String], override val prev: Combined) extends Combined(prev.publicKey, prev.prev)
-class VotesStopped(override val prev: Votes, date: DateTime = DateTime.now) extends Votes(prev.votes, prev.prev)
-class Mixing[T <: Nat](val mixes: Sized[List[String], T], override val prev: VotesStopped) extends VotesStopped(prev.prev)
-class Mixed(val prev: Mixing[_ <: Nat]) extends ElectionState(prev.id, prev.cSettings)
-class Decryptions[T <: Nat](val decryptions: Sized[List[String], T], val prev: ElectionState) extends ElectionState(prev.id, prev.cSettings)
-class Decrypted(val prev: Decryptions[_ <: Nat], date: DateTime = DateTime.now) extends ElectionState(prev.id, prev.cSettings)
-
-class Election[W <: Nat, S <: ElectionState] private (val state: S) {
-  override def toString() = s"election ${state.id}, ${state.toString}"
-}
-
-object Election {
-
-  def start[W <: Nat](id: String, bits: Int) = {
-    println("Going to start a new Election!")
-    val group = GStarModSafePrime.getFirstInstance(bits)
-    val generator = group.getDefaultGenerator()
-    val cSettings = CryptoSettings(group, generator)
-
-    new Election[W, Created](new Created(id, cSettings))
-  }
-
-  def startShares[W <: Nat](in: Election[W, Created]) = {
-    println("Now waiting for shares")
-    new Election[W, Shares[_0]](new Shares[_0](List[String]().sized(0).get, in.state))
-  }
-
-  def addShare[W <: Nat, T <: Nat](in: Election[W, Shares[T]], share: String)(implicit ev: T < W) = {
-    println("Adding share...")
-    new Election[W, Shares[Succ[T]]](new Shares[Succ[T]](in.state.shares :+ share, in.state))
-  }
-
-  def combineShares[W <: Nat](in: Election[W, Shares[W]]) = {
-    println("Combining shares..")
-    new Election[W, Combined](new Combined("public key", in.state))
-  }
-
-  def startVotes[W <: Nat](in: Election[W, Combined]) = {
-    println("Now waiting for votes")
-    new Election[W, Votes](new Votes(List[String](), in.state))
-  }
-
-  def addVotes[W <: Nat](in: Election[W, Votes], vote: String) = {
-    println("Adding vote..")
-    new Election[W, Votes](new Votes(vote :: in.state.votes, in.state))
-  }
-
-  def stopVotes[W <: Nat](in: Election[W, Votes]) = {
-    println("No more votes")
-    new Election[W, VotesStopped](new VotesStopped(in.state))
-  }
-
-  def startMixing[W <: Nat](in: Election[W, VotesStopped]) = {
-    println("Now waiting for mixes")
-    new Election[W, Mixing[_0]](new Mixing[_0](List[String]().sized(0).get, in.state))
-  }
-
-  def addMix[W <: Nat, T <: Nat](in: Election[W, Mixing[T]], mix: String)(implicit ev: T < W) = {
-    println("Adding mix...")
-    new Election[W, Mixing[Succ[T]]](new Mixing[Succ[T]](in.state.mixes :+ mix, in.state))
-  }
-
-  def stopMixing[W <: Nat](in: Election[W, Mixing[W]]) = {
-    println("Mixes done..")
-    new Election[W, Mixed](new Mixed(in.state))
-  }
-
-  def startDecryptions[W <: Nat](in: Election[W, Mixed]) = {
-    println("Now waiting for decryptions")
-    new Election[W, Decryptions[_0]](new Decryptions[_0](List[String]().sized(0).get, in.state))
-  }
-
-  def addDecryption[W <: Nat, T <: Nat](in: Election[W, Decryptions[T]], decryption: String)(implicit ev: T < W) = {
-    println("Adding decryption...")
-    new Election[W, Decryptions[Succ[T]]](new Decryptions[Succ[T]](in.state.decryptions :+ decryption, in.state))
-  }
-
-  def combineDecryptions[W <: Nat](in: Election[W, Decryptions[W]]) = {
-    println("Combining decryptions...")
-    new Election[W, Decrypted](new Decrypted(in.state))
-  }
-}
-*/
 trait HasHistory {
   def prev: ElectionState
 
@@ -108,7 +21,6 @@ trait HasHistory {
     }
   }
 }
-
 
 class ElectionState(val id: String, val cSettings: CryptoSettings)
 class ElectionStateShares(id: String, cSettings: CryptoSettings, val allShares: List[(String, String)]) extends ElectionState(id, cSettings)
@@ -153,8 +65,7 @@ object Election {
       new Election[W, Shares[Succ[T]]](Shares[Succ[T]](in.state.shares :+ (proverId, share.keyShare), in.state))
     }
     else {
-      //Remove tallier
-      throw new Exception("********** Share failed verification")
+      throw new Exception("Share failed verification")
     }
   }
 
@@ -264,12 +175,13 @@ object ElectionTest extends App {
   val m2 = MixerTrustee("mixer two")
 
   val start = Election.start[_2]("my election", 8)
+
   val readyForShares = Election.startShares(start)
+
   val oneShare = Election.addShare(readyForShares, k1.createShare(readyForShares), k1.id)
   val twoShares = Election.addShare(oneShare, k2.createShare(readyForShares), k2.id)
   val combined = Election.combineShares(twoShares)
   val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
-
 
   val startVotes = Election.startVotes(combined)
   val votes = Util.getRandomVotes(5, combined.state.cSettings.generator, publicKey)
@@ -278,27 +190,25 @@ object ElectionTest extends App {
     electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
   }
   val stopVotes = Election.stopVotes(electionGettingVotes)
+
   val startMix = Election.startMixing(stopVotes)
   val shuffle1 = m1.shuffle(startMix)
   val mixOne = Election.addMix(startMix, shuffle1, m1.id)
   val shuffle2 = m1.shuffle(mixOne)
   val mixTwo = Election.addMix(mixOne, shuffle2, m1.id)
   val stopMix = Election.stopMixing(mixTwo)
+
   val startDecryptions = Election.startDecryptions(stopMix)
   val pd1 = k1.partialDecrypt(startDecryptions)
   val pd2 = k2.partialDecrypt(startDecryptions)
-
   val partialOne = Election.addDecryption(startDecryptions, pd1, k1.id)
   val partialTwo = Election.addDecryption(partialOne, pd2, k2.id)
+
   val electionDone = Election.combineDecryptions(partialTwo)
   println("===== Election Dump =====")
   println(electionDone)
   println("===== Election Dump =====")
   println(s"Decrypted votes ${electionDone.state.decrypted}")
-  // println("================= HISTORY DUMP =================")
-  // e17.state.printHistory
-  // println("================= HISTORY DUMP =================")
-
 }
 
 case class KeyMakerTrustee(id: String, privateShares: scala.collection.mutable.Map[String, String] = scala.collection.mutable.Map()) {
@@ -316,7 +226,6 @@ case class KeyMakerTrustee(id: String, privateShares: scala.collection.mutable.M
     KeyMaker.partialDecrypt(votes, secretKey.convertToBigInteger, id, e.state.cSettings)
   }
 }
-
 
 case class MixerTrustee(id: String) {
   def shuffle(e: Election[_, Mixing[_]]) = {
