@@ -55,22 +55,25 @@ import ch.bfh.unicrypt.math.function.interfaces.Function
 import java.nio.ByteOrder
 import java.nio.charset.Charset
 
-case class EncryptionKeyShareDTO(sigmaProofDTO: SigmaProofDTO, keyShare: String, privateKey: String)
-case class SigmaProofDTO(commitment: String, challenge: String, response: String)
-case class PartialDecryptionDTO(partialDecryptions: Seq[Element[_]], proofDTO: SigmaProofDTO)
 // case class CryptoSettings(group: Group[_], generator: Element[_])
 case class CryptoSettings(group: GStarModSafePrime, generator: Element[_])
+
+case class EncryptionKeyShareDTO(sigmaProofDTO: SigmaProofDTO, keyShare: String)
+case class PartialDecryptionDTO(partialDecryptions: Seq[Element[_]], proofDTO: SigmaProofDTO)
+case class SigmaProofDTO(commitment: String, challenge: String, response: String)
+
+case class ShuffleResultDTO(shuffleProof: ShuffleProofDTO, votes: Seq[String])
 case class PermutationProofDTO(commitment: String, challenge: String, response: String,
   bridingCommitments: Seq[String], eValues: Seq[String])
 case class MixProofDTO(commitment: String, challenge: String, response: String, eValues: Seq[String])
 case class ShuffleProofDTO(mixProof: MixProofDTO, permutationProof: PermutationProofDTO, permutationCommitment: String)
-case class ShuffleResultDTO(shuffleProof: ShuffleProofDTO, votes: Seq[String])
+
 
 object CryptoTest extends App {
 
   val grp = GStarModSafePrime.getInstance(167)
   // val grp = GStarModSafePrime.getInstance(new BigInteger("170141183460469231731687303715884114527"))
-  // val grp = GStarModSafePrime.getFirstInstance(102)
+  // val grp = GStarModSafePrime.getFirstInstance(1024)
 
   val gen = grp.getDefaultGenerator()
   val Csettings = CryptoSettings(grp, gen)
@@ -86,12 +89,12 @@ object CryptoTest extends App {
     val keyPair = elGamal.getKeyPairGenerator().generateKeyPair()
     val privateKey = keyPair.getFirst()
     val publicKey = keyPair.getSecond()
-    val votes = getRandomVotes(10, Csettings.generator, publicKey)
+    val votes = Util.getRandomVotes(10, Csettings.generator, publicKey)
 
-    val shuffleResult = Mixer.shuffle(Verifier.tupleFromSeq(votes), publicKey, Csettings, "proverId")
+    val shuffleResult = Mixer.shuffle(Util.tupleFromSeq(votes), publicKey, Csettings, "proverId")
     val shuffled = shuffleResult.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
 
-    Verifier.verifyShuffle(Verifier.tupleFromSeq(votes), Verifier.tupleFromSeq(shuffled),
+    Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),
       shuffleResult.shuffleProof, "proverId", publicKey, Csettings)
 
     shuffled.foreach { v =>
@@ -101,21 +104,23 @@ object CryptoTest extends App {
   }
 
   def testDkgAndJointDecryption() = {
-    var share = KeyMaker.createShare("1", Csettings)
-    addShare(share, "1", Csettings)
-    share = KeyMaker.createShare("2", Csettings)
-    addShare(share, "2", Csettings)
+    val (share, key) = KeyMaker.createShare("1", Csettings)
+    addShare(share, "1", Csettings, key)
+    val (share2, key2) = KeyMaker.createShare("2", Csettings)
+    addShare(share2, "2", Csettings, key2)
     println(s"Shares $shares")
     val publicKey = combineShares(shares, Csettings)
 
-    val ciphertexts = getRandomVotes(10, Csettings.generator, publicKey)
+    val ciphertexts = Util.getRandomVotes(10, Csettings.generator, publicKey)
 
     // a^-x1
     val elementsOne = KeyMaker.partialDecrypt(ciphertexts, privates(0).convertToBigInteger, "0", Csettings)
-    Verifier.verifyPartialDecryptions(elementsOne, ciphertexts, Csettings, "0", shares(0))
+    var ok = Verifier.verifyPartialDecryptions(elementsOne, ciphertexts, Csettings, "0", shares(0))
+    if(!ok) throw new Exception()
     // a^-x2
     val elementsTwo = KeyMaker.partialDecrypt(ciphertexts, privates(1).convertToBigInteger, "1", Csettings)
-    Verifier.verifyPartialDecryptions(elementsTwo, ciphertexts, Csettings, "1", shares(1))
+    ok = Verifier.verifyPartialDecryptions(elementsTwo, ciphertexts, Csettings, "1", shares(1))
+    if(!ok) throw new Exception()
 
     println(s"partial decrypts one ****\n$elementsOne")
     println(s"partial decrypts two ****\n $elementsTwo")
@@ -139,14 +144,14 @@ object CryptoTest extends App {
     encKey
   }
 
-  def addShare(encryptionKeyShare: EncryptionKeyShareDTO, proverId: String, CSettings: CryptoSettings) = {
+  def addShare(encryptionKeyShare: EncryptionKeyShareDTO, proverId: String, CSettings: CryptoSettings, privateK: String) = {
     val result = Verifier.verifyKeyShare(encryptionKeyShare, Csettings, proverId: String)
     if(result) {
       val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
       val keyPairGen: KeyPairGenerator = elGamal.getKeyPairGenerator()
       val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(encryptionKeyShare.keyShare)
       shares += publicKey
-      val privateKey = keyPairGen.getPrivateKeySpace().getElementFrom(encryptionKeyShare.privateKey)
+      val privateKey = keyPairGen.getPrivateKeySpace().getElementFrom(privateK)
 
       privates += privateKey
       println(s"Share added $publicKey $privateKey")
@@ -156,25 +161,11 @@ object CryptoTest extends App {
       throw new Exception("********** Share failed verification")
     }
   }
-
-  def getRandomVotes(size: Int, generator: Element[_], publicKey: Element[_]) = {
-    val elGamal = ElGamalEncryptionScheme.getInstance(generator)
-
-    (1 to size).map { _ =>
-      // we are getting random elements from G_q, if we want to encode general elements we need to use an encoder
-      // see ElGamalEncryptionExample.example2
-      // val encoder = ZModToGStarModSafePrimeEncoder.getInstance(cyclicGroup)
-      val element = elGamal.getMessageSpace().getRandomElement()
-      System.out.println(s"getRandomVotes: plaintext $element")
-      elGamal.encrypt(publicKey, element)
-    }
-  }
-
 }
 
 object KeyMaker extends ProofSettings {
 
-  def createShare(tallier: String, Csettings: CryptoSettings) = {
+  def createShare(proverId: String, Csettings: CryptoSettings) = {
 
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
 
@@ -184,7 +175,7 @@ object KeyMaker extends ProofSettings {
     val publicKey = keyPair.getSecond()
 
     val function = kpg.getPublicKeyGenerationFunction()
-    val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(tallier)
+    val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
 
     val challengeGenerator: SigmaChallengeGenerator  = FiatShamirSigmaChallengeGenerator.getInstance(
       Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
@@ -202,15 +193,16 @@ object KeyMaker extends ProofSettings {
     }
 
     val sigmaProofDTO = SigmaProofDTO(pg.getCommitment(proof).convertToString(), pg.getChallenge(proof).convertToString(), pg.getResponse(proof).convertToString())
-      EncryptionKeyShareDTO(sigmaProofDTO, publicKey.convertToBigInteger().toString(10), privateKey.convertToBigInteger().toString)
+
+    (EncryptionKeyShareDTO(sigmaProofDTO, publicKey.convertToBigInteger().toString(10)), privateKey.convertToBigInteger().toString)
   }
 
-  def partialDecrypt(votes: Seq[Pair], privateKey: BigInteger, proverId: String, Csettings: CryptoSettings) = {
+  def partialDecrypt(votes: Seq[Tuple], privateKey: BigInteger, proverId: String, Csettings: CryptoSettings) = {
 
     val encryptionGenerator = Csettings.generator
 
     val secretKey = Csettings.group.getZModOrder().getElementFrom(privateKey)
-    println(s"PartialDecrypt: secretKey $secretKey")
+    println(s"PartialDecrypt: keymaker using secretKey $secretKey")
     val decryptionKey = secretKey.invert()
     val publicKey = encryptionGenerator.selfApply(secretKey)
 
@@ -223,9 +215,8 @@ object KeyMaker extends ProofSettings {
       }
       // println(s"partial decryption: $element")
       val function: GeneratorFunction = GeneratorFunction.getInstance(element)
-      // generatorFunctions += function
       val partialDecryption = function.apply(decryptionKey).asInstanceOf[GStarModElement]
-      // partialDecryptions.add(partialDecryption)
+
       (partialDecryption, function)
     }.unzip
 
@@ -234,7 +225,7 @@ object KeyMaker extends ProofSettings {
     PartialDecryptionDTO(lists._1, proofDTO)
   }
 
-  def createProof(proverId: String, secretKey: Element[_],
+  private def createProof(proverId: String, secretKey: Element[_],
       publicKey: Element[_], partialDecryptions: Seq[Element[_]], generatorFunctions: Seq[Function], Csettings: CryptoSettings) = {
 
     val encryptionGenerator = Csettings.generator
@@ -271,8 +262,9 @@ object Mixer extends ProofSettings {
 
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
 
-    println("******** CIPHERTEXTS ********")
+    println("===== ciphertexts =====")
     println(ciphertexts)
+    println("===== ciphertexts =====")
 
     val mixer: ReEncryptionMixer = ReEncryptionMixer.getInstance(elGamal, publicKey, ciphertexts.getArity())
     val psi: PermutationElement = mixer.getPermutationGroup().getRandomElement()
@@ -281,6 +273,10 @@ object Mixer extends ProofSettings {
 
     // Perfom shuffle
     val shuffledVs: Tuple = mixer.shuffle(ciphertexts, psi, rs)
+
+    println("===== shuffled  =====")
+    println(shuffledVs)
+    println("===== shuffled  =====")
 
     // Create sigma challenge generator
     val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
@@ -339,7 +335,6 @@ object Mixer extends ProofSettings {
     val shuffleProofDTO = ShuffleProofDTO(mixProofDTO, permputationProofDTO, permutationCommitment.convertToString)
 
     // println(s"Mix proof *****\n$mixProof")
-
     // println(shuffleProofDTO)
 
     val pcps2: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
@@ -355,7 +350,7 @@ object Mixer extends ProofSettings {
 
     println("Verification ok: " + (v1 && v2 && v3))
 
-    val votesString = Verifier.seqFromTuple(shuffledVs).map( x => x.convertToString )
+    val votesString = Util.seqFromTuple(shuffledVs).map( x => x.convertToString )
     ShuffleResultDTO(shuffleProofDTO, votesString)
   }
 }

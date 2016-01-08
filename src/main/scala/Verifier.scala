@@ -91,18 +91,21 @@ object Verifier extends ProofSettings {
         = pg.getResponseSpace().getElementFrom(share.sigmaProofDTO.response)
 
     val proofTriple: Triple = Triple.getInstance(commitment, challenge, response)
+    println("===== Share verification =====")
     println("Commitment: " + commitment + " challenge:" + challenge + " response: " + response)
     println("ZKP for shared key: Challenge-Space: " + pg.getChallengeSpace() + "Commitment-Space: " + pg.getCommitmentSpace() + "public Key:" + publicKey)
+
     val result = pg.verify(proofTriple, publicKey)
     println(s"Verifier: verifyKeyShare......$result")
+    println("===== Share verification =====")
     result
   }
 
-  def verifyPartialDecryptions(pd: PartialDecryptionDTO, votes: Seq[Pair], Csettings: CryptoSettings,
+  def verifyPartialDecryptions(pd: PartialDecryptionDTO, votes: Seq[Tuple], Csettings: CryptoSettings,
       proverId: String, publicKey: Element[_]) = {
 
     val encryptionGenerator = Csettings.generator
-    val generatorFunctions = votes.map { x: Pair =>
+    val generatorFunctions = votes.map { x: Tuple =>
       GeneratorFunction.getInstance(x.getFirst)
     }
 
@@ -129,7 +132,12 @@ object Verifier extends ProofSettings {
 
     val proof: Triple = Triple.getInstance(commitment, challenge, response)
     val result = proofSystem.verify(proof, publicInput)
+    println("===== decryption verification =====")
+    println("Commitment: " + commitment + " challenge:" + challenge + " response: " + response)
     println(s"Verifier: verifyPartialDecryptions $result")
+    println("===== decryption verification =====")
+
+    result
   }
 
   def verifyShuffle(votes: Tuple, shuffledVotes: Tuple, shuffleProof: ShuffleProofDTO,
@@ -179,14 +187,16 @@ object Verifier extends ProofSettings {
       Csettings.group.getZModOrder.getElementFrom(x)
     }
 
-    val permutationProof: Tuple = Tuple.getInstance(tupleFromSeq(eValues), tupleFromSeq(bridgingCommitments),
+    val permutationProof: Tuple = Tuple.getInstance(Util.tupleFromSeq(eValues), Util.tupleFromSeq(bridgingCommitments),
       commitment1, challenge1, response1)
-    val mixProof: Tuple = Tuple.getInstance(tupleFromSeq(eValues2), commitment2, challenge2, response2)
+    val mixProof: Tuple = Tuple.getInstance(Util.tupleFromSeq(eValues2), commitment2, challenge2, response2)
 
-    println(">>>>>>>>>>")
+    println("===== Permutation proof =====")
     println(permutationProof)
-    println(">>>>>>>>>>")
+    println("===== Permutation proof =====")
+    println("===== Mix proof =====")
     println(mixProof)
+    println("===== Mix proof =====")
 
     val publicInputShuffle: Tuple = Tuple.getInstance(permutationCommitment, votes, shuffledVotes)
     val publicInputPermutation = permutationCommitment
@@ -200,8 +210,12 @@ object Verifier extends ProofSettings {
 
     val result = v1 && v2 && v3
     println(s"Verifier: verifyShuffle: $result")
-  }
 
+    result
+  }
+}
+
+object Util {
   def tupleFromSeq(items: Seq[Element[_]]) = {
     var tuple = Tuple.getInstance()
     items.foreach(v => tuple = tuple.add(v))
@@ -213,5 +227,24 @@ object Verifier extends ProofSettings {
     import scala.collection.JavaConversions._
 
     tuple.map{ x => x }.toSeq
+  }
+
+  def getRandomVotes(size: Int, generator: Element[_], publicKey: Element[_]) = {
+    val elGamal = ElGamalEncryptionScheme.getInstance(generator)
+
+    (1 to size).map { _ =>
+      // we are getting random elements from G_q, if we want to encode general elements we need to use an encoder
+      // see ElGamalEncryptionExample.example2
+      // val encoder = ZModToGStarModSafePrimeEncoder.getInstance(cyclicGroup)
+      val element = elGamal.getMessageSpace().getRandomElement()
+      println(s"* plaintext $element")
+      elGamal.encrypt(publicKey, element)
+    }
+  }
+
+  def getPublicKeyFromString(publicKey: String, generator: Element[_]) = {
+    val elGamal = ElGamalEncryptionScheme.getInstance(generator)
+    val keyPairGen = elGamal.getKeyPairGenerator()
+    keyPairGen.getPublicKeySpace().getElementFrom(publicKey)
   }
 }
