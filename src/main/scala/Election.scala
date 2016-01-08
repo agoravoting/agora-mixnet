@@ -10,6 +10,8 @@ import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
 import ch.bfh.unicrypt.math.algebra.general.classes.Pair
 
+case class CryptoSettings(group: GStarModSafePrime, generator: Element[_])
+
 trait HasHistory {
   def prev: ElectionState
 
@@ -116,10 +118,11 @@ object Election {
     }
     mix.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
 
-    println(s"verifying shuffle from $votes to $mix")
+    println(s"Verifying shuffle..")
     val ok = Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),
       mix.shuffleProof, proverId, publicKey, in.state.cSettings)
     if(!ok) throw new Exception()
+    println(s"Verifying shuffle..Ok")
 
     new Election[W, Mixing[Succ[T]]](Mixing[Succ[T]](in.state.mixes :+ mix, in.state))
   }
@@ -138,6 +141,7 @@ object Election {
     println("Adding decryption...")
 
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
+    println("Convert votes...")
     val votes = in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v))
 
     val sharesMap = in.state.allShares.toMap
@@ -152,11 +156,11 @@ object Election {
   def combineDecryptions[W <: Nat](in: Election[W, Decryptions[W]]) = {
     println("Combining decryptions...")
 
-
     val combined = in.state.decryptions.map( x => x.partialDecryptions ).reduce { (a, b) =>
       (a zip b).map(c => c._1.apply(c._2))
     }
-    println(s"a^-x $combined")
+    println("Combining decryptions...Ok")
+    // println(s"a^-x $combined")
 
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
     val votes = in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v).asInstanceOf[Pair] )
@@ -174,7 +178,7 @@ object ElectionTest extends App {
   val m1 = MixerTrustee("mixer one")
   val m2 = MixerTrustee("mixer two")
 
-  val start = Election.start[_2]("my election", 8)
+  val start = Election.start[_2]("my election", 2048)
 
   val readyForShares = Election.startShares(start)
 
@@ -184,7 +188,7 @@ object ElectionTest extends App {
   val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
 
   val startVotes = Election.startVotes(combined)
-  val votes = Util.getRandomVotes(5, combined.state.cSettings.generator, publicKey)
+  val votes = Util.getRandomVotes(10, combined.state.cSettings.generator, publicKey)
   var electionGettingVotes = startVotes
   votes.foreach { v =>
     electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
@@ -205,14 +209,15 @@ object ElectionTest extends App {
   val partialTwo = Election.addDecryption(partialOne, pd2, k2.id)
 
   val electionDone = Election.combineDecryptions(partialTwo)
-  println("===== Election Dump =====")
-  println(electionDone)
-  println("===== Election Dump =====")
-  println(s"Decrypted votes ${electionDone.state.decrypted}")
+  // println("===== Election Dump =====")
+  // println(electionDone)
+  // println("===== Election Dump =====")
+  // println(s"Decrypted votes ${electionDone.state.decrypted}")
 }
 
 case class KeyMakerTrustee(id: String, privateShares: scala.collection.mutable.Map[String, String] = scala.collection.mutable.Map()) {
   def createShare(e: Election[_, Shares[_]]) = {
+    println("KeyMaker creating share..")
     val (encryptionKeyShareDTO, privateKey) = KeyMaker.createShare(id, e.state.cSettings)
     privateShares += (e.state.id -> privateKey)
     encryptionKeyShareDTO
@@ -229,13 +234,16 @@ case class KeyMakerTrustee(id: String, privateShares: scala.collection.mutable.M
 
 case class MixerTrustee(id: String) {
   def shuffle(e: Election[_, Mixing[_]]) = {
+    println("Mixer..")
     val elGamal = ElGamalEncryptionScheme.getInstance(e.state.cSettings.generator)
     val keyPairGen = elGamal.getKeyPairGenerator()
     val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(e.state.publicKey)
+    println("Convert votes..")
     val votes = e.state match {
       case s: Mixing[_0] => e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
       case _ => e.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
     }
+    println("Mixer creating shuffle..")
     Mixer.shuffle(Util.tupleFromSeq(votes), publicKey, e.state.cSettings, id)
   }
 }
