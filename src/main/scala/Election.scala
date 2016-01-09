@@ -9,6 +9,9 @@ import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
 import ch.bfh.unicrypt.math.algebra.general.classes.Pair
+import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
+import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
+import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
 
 case class CryptoSettings(group: GStarModSafePrime, generator: Element[_])
 
@@ -188,7 +191,8 @@ object ElectionTest extends App {
   val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
 
   val startVotes = Election.startVotes(combined)
-  val votes = Util.getRandomVotes(10, combined.state.cSettings.generator, publicKey)
+  val plaintexts = Seq.fill(10)(scala.util.Random.nextInt(10))
+  val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
   var electionGettingVotes = startVotes
   votes.foreach { v =>
     electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
@@ -212,7 +216,9 @@ object ElectionTest extends App {
   // println("===== Election Dump =====")
   // println(electionDone)
   // println("===== Election Dump =====")
-  // println(s"Decrypted votes ${electionDone.state.decrypted}")
+  println(s"Plaintexts $plaintexts")
+  println(s"Decrypted ${electionDone.state.decrypted.map(_.toInt - 1)}")
+
 }
 
 case class KeyMakerTrustee(id: String, privateShares: scala.collection.mutable.Map[String, String] = scala.collection.mutable.Map()) {
@@ -228,7 +234,7 @@ case class KeyMakerTrustee(id: String, privateShares: scala.collection.mutable.M
     val votes = e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v))
     val secretKey = e.state.cSettings.group.getZModOrder().getElementFrom(privateShares(e.state.id))
 
-    KeyMaker.partialDecrypt(votes, secretKey.convertToBigInteger, id, e.state.cSettings)
+    KeyMaker.partialDecrypt(votes, secretKey, id, e.state.cSettings)
   }
 }
 
@@ -245,5 +251,52 @@ case class MixerTrustee(id: String) {
     }
     println("Mixer creating shuffle..")
     Mixer.shuffle(Util.tupleFromSeq(votes), publicKey, e.state.cSettings, id)
+  }
+}
+
+object Util {
+  def tupleFromSeq(items: Seq[Element[_]]) = {
+    var tuple = Tuple.getInstance()
+    items.foreach(v => tuple = tuple.add(v))
+
+    tuple
+  }
+
+  def seqFromTuple(tuple: Tuple): Seq[Element[_]] = {
+    import scala.collection.JavaConversions._
+
+    tuple.map{ x => x }.toSeq
+  }
+
+  def getRandomVotes(size: Int, generator: Element[_], publicKey: Element[_]) = {
+    val elGamal = ElGamalEncryptionScheme.getInstance(generator)
+
+    (1 to size).map { _ =>
+      // we are getting random elements from G_q, if we want to encode general elements we need to use an encoder
+      // see ElGamalEncryptionExample.example2
+      // val encoder = ZModToGStarModSafePrimeEncoder.getInstance(cyclicGroup)
+      val element = elGamal.getMessageSpace().getRandomElement()
+      println(s"* plaintext $element")
+      elGamal.encrypt(publicKey, element)
+    }
+  }
+
+  def encryptVotes(plaintexts: Seq[Int], cSettings: CryptoSettings, publicKey: Element[_]) = {
+    val elGamal = ElGamalEncryptionScheme.getInstance(cSettings.generator)
+    val encoder = ZModPrimeToGStarModSafePrime.getInstance(cSettings.group)
+
+    plaintexts.map { p =>
+      // we are getting random elements from G_q, if we want to encode general elements we need to use an encoder
+      val message = encoder.getDomain().getElementFrom(p)
+      val encodedMessage = encoder.encode(message)
+      elGamal.encrypt(publicKey, encodedMessage)
+    }
+  }
+
+
+  def getPublicKeyFromString(publicKey: String, generator: Element[_]) = {
+    val elGamal = ElGamalEncryptionScheme.getInstance(generator)
+    val keyPairGen = elGamal.getKeyPairGenerator()
+    keyPairGen.getPublicKeySpace().getElementFrom(publicKey)
   }
 }

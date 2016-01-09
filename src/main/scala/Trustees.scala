@@ -89,8 +89,6 @@ object KeyMaker extends ProofSettings {
       throw new Exception("Failed verifying proof")
     } else {
       println("createShare: verified share ok")
-      // println("Commitment: " + pg.getChallenge(proof) + " challenge:" + pg.getCommitment(proof) + " response: " + pg.getResponse(proof))
-      // println("ZKP for shared key: Challenge-Space: " + pg.getChallengeSpace() + "Commitment-Space: " + pg.getCommitmentSpace() + "public Key:" + publicKey)
     }
 
     val sigmaProofDTO = SigmaProofDTO(pg.getCommitment(proof).convertToString(), pg.getChallenge(proof).convertToString(), pg.getResponse(proof).convertToString())
@@ -98,11 +96,11 @@ object KeyMaker extends ProofSettings {
     (EncryptionKeyShareDTO(sigmaProofDTO, publicKey.convertToBigInteger().toString(10)), privateKey.convertToBigInteger().toString)
   }
 
-  def partialDecrypt(votes: Seq[Tuple], privateKey: BigInteger, proverId: String, Csettings: CryptoSettings) = {
+  def partialDecrypt(votes: Seq[Tuple], privateKey: Element[_], proverId: String, Csettings: CryptoSettings) = {
 
     val encryptionGenerator = Csettings.generator
 
-    val secretKey = Csettings.group.getZModOrder().getElementFrom(privateKey)
+    val secretKey = Csettings.group.getZModOrder().getElementFrom(privateKey.convertToBigInteger)
     println(s"PartialDecrypt: keymaker using secretKey $secretKey")
     val decryptionKey = secretKey.invert()
     val publicKey = encryptionGenerator.selfApply(secretKey)
@@ -114,7 +112,6 @@ object KeyMaker extends ProofSettings {
         // FIXME
         println("********** Crash incoming!")
       }
-      // println(s"partial decryption: $element")
       val function: GeneratorFunction = GeneratorFunction.getInstance(element)
       val partialDecryption = function.apply(decryptionKey).asInstanceOf[GStarModElement]
 
@@ -149,8 +146,7 @@ object KeyMaker extends ProofSettings {
     // Generate and verify proof
     val proof: Triple = proofSystem.generate(privateInput, publicInput)
     val result = proofSystem.verify(proof, publicInput)
-    // FIXME do something if verify broken
-    // println(s"Decryption proof $result")
+    if(!result) throw new Exception
 
     SigmaProofDTO(proofSystem.getCommitment(proof).convertToString(), proofSystem.getChallenge(proof).convertToString(), proofSystem.getResponse(proof).convertToString())
   }
@@ -170,8 +166,10 @@ object Mixer extends ProofSettings {
     val mixer: ReEncryptionMixer = ReEncryptionMixer.getInstance(elGamal, publicKey, ciphertexts.getArity())
     val psi: PermutationElement = mixer.getPermutationGroup().getRandomElement()
 
+    println("Mixer: randomizations..")
     val rs: Tuple = mixer.generateRandomizations()
 
+    println("Mixer: shuffle..")
     // Perfom shuffle
     val shuffledVs: Tuple = mixer.shuffle(ciphertexts, psi, rs)
 
@@ -179,6 +177,7 @@ object Mixer extends ProofSettings {
     // println(shuffledVs)
     // println("===== shuffled  =====")
 
+    println("Mixer: generators..")
     // Create sigma challenge generator
     val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
 
@@ -189,7 +188,7 @@ object Mixer extends ProofSettings {
     val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
         Csettings.group.getZModOrder(), ciphertexts.getArity())
 
-    // val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(group, ciphertexts.getArity())
+    println("Mixer: permutation proof..")
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, ciphertexts.getArity())
     val permutationCommitmentRandomizations: Tuple = pcs.getRandomizationSpace().getRandomElement()
     val permutationCommitment: Tuple = pcs.commit(psi, permutationCommitmentRandomizations)
@@ -201,8 +200,10 @@ object Mixer extends ProofSettings {
     // Create psi commitment proof
     val privateInputPermutation: Pair = Pair.getInstance(psi, permutationCommitmentRandomizations)
     val publicInputPermutation = permutationCommitment
+    println("Mixer: permutation proof, generating..")
     val permutationProof: Tuple = pcps.generate(privateInputPermutation, publicInputPermutation)
 
+    println("Mixer: shuffle proof..")
     // 2. Shuffle Proof
     //------------------
     // Create shuffle proof system
@@ -212,6 +213,7 @@ object Mixer extends ProofSettings {
     val privateInputShuffle: Tuple = Tuple.getInstance(psi, permutationCommitmentRandomizations, rs)
     val publicInputShuffle: Tuple = Tuple.getInstance(permutationCommitment, ciphertexts, shuffledVs)
 
+    println("Mixer: shuffle proof, generating..")
     // Create shuffle proof
     val mixProof: Tuple = spg.generate(privateInputShuffle, publicInputShuffle)
 

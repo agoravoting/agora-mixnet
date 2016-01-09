@@ -47,12 +47,12 @@ import ch.bfh.unicrypt.crypto.mixer.classes.ReEncryptionMixer
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModElement
 import ch.bfh.unicrypt.crypto.keygenerator.interfaces.KeyPairGenerator
 import ch.bfh.unicrypt.math.function.classes.GeneratorFunction
-import ch.bfh.unicrypt.math.function.classes.CompositeFunction;
-import ch.bfh.unicrypt.math.function.classes.GeneratorFunction;
-import ch.bfh.unicrypt.math.function.classes.InvertFunction;
-import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction;
-import ch.bfh.unicrypt.math.function.classes.ProductFunction;
-import ch.bfh.unicrypt.math.function.interfaces.Function;
+import ch.bfh.unicrypt.math.function.classes.CompositeFunction
+import ch.bfh.unicrypt.math.function.classes.GeneratorFunction
+import ch.bfh.unicrypt.math.function.classes.InvertFunction
+import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
+import ch.bfh.unicrypt.math.function.classes.ProductFunction
+import ch.bfh.unicrypt.math.function.interfaces.Function
 
 import java.nio.ByteOrder
 import java.nio.charset.Charset
@@ -177,15 +177,17 @@ object Verifier extends ProofSettings {
     val permutationProofDTO = shuffleProof.permutationProof
     val mixProofDTO = shuffleProof.mixProof
 
-    println("Converting bridging commitments and evalues..")
+    println("Converting bridging commitments..")
     // Assume bridging commitments: GStarmod
     val bridgingCommitments = permutationProofDTO.bridingCommitments.map { x =>
       Csettings.group.getElementFrom(x)
     }
+    println("Converting permutation e values..")
     // Assume evalues: ZMod
     val eValues = permutationProofDTO.eValues.map { x =>
       Csettings.group.getZModOrder.getElementFrom(x)
     }
+    println("Converting shuffle e values..")
     val eValues2 = mixProofDTO.eValues.map { x =>
       Csettings.group.getZModOrder.getElementFrom(x)
     }
@@ -218,39 +220,5 @@ object Verifier extends ProofSettings {
     println(s"Verifier: verifyShuffle: $result")
 
     result
-  }
-}
-
-object Util {
-  def tupleFromSeq(items: Seq[Element[_]]) = {
-    var tuple = Tuple.getInstance()
-    items.foreach(v => tuple = tuple.add(v))
-
-    tuple
-  }
-
-  def seqFromTuple(tuple: Tuple): Seq[Element[_]] = {
-    import scala.collection.JavaConversions._
-
-    tuple.map{ x => x }.toSeq
-  }
-
-  def getRandomVotes(size: Int, generator: Element[_], publicKey: Element[_]) = {
-    val elGamal = ElGamalEncryptionScheme.getInstance(generator)
-
-    (1 to size).map { _ =>
-      // we are getting random elements from G_q, if we want to encode general elements we need to use an encoder
-      // see ElGamalEncryptionExample.example2
-      // val encoder = ZModToGStarModSafePrimeEncoder.getInstance(cyclicGroup)
-      val element = elGamal.getMessageSpace().getRandomElement()
-      println(s"* plaintext $element")
-      elGamal.encrypt(publicKey, element)
-    }
-  }
-
-  def getPublicKeyFromString(publicKey: String, generator: Element[_]) = {
-    val elGamal = ElGamalEncryptionScheme.getInstance(generator)
-    val keyPairGen = elGamal.getKeyPairGenerator()
-    keyPairGen.getPublicKeySpace().getElementFrom(publicKey)
   }
 }

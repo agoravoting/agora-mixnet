@@ -99,11 +99,11 @@ object CryptoTest extends App {
     val ciphertexts = Util.getRandomVotes(10, Csettings.generator, publicKey)
 
     // a^-x1
-    val elementsOne = KeyMaker.partialDecrypt(ciphertexts, privates(0).convertToBigInteger, "0", Csettings)
+    val elementsOne = KeyMaker.partialDecrypt(ciphertexts, privates(0), "0", Csettings)
     var ok = Verifier.verifyPartialDecryptions(elementsOne, ciphertexts, Csettings, "0", shares(0))
     if(!ok) throw new Exception()
     // a^-x2
-    val elementsTwo = KeyMaker.partialDecrypt(ciphertexts, privates(1).convertToBigInteger, "1", Csettings)
+    val elementsTwo = KeyMaker.partialDecrypt(ciphertexts, privates(1), "1", Csettings)
     ok = Verifier.verifyPartialDecryptions(elementsTwo, ciphertexts, Csettings, "1", shares(1))
     if(!ok) throw new Exception()
 
