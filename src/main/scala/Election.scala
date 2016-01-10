@@ -16,7 +16,7 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
 /**
  * An election process DEMO
  *
- * Simualtes the steps in the election from public key generation all the way to decryption
+ * Simulates the steps in the election from public key generation all the way to decryption
  *
  * Things that are included in this demo are:
  *
