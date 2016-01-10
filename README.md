@@ -1,4 +1,4 @@
-Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus code/design from [univote](https://github.com/bfh-evg/univote2)
+Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus code/design from [univote](https://github.com/bfh-evg/univote2). Copied from [Election.scala](https://github.com/agoravoting/sandbox/blob/master/src/main/scala/Election.scala):
 
     /**
      * An election process DEMO
