@@ -14,7 +14,7 @@ import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
 import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
 
 /**
- * An eletion process DEMO
+ * An election process DEMO
  *
  * Simualates all the steps in the election from public key generation all the way to decryption
  *
