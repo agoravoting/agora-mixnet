@@ -60,7 +60,7 @@ import scala.collection.mutable.{Map => MutableMap}
  *
  * Simply mixes in the KeyMaker trait (below) as well as managing an identity and private shares
  */
-case class KeyMakerTrustee(id: String, privateShares: MutableMap[String, String] = MutableMap()) extends KeyMaker {
+class KeyMakerTrustee(val id: String, privateShares: MutableMap[String, String] = MutableMap()) extends KeyMaker {
   def createKeyShare(e: Election[_, Shares[_]]) = {
     println("KeyMaker creating share..")
     // val (encryptionKeyShareDTO, privateKey) = KeyMaker.createShare(id, e.state.cSettings)
@@ -84,7 +84,7 @@ case class KeyMakerTrustee(id: String, privateShares: MutableMap[String, String]
  *
  * Simply mixes in the Mixer trait (below) as well as managing an identity
  */
-case class MixerTrustee(id: String) extends Mixer {
+class MixerTrustee(val id: String) extends Mixer {
   def shuffleVotes(e: Election[_, Mixing[_]]) = {
     println("Mixer..")
     val elGamal = ElGamalEncryptionScheme.getInstance(e.state.cSettings.generator)

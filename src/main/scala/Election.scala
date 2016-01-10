@@ -37,10 +37,8 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  * Proofs of knowledge of plaintext and verification in vote casting
  *
  *
- * An election is modeled as a typed, purely functional sequential state machine.
- * We use shapeless encoding of natural numbers to provide length-typed lists (aka dependent types)
- *
- * This has two benefits
+ * An election is modeled as a typed, purely functional sequential state machine. We use shapeless
+ * encoding of natural numbers to provide length-typed lists (aka dependent types), that way we get:
  *
  * 1) The election process logic is captured by types, so illegal transitions
  *    are caught by the compiler and inconsistent states are not possible
@@ -65,16 +63,16 @@ object ElectionTest extends App {
 
   // create the keymakers
   // these are responsible for distributed key generation and joint decryption
-  val k1 = KeyMakerTrustee("keymaker one")
-  val k2 = KeyMakerTrustee("keymaker two")
+  val k1 = new KeyMakerTrustee("keymaker one")
+  val k2 = new KeyMakerTrustee("keymaker two")
 
   // create the mixers
   // these are responsible for shuffling the votes
-  val m1 = MixerTrustee("mixer one")
-  val m2 = MixerTrustee("mixer two")
+  val m1 = new MixerTrustee("mixer one")
+  val m2 = new MixerTrustee("mixer two")
 
   // create the election,
-  // we are using security level 2, two trustees of each kind
+  // we are using privacy level 2, two trustees of each kind
   // we are 2048 bits for the size of the group modulus
   val start = Election.create[_2]("my election", 2048)
 
@@ -122,8 +120,8 @@ object ElectionTest extends App {
   val mixOne = Election.addMix(startMix, shuffle1, m1.id)
 
   // again for the second trustee..
-  val shuffle2 = m1.shuffleVotes(mixOne)
-  val mixTwo = Election.addMix(mixOne, shuffle2, m1.id)
+  val shuffle2 = m2.shuffleVotes(mixOne)
+  val mixTwo = Election.addMix(mixOne, shuffle2, m2.id)
 
   // we are done mixing
   val stopMix = Election.stopMixing(mixTwo)
@@ -146,13 +144,86 @@ object ElectionTest extends App {
 
   // lets check that everything went well
   println(s"Plaintexts $plaintexts")
-  println(s"Decrypted ${electionDone.state.decrypted.map(_.toInt - 1)}")
+  println(s"Decrypted ${electionDone.state.decrypted}")
+  println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
+}
+
+/**
+ * Same as above but with three trustees
+ *
+ * Note that everything is done the same way except the type parameter _3 and
+ * the number of trustee operations
+ *
+ */
+object ElectionTest3 extends App {
+
+  val k1 = new KeyMakerTrustee("keymaker one")
+  val k2 = new KeyMakerTrustee("keymaker two")
+  val k3 = new KeyMakerTrustee("keymaker three")
+
+  val m1 = new MixerTrustee("mixer one")
+  val m2 = new MixerTrustee("mixer two")
+  val m3 = new MixerTrustee("mixer three")
+
+  // privacy level 3, three trustees of each kind, 64 bits for the size of the group modulus
+  val start = Election.create[_3]("my election", 64)
+
+  val readyForShares = Election.startShares(start)
+
+  val oneShare = Election.addShare(readyForShares, k1.createKeyShare(readyForShares), k1.id)
+  val twoShares = Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
+  val threeShares = Election.addShare(twoShares, k3.createKeyShare(readyForShares), k3.id)
+
+  val combined = Election.combineShares(threeShares)
+
+  val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
+
+  val startVotes = Election.startVotes(combined)
+
+  val plaintexts = Seq.fill(100)(scala.util.Random.nextInt(10))
+
+  val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
+
+  var electionGettingVotes = startVotes
+  votes.foreach { v =>
+    electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
+  }
+
+  val stopVotes = Election.stopVotes(electionGettingVotes)
+
+  val startMix = Election.startMixing(stopVotes)
+
+  val shuffle1 = m1.shuffleVotes(startMix)
+  val mixOne = Election.addMix(startMix, shuffle1, m1.id)
+  val shuffle2 = m2.shuffleVotes(mixOne)
+  val mixTwo = Election.addMix(mixOne, shuffle2, m2.id)
+  val shuffle3 = m3.shuffleVotes(mixTwo)
+  val mixThree = Election.addMix(mixTwo, shuffle3, m3.id)
+
+  val stopMix = Election.stopMixing(mixThree)
+
+  val startDecryptions = Election.startDecryptions(stopMix)
+
+  val pd1 = k1.partialDecryption(startDecryptions)
+  val pd2 = k2.partialDecryption(startDecryptions)
+  val pd3 = k3.partialDecryption(startDecryptions)
+
+  val partialOne = Election.addDecryption(startDecryptions, pd1, k1.id)
+  val partialTwo = Election.addDecryption(partialOne, pd2, k2.id)
+  val partialThree = Election.addDecryption(partialTwo, pd3, k3.id)
+
+  val electionDone = Election.combineDecryptions(partialThree)
+
+  // lets check that everything went well
+  println(s"Plaintexts $plaintexts")
+  println(s"Decrypted ${electionDone.state.decrypted}")
+  println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
 }
 
 /**
  * An election is a typed, purely function state machine with an immutable history
  *
- * The parameters are security level, W, and current state, S
+ * The parameters are privacy level, W, and current state, S
  *
  */
 class Election[+W <: Nat, +S <: ElectionState] private (val state: S) {
@@ -233,7 +304,7 @@ object Election {
 
   // votes are casted here
   def addVotes[W <: Nat](in: Election[W, Votes], vote: String) = {
-    println("Adding vote..")
+    print("+")
     new Election[W, Votes](Votes(vote :: in.state.votes, in.state))
   }
 
@@ -313,8 +384,9 @@ object Election {
     val votes = in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v).asInstanceOf[Pair] )
     // a^-x * b = m
     val decrypted = (votes zip combined).map(c => c._1.getSecond().apply(c._2))
+    val encoder = ZModPrimeToGStarModSafePrime.getInstance(in.state.cSettings.group)
 
-    new Election[W, Decrypted](Decrypted(decrypted.map(_.convertToString), in.state))
+    new Election[W, Decrypted](Decrypted(decrypted.map(encoder.decode(_).convertToString), in.state))
   }
 }
 

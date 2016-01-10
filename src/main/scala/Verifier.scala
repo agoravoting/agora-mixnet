@@ -141,10 +141,8 @@ object Verifier extends ProofSettings {
 
     val proof: Triple = Triple.getInstance(commitment, challenge, response)
     val result = proofSystem.verify(proof, publicInput)
-    println("===== decryption verification =====")
-    // println("Commitment: " + commitment + " challenge:" + challenge + " response: " + response)
+
     println(s"Verifier: verifyPartialDecryptions $result")
-    println("===== decryption verification =====")
 
     result
   }
