@@ -27,7 +27,7 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  *  a) encrypting votes
  *  b) creating keyshares, proofs and verification
  *  c) shuffling votes, proofs and verification
- *  d) joint (partial) decryption and verification
+ *  d) joint (partial) decryption, proofs and verification
  *
  * - Not included
  *

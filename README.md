@@ -14,7 +14,7 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
      *  a) encrypting votes
      *  b) creating keyshares, proofs and verification
      *  c) shuffling votes, proofs and verification
-     *  d) joint (partial) decryption and verification
+     *  d) joint (partial) decryption, proofs and verification
      *
      * - Not included
      *
