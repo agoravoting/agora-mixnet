@@ -57,7 +57,7 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  *    sense a general case of an immutable log
  *
  *
- * The current demo uses two trustees of each kind
+ * This demo uses two trustees, ElectionTest3 below shows how number of trustees generalizes
  */
 object ElectionTest extends App {
 

@@ -3,7 +3,7 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
     /**
      * An election process DEMO
      *
-     * Simulates the steps in the election from public key generation all the way to decryption
+     * Simualtes the steps in the election from public key generation all the way to decryption
      *
      * Things that are included in this demo are:
      *
@@ -24,10 +24,8 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
      * Proofs of knowledge of plaintext and verification in vote casting
      *
      *
-     * An election is modeled as a typed, purely functional sequential state machine.
-     * We use shapeless encoding of natural numbers to provide length-typed lists (aka dependent types)
-     *
-     * This has two benefits
+     * An election is modeled as a typed, purely functional sequential state machine. We use shapeless
+     * encoding of natural numbers to provide length-typed lists (aka dependent types), that way we get:
      *
      * 1) The election process logic is captured by types, so illegal transitions
      *    are caught by the compiler and inconsistent states are not possible
@@ -46,7 +44,7 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
      *    sense a general case of an immutable log
      *
      *
-     * The current demo uses two trustees of each kind
+     * This demo uses two trustees, ElectionTest3 below shows how number of trustees generalizes
      */
     object ElectionTest extends App {
 
