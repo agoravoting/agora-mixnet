@@ -58,6 +58,8 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  */
 object ElectionTest extends App {
 
+  println("Waiting for keystroke..")
+  Console.in.read()
   // create the keymakers
   // these are responsible for distributed key generation and joint decryption
   val k1 = new KeyMakerTrustee("keymaker one")
