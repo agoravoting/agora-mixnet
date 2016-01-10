@@ -56,7 +56,7 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  *    These are checked by the compiler rather than with runtime checks
  *
  * 2) Because the election is purely functional, the entire history of the election
- *    can be reconstructed or replayed. A purely functional datastructure is in this
+ *    can be reconstructed or replayed. A purely functional data structure is in this
  *    sense a general case of an immutable log
  *
  *
