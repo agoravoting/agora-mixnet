@@ -54,6 +54,9 @@ import java.nio.ByteOrder
 import java.nio.charset.Charset
 import java.math.BigInteger
 
+/**
+ * Minimal tests of crypto for key generation, shuffling and joint decryption
+ */
 object CryptoTest extends App {
 
   // val grp = GStarModSafePrime.getInstance(167)
@@ -66,6 +69,9 @@ object CryptoTest extends App {
   val shares = scala.collection.mutable.ArrayBuffer.empty[Element[_]]
   val privates = scala.collection.mutable.ArrayBuffer.empty[Element[_]]
 
+  object KM extends KeyMaker
+  object MX extends Mixer
+
   testDkgAndJointDecryption()
   testShuffle()
 
@@ -76,7 +82,7 @@ object CryptoTest extends App {
     val publicKey = keyPair.getSecond()
     val votes = Util.getRandomVotes(10, Csettings.generator, publicKey)
 
-    val shuffleResult = Mixer.shuffle(Util.tupleFromSeq(votes), publicKey, Csettings, "proverId")
+    val shuffleResult = MX.shuffle(Util.tupleFromSeq(votes), publicKey, Csettings, "proverId")
     val shuffled = shuffleResult.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
 
     Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),
@@ -89,9 +95,9 @@ object CryptoTest extends App {
   }
 
   def testDkgAndJointDecryption() = {
-    val (share, key) = KeyMaker.createShare("1", Csettings)
+    val (share, key) = KM.createShare("1", Csettings)
     addShare(share, "1", Csettings, key)
-    val (share2, key2) = KeyMaker.createShare("2", Csettings)
+    val (share2, key2) = KM.createShare("2", Csettings)
     addShare(share2, "2", Csettings, key2)
     println(s"Shares $shares")
     val publicKey = combineShares(shares, Csettings)
@@ -99,11 +105,11 @@ object CryptoTest extends App {
     val ciphertexts = Util.getRandomVotes(10, Csettings.generator, publicKey)
 
     // a^-x1
-    val elementsOne = KeyMaker.partialDecrypt(ciphertexts, privates(0), "0", Csettings)
+    val elementsOne = KM.partialDecrypt(ciphertexts, privates(0), "0", Csettings)
     var ok = Verifier.verifyPartialDecryptions(elementsOne, ciphertexts, Csettings, "0", shares(0))
     if(!ok) throw new Exception()
     // a^-x2
-    val elementsTwo = KeyMaker.partialDecrypt(ciphertexts, privates(1), "1", Csettings)
+    val elementsTwo = KM.partialDecrypt(ciphertexts, privates(1), "1", Csettings)
     ok = Verifier.verifyPartialDecryptions(elementsTwo, ciphertexts, Csettings, "1", shares(1))
     if(!ok) throw new Exception()
 
@@ -142,7 +148,6 @@ object CryptoTest extends App {
       println(s"Share added $publicKey $privateKey")
     }
     else {
-      //Remove tallier
       throw new Exception("********** Share failed verification")
     }
   }

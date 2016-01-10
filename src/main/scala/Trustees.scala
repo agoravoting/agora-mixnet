@@ -53,18 +53,60 @@ import ch.bfh.unicrypt.math.function.interfaces.Function
 import java.nio.ByteOrder
 import java.nio.charset.Charset
 import java.math.BigInteger
+import scala.collection.mutable.{Map => MutableMap}
 
-case class EncryptionKeyShareDTO(sigmaProofDTO: SigmaProofDTO, keyShare: String)
-case class PartialDecryptionDTO(partialDecryptions: Seq[Element[_]], proofDTO: SigmaProofDTO)
-case class SigmaProofDTO(commitment: String, challenge: String, response: String)
+/**
+ * Represents a key maker trustee
+ *
+ * Simply mixes in the KeyMaker trait (below) as well as managing an identity and private shares
+ */
+case class KeyMakerTrustee(id: String, privateShares: MutableMap[String, String] = MutableMap()) extends KeyMaker {
+  def createKeyShare(e: Election[_, Shares[_]]) = {
+    println("KeyMaker creating share..")
+    // val (encryptionKeyShareDTO, privateKey) = KeyMaker.createShare(id, e.state.cSettings)
+    val (encryptionKeyShareDTO, privateKey) = createShare(id, e.state.cSettings)
+    privateShares += (e.state.id -> privateKey)
+    encryptionKeyShareDTO
+  }
 
-case class ShuffleResultDTO(shuffleProof: ShuffleProofDTO, votes: Seq[String])
-case class PermutationProofDTO(commitment: String, challenge: String, response: String,
-  bridingCommitments: Seq[String], eValues: Seq[String])
-case class MixProofDTO(commitment: String, challenge: String, response: String, eValues: Seq[String])
-case class ShuffleProofDTO(mixProof: MixProofDTO, permutationProof: PermutationProofDTO, permutationCommitment: String)
+  def partialDecryption(e: Election[_, Decryptions[_]]) = {
+    val elGamal = ElGamalEncryptionScheme.getInstance(e.state.cSettings.generator)
+    val votes = e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v))
+    val secretKey = e.state.cSettings.group.getZModOrder().getElementFrom(privateShares(e.state.id))
 
-object KeyMaker extends ProofSettings {
+    partialDecrypt(votes, secretKey, id, e.state.cSettings)
+    // KeyMaker.partialDecrypt(votes, secretKey, id, e.state.cSettings)
+  }
+}
+
+/**
+ * Represents a mixer trustee
+ *
+ * Simply mixes in the Mixer trait (below) as well as managing an identity
+ */
+case class MixerTrustee(id: String) extends Mixer {
+  def shuffleVotes(e: Election[_, Mixing[_]]) = {
+    println("Mixer..")
+    val elGamal = ElGamalEncryptionScheme.getInstance(e.state.cSettings.generator)
+    val keyPairGen = elGamal.getKeyPairGenerator()
+    val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(e.state.publicKey)
+    println("Convert votes..")
+    val votes = e.state match {
+      case s: Mixing[_0] => e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
+      case _ => e.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
+    }
+    println("Mixer creating shuffle..")
+    // Mixer.shuffle(Util.tupleFromSeq(votes), publicKey, e.state.cSettings, id)
+    shuffle(Util.tupleFromSeq(votes), publicKey, e.state.cSettings, id)
+  }
+}
+
+/**
+ * Functions needed for a keymaker trustee
+ *
+ * Creation of key shares and partial decryptions, along with necessary proofs and verification
+ */
+trait KeyMaker extends ProofSettings {
 
   def createShare(proverId: String, Csettings: CryptoSettings) = {
 
@@ -119,6 +161,7 @@ object KeyMaker extends ProofSettings {
     }.unzip
 
     val proofDTO = createProof(proverId, secretKey, publicKey, lists._1, lists._2, Csettings)
+    // FIXME missing verification of own proof
 
     PartialDecryptionDTO(lists._1, proofDTO)
   }
@@ -152,7 +195,12 @@ object KeyMaker extends ProofSettings {
   }
 }
 
-object Mixer extends ProofSettings {
+/**
+ * Functions needed for a mixer trustee
+ *
+ * Creation of shuffles and proofs (Terelius Wikstrom according to Locher-Haenni pdf)
+ */
+trait Mixer extends ProofSettings {
 
   def shuffle(ciphertexts: Tuple, publicKey: Element[_], Csettings: CryptoSettings, proverId: String) = {
     import scala.collection.JavaConversions._

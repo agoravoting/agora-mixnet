@@ -57,6 +57,12 @@ import ch.bfh.unicrypt.math.function.interfaces.Function
 import java.nio.ByteOrder
 import java.nio.charset.Charset
 
+/**
+ * Proof settings common for proof generators and verifiers
+ *
+ * We mix in this trait wherever necessary to ensure consistent use of conversions and hashing
+ *
+ */
 trait ProofSettings {
   val convertMethod = ConvertMethod.getInstance(
         BigIntegerToByteArray.getInstance(ByteOrder.BIG_ENDIAN),
@@ -66,6 +72,10 @@ trait ProofSettings {
   val converter = ByteArrayToBigInteger.getInstance(hashAlgorithm.getByteLength(), 1)
 }
 
+/**
+ * Verification methods for keyshares, shuffles and partial decryptions
+ *
+ */
 object Verifier extends ProofSettings {
 
   def verifyKeyShare(share: EncryptionKeyShareDTO, Csettings: CryptoSettings, proverId: String) = {
