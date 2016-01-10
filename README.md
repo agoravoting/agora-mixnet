@@ -54,6 +54,7 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
       // these are responsible for distributed key generation and joint decryption
       val k1 = KeyMakerTrustee("keymaker one")
       val k2 = KeyMakerTrustee("keymaker two")
+
       // create the mixers
       // these are responsible for shuffling the votes
       val m1 = MixerTrustee("mixer one")
@@ -70,13 +71,11 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
       // each keymaker creates the shares and their proofs, these are added to the election
       val oneShare = Election.addShare(readyForShares, k1.createKeyShare(readyForShares), k1.id)
       val twoShares = Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
-      // the election state contains all the shares, if we tried to add another share
-      // this would be a compiler error:
-      // val threeShares = Election.addShare(oneShare, k2.createShare(readyForShares), k2.id) <-- doesn't compile
 
       // combine the shares from the keymaker trustees, this produces the election public key
       // the compiler makes sure that this is possible because the election state contails all the shares
       val combined = Election.combineShares(twoShares)
+
       // since we are using storing information in election as if it were a bulletin board, all
       // the information is stored in a wire-compatible format, that is strings/jsons whatever
       // we reconstruct the public key as if it had been read from such a format
