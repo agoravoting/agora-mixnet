@@ -165,8 +165,8 @@ object ElectionTest3 extends App {
   val m2 = new MixerTrustee("mixer two")
   val m3 = new MixerTrustee("mixer three")
 
-  // privacy level 3, three trustees of each kind, 64 bits for the size of the group modulus
-  val start = Election.create[_3]("my election", 64)
+  // privacy level 3, three trustees of each kind, 512 bits for the size of the group modulus
+  val start = Election.create[_3]("my election", 512)
 
   val readyForShares = Election.startShares(start)
 
