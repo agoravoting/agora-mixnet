@@ -86,10 +86,9 @@ object ElectionTest extends App {
   val twoShares = Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
 
   // combine the shares from the keymaker trustees, this produces the election public key
-  // the compiler makes sure that this is possible because the election state contails all the shares
   val combined = Election.combineShares(twoShares)
 
-  // since we are using storing information in election as if it were a bulletin board, all
+  // since we are storing information in election as if it were a bulletin board, all
   // the information is stored in a wire-compatible format, that is strings/jsons whatever
   // we reconstruct the public key as if it had been read from such a format
   val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
