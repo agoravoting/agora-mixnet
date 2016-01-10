@@ -53,7 +53,6 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  *    It is a compile-time error to decrypt without shuffling
  *    etc.
  *
- *    These are checked by the compiler rather than with runtime checks
  *
  * 2) Because the election is purely functional, the entire history of the election
  *    can be reconstructed or replayed. A purely functional data structure is in this

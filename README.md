@@ -21,7 +21,7 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
      * Remoting (everything simulated with method calls)
      * Signatures and authentication
      * Error handling
-     * Proofs of knowledge of plaintext and verification for vote casting
+     * Proofs of knowledge of plaintext and verification in vote casting
      *
      *
      * An election is modeled as a typed, purely functional sequential state machine.
@@ -40,7 +40,6 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
      *    It is a compile-time error to decrypt without shuffling
      *    etc.
      *
-     *    These are checked by the compiler rather than with runtime checks
      *
      * 2) Because the election is purely functional, the entire history of the election
      *    can be reconstructed or replayed. A purely functional data structure is in this
