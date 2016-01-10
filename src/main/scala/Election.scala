@@ -34,7 +34,7 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  * Remoting (everything simulated with method calls)
  * Signatures and authentication
  * Error handling
- * Proofs of knowledge of plaintext and verification for voting
+ * Proofs of knowledge of plaintext and verification in vote casting
  *
  *
  * An election is modeled as a typed, purely functional sequential state machine.
