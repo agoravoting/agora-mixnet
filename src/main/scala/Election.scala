@@ -211,7 +211,6 @@ object ElectionTest3 extends App {
 
   val electionDone = Election.combineDecryptions(partialThree)
 
-  // lets check that everything went well
   println(s"Plaintexts $plaintexts")
   println(s"Decrypted ${electionDone.state.decrypted}")
   println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))

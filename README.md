@@ -131,3 +131,74 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
       println(s"Decrypted ${electionDone.state.decrypted}")
       println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
     }
+
+    /**
+     * Same as above but with three trustees
+     *
+     * Note that everything is done the same way except the type parameter _3 and
+     * the number of trustee operations
+     *
+     */
+    object ElectionTest3 extends App {
+
+      val k1 = new KeyMakerTrustee("keymaker one")
+      val k2 = new KeyMakerTrustee("keymaker two")
+      val k3 = new KeyMakerTrustee("keymaker three")
+
+      val m1 = new MixerTrustee("mixer one")
+      val m2 = new MixerTrustee("mixer two")
+      val m3 = new MixerTrustee("mixer three")
+
+      // privacy level 3, three trustees of each kind, 512 bits for the size of the group modulus
+      val start = Election.create[_3]("my election", 512)
+
+      val readyForShares = Election.startShares(start)
+
+      val oneShare = Election.addShare(readyForShares, k1.createKeyShare(readyForShares), k1.id)
+      val twoShares = Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
+      val threeShares = Election.addShare(twoShares, k3.createKeyShare(readyForShares), k3.id)
+
+      val combined = Election.combineShares(threeShares)
+
+      val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
+
+      val startVotes = Election.startVotes(combined)
+
+      val plaintexts = Seq.fill(100)(scala.util.Random.nextInt(10))
+
+      val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
+
+      var electionGettingVotes = startVotes
+      votes.foreach { v =>
+        electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
+      }
+
+      val stopVotes = Election.stopVotes(electionGettingVotes)
+
+      val startMix = Election.startMixing(stopVotes)
+
+      val shuffle1 = m1.shuffleVotes(startMix)
+      val mixOne = Election.addMix(startMix, shuffle1, m1.id)
+      val shuffle2 = m2.shuffleVotes(mixOne)
+      val mixTwo = Election.addMix(mixOne, shuffle2, m2.id)
+      val shuffle3 = m3.shuffleVotes(mixTwo)
+      val mixThree = Election.addMix(mixTwo, shuffle3, m3.id)
+
+      val stopMix = Election.stopMixing(mixThree)
+
+      val startDecryptions = Election.startDecryptions(stopMix)
+
+      val pd1 = k1.partialDecryption(startDecryptions)
+      val pd2 = k2.partialDecryption(startDecryptions)
+      val pd3 = k3.partialDecryption(startDecryptions)
+
+      val partialOne = Election.addDecryption(startDecryptions, pd1, k1.id)
+      val partialTwo = Election.addDecryption(partialOne, pd2, k2.id)
+      val partialThree = Election.addDecryption(partialTwo, pd3, k3.id)
+
+      val electionDone = Election.combineDecryptions(partialThree)
+
+      println(s"Plaintexts $plaintexts")
+      println(s"Decrypted ${electionDone.state.decrypted}")
+      println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
+    }
