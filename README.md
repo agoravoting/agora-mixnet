@@ -1,9 +1,9 @@
 Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus code/design from [univote](https://github.com/bfh-evg/univote2)
 
     /**
-     * An eletion process DEMO
+     * An election process DEMO
      *
-     * Simualates all the steps in the election from public key generation all the way to decryption
+     * Simulates the steps in the election from public key generation all the way to decryption
      *
      * Things that are included in this demo are:
      *
