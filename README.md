@@ -9,7 +9,7 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
      *
      * - A typed purely functional data structure modeling the election process and bulletin board (see below)
      *
-     * - Cryptographiy for
+     * - Cryptography for
      *
      *  a) encrypting votes
      *  b) creating keyshares, proofs and verification

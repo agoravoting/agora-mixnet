@@ -22,7 +22,7 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  *
  * - A typed purely functional data structure modeling the election process and bulletin board (see below)
  *
- * - Cryptographiy for
+ * - Cryptography for
  *
  *  a) encrypting votes
  *  b) creating keyshares, proofs and verification
