@@ -47,16 +47,16 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
 
       // create the keymakers
       // these are responsible for distributed key generation and joint decryption
-      val k1 = KeyMakerTrustee("keymaker one")
-      val k2 = KeyMakerTrustee("keymaker two")
+      val k1 = new KeyMakerTrustee("keymaker one")
+      val k2 = new KeyMakerTrustee("keymaker two")
 
       // create the mixers
       // these are responsible for shuffling the votes
-      val m1 = MixerTrustee("mixer one")
-      val m2 = MixerTrustee("mixer two")
+      val m1 = new MixerTrustee("mixer one")
+      val m2 = new MixerTrustee("mixer two")
 
       // create the election,
-      // we are using security level 2, two trustees of each kind
+      // we are using privacy level 2, two trustees of each kind
       // we are 2048 bits for the size of the group modulus
       val start = Election.create[_2]("my election", 2048)
 
@@ -104,8 +104,8 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
       val mixOne = Election.addMix(startMix, shuffle1, m1.id)
 
       // again for the second trustee..
-      val shuffle2 = m1.shuffleVotes(mixOne)
-      val mixTwo = Election.addMix(mixOne, shuffle2, m1.id)
+      val shuffle2 = m2.shuffleVotes(mixOne)
+      val mixTwo = Election.addMix(mixOne, shuffle2, m2.id)
 
       // we are done mixing
       val stopMix = Election.stopMixing(mixTwo)
@@ -128,5 +128,6 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
 
       // lets check that everything went well
       println(s"Plaintexts $plaintexts")
-      println(s"Decrypted ${electionDone.state.decrypted.map(_.toInt - 1)}")
+      println(s"Decrypted ${electionDone.state.decrypted}")
+      println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
     }
