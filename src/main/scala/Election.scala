@@ -94,7 +94,7 @@ object ElectionTest extends App {
   val startVotes = Election.startVotes(combined)
 
   // generate dummy votes
-  val plaintexts = Seq.fill(10)(scala.util.Random.nextInt(10))
+  val plaintexts = Seq.fill(100)(scala.util.Random.nextInt(10))
 
   // encrypt the votes with the public key of the election
   val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
