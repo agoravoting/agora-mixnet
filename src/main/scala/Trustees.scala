@@ -288,16 +288,11 @@ trait Mixer extends ProofSettings {
     // println(s"Mix proof *****\n$mixProof")
     // println(shuffleProofDTO)
 
-    val pcps2: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
-      Csettings.group, ciphertexts.getArity())
-    val spg2: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, ciphertexts.getArity(), elGamal, publicKey)
-
-    val v1 = pcps2.verify(permutationProof, publicInputPermutation)
+    val v1 = pcps.verify(permutationProof, publicInputPermutation)
     // Verify shuffle proof
-    val v2 = spg2.verify(mixProof, publicInputShuffle)
+    val v2 = spg.verify(mixProof, publicInputShuffle)
     // Verify equality of permutation commitments
-    val v3 =
-      publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
+    val v3 = publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
 
     println("Verification ok: " + (v1 && v2 && v3))
 

@@ -93,18 +93,12 @@ object Verifier extends ProofSettings {
     val pg: PlainPreimageProofSystem = PlainPreimageProofSystem.getInstance(challengeGenerator, proofFunction)
 
     //Fill triple
-    val commitment
-        = pg.getCommitmentSpace().getElementFrom(share.sigmaProofDTO.commitment)
-    val challenge
-        = pg.getChallengeSpace().getElementFrom(share.sigmaProofDTO.challenge)
-    val response
-        = pg.getResponseSpace().getElementFrom(share.sigmaProofDTO.response)
+    val commitment = pg.getCommitmentSpace().getElementFrom(share.sigmaProofDTO.commitment)
+    val challenge = pg.getChallengeSpace().getElementFrom(share.sigmaProofDTO.challenge)
+    val response = pg.getResponseSpace().getElementFrom(share.sigmaProofDTO.response)
 
     val proofTriple: Triple = Triple.getInstance(commitment, challenge, response)
     println("===== Share verification =====")
-    println("Commitment: " + commitment + " challenge:" + challenge + " response: " + response)
-    println("ZKP for shared key: Challenge-Space: " + pg.getChallengeSpace() + "Commitment-Space: " + pg.getCommitmentSpace() + "public Key:" + publicKey)
-
     val result = pg.verify(proofTriple, publicKey)
     println(s"Verifier: verifyKeyShare......$result")
     println("===== Share verification =====")
@@ -132,12 +126,9 @@ object Verifier extends ProofSettings {
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
     val proofSystem: EqualityPreimageProofSystem = EqualityPreimageProofSystem.getInstance(challengeGenerator, f1, f2)
 
-    val commitment
-        = proofSystem.getCommitmentSpace().getElementFrom(pd.proofDTO.commitment)
-    val challenge
-        = proofSystem.getChallengeSpace().getElementFrom(pd.proofDTO.challenge)
-    val response
-        = proofSystem.getResponseSpace().getElementFrom(pd.proofDTO.response)
+    val commitment = proofSystem.getCommitmentSpace().getElementFrom(pd.proofDTO.commitment)
+    val challenge = proofSystem.getChallengeSpace().getElementFrom(pd.proofDTO.challenge)
+    val response = proofSystem.getResponseSpace().getElementFrom(pd.proofDTO.response)
 
     val proof: Triple = Triple.getInstance(commitment, challenge, response)
     val result = proofSystem.verify(proof, publicInput)
@@ -168,19 +159,13 @@ object Verifier extends ProofSettings {
 
     println("Getting values..")
 
-    val commitment1
-        = pcps.getCommitmentSpace().getElementFrom(shuffleProof.permutationProof.commitment)
-    val challenge1
-        = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
-    val response1
-        = pcps.getResponseSpace().getElementFrom(shuffleProof.permutationProof.response)
+    val commitment1 = pcps.getCommitmentSpace().getElementFrom(shuffleProof.permutationProof.commitment)
+    val challenge1 = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
+    val response1 = pcps.getResponseSpace().getElementFrom(shuffleProof.permutationProof.response)
 
-    val commitment2
-        = spg.getCommitmentSpace().getElementFrom(shuffleProof.mixProof.commitment)
-    val challenge2
-        = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
-    val response2
-        = spg.getResponseSpace().getElementFrom(shuffleProof.mixProof.response)
+    val commitment2 = spg.getCommitmentSpace().getElementFrom(shuffleProof.mixProof.commitment)
+    val challenge2 = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
+    val response2 = spg.getResponseSpace().getElementFrom(shuffleProof.mixProof.response)
 
     val permutationProofDTO = shuffleProof.permutationProof
     val mixProofDTO = shuffleProof.mixProof
@@ -221,8 +206,7 @@ object Verifier extends ProofSettings {
     // Verify shuffle proof
     val v2 = spg.verify(mixProof, publicInputShuffle)
     // Verify equality of permutation commitments
-    val v3 =
-      publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
+    val v3 = publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
 
     val result = v1 && v2 && v3
     println(s"Verifier: verifyShuffle: $result")
