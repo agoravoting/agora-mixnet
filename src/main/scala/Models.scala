@@ -1,7 +1,7 @@
 // Note: See Election.scala for the election and election state models
 
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
+import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 
 /**
  * the group and generator for an election
