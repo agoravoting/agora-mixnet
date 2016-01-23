@@ -21,6 +21,6 @@ case class SigmaProofDTO(commitment: String, challenge: String, response: String
 
 case class ShuffleResultDTO(shuffleProof: ShuffleProofDTO, votes: Seq[String])
 case class PermutationProofDTO(commitment: String, challenge: String, response: String,
-  bridingCommitments: Seq[String], eValues: Seq[String])
+  bridgingCommitments: Seq[String], eValues: Seq[String])
 case class MixProofDTO(commitment: String, challenge: String, response: String, eValues: Seq[String])
 case class ShuffleProofDTO(mixProof: MixProofDTO, permutationProof: PermutationProofDTO, permutationCommitment: String)

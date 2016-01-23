@@ -146,7 +146,7 @@ object Verifier extends ProofSettings {
 
     println("Converting bridging commitments..")
     // Assume bridging commitments: GStarmod
-    val bridgingCommitments = permutationProofDTO.bridingCommitments.map { x =>
+    val bridgingCommitments = permutationProofDTO.bridgingCommitments.map { x =>
       Csettings.group.getElementFrom(x)
     }
     println("Converting permutation e values..")
