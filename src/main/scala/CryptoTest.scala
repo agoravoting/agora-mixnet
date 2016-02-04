@@ -2,6 +2,8 @@ import ch.bfh.unicrypt.crypto.keygenerator.interfaces.KeyPairGenerator
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
+import java.math.BigInteger
+import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
 
 /**
  * Minimal tests of crypto for key generation, shuffling and joint decryption
@@ -21,8 +23,9 @@ object CryptoTest extends App {
   object KM extends KeyMaker
   object MX extends Mixer
 
-  testDkgAndJointDecryption()
-  testShuffle()
+  // testDkgAndJointDecryption()
+  // testShuffle()
+  testJnaGmp()
 
   def testShuffle() = {
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
@@ -32,7 +35,7 @@ object CryptoTest extends App {
     val votes = Util.getRandomVotes(10, Csettings.generator, publicKey)
 
     val shuffleResult = MX.shuffle(Util.tupleFromSeq(votes), publicKey, Csettings, "proverId")
-    val shuffled = shuffleResult.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
+    val shuffled = shuffleResult.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v) )
 
     Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),
       shuffleResult.shuffleProof, "proverId", publicKey, Csettings)
@@ -70,6 +73,19 @@ object CryptoTest extends App {
     // a^-x * b = m
     val decrypted = (ciphertexts zip combined).map(c => c._1.getSecond().apply(c._2))
     println(s"Decrypted $decrypted")
+  }
+
+  def testJnaGmp() = {
+    import com.squareup.jnagmp._
+
+    val base = new BigInteger("31232")
+    val pow = new BigInteger("170141183")
+    val mod = new BigInteger("17015")
+
+    val pResult = Gmp.modPowSecure(base, pow, mod)
+    println(pResult)
+
+    println(base.modPow(pow, mod))
   }
 
   def combineShares(shares: Seq[Element[_]], Csettings: CryptoSettings) = {

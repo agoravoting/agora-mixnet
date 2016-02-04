@@ -13,6 +13,11 @@ import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
 import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
 import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
 
+import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
+
+
+// FIXME https://docs.oracle.com/cd/E13209_01/wlcp/wlss30/configwlss/jvmrand.html
+
 /**
  * An election process DEMO
  *
@@ -57,9 +62,8 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  * This demo uses two trustees, ElectionTest3 below shows how number of trustees generalizes
  */
 object ElectionTest extends App {
+  val totalVotes = args.toList.headOption.getOrElse("100").toInt
 
-  println("Waiting for keystroke..")
-  Console.in.read()
   // create the keymakers
   // these are responsible for distributed key generation and joint decryption
   val k1 = new KeyMakerTrustee("keymaker one")
@@ -94,7 +98,7 @@ object ElectionTest extends App {
   val startVotes = Election.startVotes(combined)
 
   // generate dummy votes
-  val plaintexts = Seq.fill(100)(scala.util.Random.nextInt(10))
+  val plaintexts = Seq.fill(totalVotes)(scala.util.Random.nextInt(10))
 
   // encrypt the votes with the public key of the election
   val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
@@ -104,6 +108,19 @@ object ElectionTest extends App {
   votes.foreach { v =>
     electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
   }
+
+  import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod
+  import ch.bfh.unicrypt.helper.hash.HashAlgorithm
+  import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.classes.FiatShamirSigmaChallengeGenerator
+  import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.classes.FiatShamirChallengeGenerator
+
+  // we are only timing the mixing phase
+  val mixingStart = System.currentTimeMillis()
+  GStarMod.modExps = 0;
+  
+  // wait for keystroke, this allows us to attach a profiler
+  println("Hit return to start")
+  Console.in.read()
 
   // stop the voting period
   val stopVotes = Election.stopVotes(electionGettingVotes)
@@ -125,6 +142,11 @@ object ElectionTest extends App {
   // we are done mixing
   val stopMix = Election.stopMixing(mixTwo)
 
+  val mixingEnd = System.currentTimeMillis()
+  val modExps = GStarMod.modExps
+
+  // leaving this part out as we want to benchmark only mixing
+  /*
   // start the partial decryptions
   // if we tried to do this before the mixing was completed, the compiler would protest
   val startDecryptions = Election.startDecryptions(stopMix)
@@ -145,6 +167,15 @@ object ElectionTest extends App {
   println(s"Plaintexts $plaintexts")
   println(s"Decrypted ${electionDone.state.decrypted}")
   println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
+
+  */
+
+  val mixTime = (mixingEnd - mixingStart) / 1000.0
+
+  println(s"mixTime: $mixTime")
+  println(s"sec / vote: ${mixTime / totalVotes}")
+  println(s"modExps: $modExps")
+  println(s"modExps / vote: ${modExps.toFloat / totalVotes}")
 }
 
 /**
@@ -155,6 +186,7 @@ object ElectionTest extends App {
  *
  */
 object ElectionTest3 extends App {
+  val totalVotes = args.toList.headOption.getOrElse("100").toInt
 
   val k1 = new KeyMakerTrustee("keymaker one")
   val k2 = new KeyMakerTrustee("keymaker two")
@@ -179,7 +211,7 @@ object ElectionTest3 extends App {
 
   val startVotes = Election.startVotes(combined)
 
-  val plaintexts = Seq.fill(100)(scala.util.Random.nextInt(10))
+  val plaintexts = Seq.fill(totalVotes)(scala.util.Random.nextInt(10))
 
   val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
 
@@ -324,12 +356,12 @@ object Election {
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
     val keyPairGen = elGamal.getKeyPairGenerator()
     val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(in.state.publicKey)
-    val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
+    val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v) )
     val votes = in.state match {
-      case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
-      case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
+      case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v) )
+      case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v) )
     }
-    mix.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v) )
+    mix.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v) )
 
     println(s"Verifying shuffle..")
     val ok = Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),
@@ -357,7 +389,7 @@ object Election {
     println("Adding decryption...")
 
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
-    val votes = in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v))
+    val votes = in.state.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v).asInstanceOf[Pair])
 
     val sharesMap = in.state.allShares.toMap
     val share = elGamal.getMessageSpace.getElementFrom(sharesMap(proverId))
@@ -379,7 +411,7 @@ object Election {
     println("Combining decryptions...Ok")
 
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
-    val votes = in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFrom(v).asInstanceOf[Pair] )
+    val votes = in.state.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v).asInstanceOf[Pair] )
     // a^-x * b = m
     val decrypted = (votes zip combined).map(c => c._1.getSecond().apply(c._2))
     val encoder = ZModPrimeToGStarModSafePrime.getInstance(in.state.cSettings.group)

@@ -1,4 +1,3 @@
-// PATCHING UNICRYPT TO ADD CACHING TO ISPRIME
 /*
  * UniCrypt
  *
@@ -42,9 +41,11 @@
  */
 package ch.bfh.unicrypt.helper.math;
 
+import ch.bfh.unicrypt.helper.array.classes.ByteArray;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.HashSet;
+import org.apache.commons.collections4.map.LRUMap;
 
 /**
  * This is a helper class with some static methods for various mathematical functions. By contract, the methods of this
@@ -63,11 +64,15 @@ public final class MathUtil {
   public static final BigInteger TWO = BigInteger.valueOf(2);
   public static final BigInteger THREE = BigInteger.valueOf(3);
   public static final BigInteger FOUR = BigInteger.valueOf(4);
+  public static final BigInteger FIVE = BigInteger.valueOf(5);
+  public static final BigInteger SIX = BigInteger.valueOf(6);
+  public static final BigInteger SEVEN = BigInteger.valueOf(7);
 
   private static final byte[] BIT_MASKS = new byte[Byte.SIZE];
   private static final byte[] BIT_MASKS_INV = new byte[Byte.SIZE];
 
-  private static final java.util.HashMap<BigInteger,Boolean> cache = new java.util.HashMap<BigInteger, Boolean>();
+  // drb
+  private static final LRUMap<BigInteger,Boolean> cache = new LRUMap<BigInteger, Boolean>();
 
   static {
     for (int i = 0; i < Byte.SIZE; i++) {
@@ -141,6 +146,7 @@ public final class MathUtil {
    * @return {@code true} if {@code value} is prime, {@code false} otherwise
    */
   public static boolean isPrime(final BigInteger value) {
+    // drb
     if(cache.containsKey(value)) {
       return cache.get(value);
     }
@@ -151,6 +157,9 @@ public final class MathUtil {
 
       return ret;
     }
+
+    // BigInteger.isProbablePrime considers "negative primes" as primes
+    // return value.signum() > 0 && value.isProbablePrime(MathUtil.NUMBER_OF_PRIME_TESTS);
   }
 
   /**
@@ -260,8 +269,17 @@ public final class MathUtil {
   }
 
   /**
-   * Computes the elegant pairing function for a given list of non-negative {@code int} values. This is a convenience
-   * method for {@link MathUtil#pairWithSize(java.math.BigInteger...)}.
+   * Returns 0 for the special case of an empty list.
+   * <p>
+   * @return 0
+   */
+  public static BigInteger pair() {
+    return MathUtil.ZERO;
+  }
+
+  /**
+   * Computes the elegant pairing function for a given list of non-negative {@code long} values. This is a convenience
+   * method for {@link MathUtil#pair(java.math.BigInteger...)}.
    * <p>
    * @param values The given values
    * @return The result of applying the elegant pairing function
@@ -301,6 +319,31 @@ public final class MathUtil {
       newValues[length / 2] = values[length - 1];
     }
     return pair(newValues);
+  }
+
+  /**
+   * Returns 0 for the special case of an empty list.
+   * <p>
+   * @return 0
+   */
+  public static BigInteger pairWithSize() {
+    return MathUtil.ZERO;
+  }
+
+  /**
+   * Computes the elegant pairing function for a given list of non-negative {@code long} values. This is a convenience
+   * method for {@link MathUtil#pairWithSize(java.math.BigInteger...)}.
+   * <p>
+   * @param values The given values
+   * @return The result of applying the elegant pairing function
+   * @see MathUtil#pair(java.math.BigInteger...)
+   */
+  public static BigInteger pairWithSize(long... values) {
+    BigInteger[] bigIntegers = new BigInteger[values.length];
+    for (int i = 0; i < values.length; i++) {
+      bigIntegers[i] = BigInteger.valueOf(values[i]);
+    }
+    return MathUtil.pairWithSize(bigIntegers);
   }
 
   /**
@@ -381,6 +424,17 @@ public final class MathUtil {
     }
     BigInteger[] values = unpair(value.subtract(ONE));
     return unpair(values[0], values[1].intValue() + 1);
+  }
+
+  /**
+   * Applies the folding function to a given value of type {@code long}. This is a convenience method for
+   * {@link MathUtil#fold(java.math.BigInteger)}.
+   * <p>
+   * @param value The given long value
+   * @return The result of applying the folding function
+   */
+  public static BigInteger fold(long value) {
+    return fold(BigInteger.valueOf(value));
   }
 
   /**
@@ -517,8 +571,7 @@ public final class MathUtil {
     BigInteger q = p.subtract(ONE).divide(TWO);
 
     // finding q
-    while (q.mod(TWO)
-         .equals(ZERO)) {
+    while (q.mod(TWO).equals(ZERO)) {
       q = q.divide(TWO);
       s = s.add(ONE);
     }
@@ -558,7 +611,30 @@ public final class MathUtil {
     return x.modPow(p.subtract(ONE).divide(TWO), p).equals(ONE);
   }
 
-  // Bit operations on byte
+  /**
+   * Converts the 8 rightmost bits of an integer into a byte.
+   * <p>
+   * @param integer The given integer
+   * @return The corresponding byte
+   */
+  public static byte getByte(int integer) {
+    return (byte) (integer & 0xFF);
+  }
+
+  /**
+   * Converts an integer into a byte array in big-endian byte order.
+   * <p>
+   * @param integer The given integer
+   * @return The corresponding byte array
+   */
+  public static ByteArray getByteArray(int integer) {
+    byte byte0 = MathUtil.getByte(integer);
+    byte byte1 = MathUtil.getByte(integer >>> Byte.SIZE);
+    byte byte2 = MathUtil.getByte(integer >>> 2 * Byte.SIZE);
+    byte byte3 = MathUtil.getByte(integer >>> 3 * Byte.SIZE);
+    return ByteArray.getInstance(byte3, byte2, byte1, byte0);
+  }
+
   /**
    * Returns the {@code i}-th bit of a byte.
    * <p>
