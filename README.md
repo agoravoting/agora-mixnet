@@ -47,9 +47,41 @@ Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus c
      * This demo uses two trustees, ElectionTest3 below shows how number of trustees generalizes
      */
   
-  Running it
-  ----------
+Setting it up
+-------------
 
-     git clone
+     git clone https://github.com/agoravoting/sandbox.git
 
-     rng-tools
+     apt-get install rng-tools
+
+     install sbt - http://www.scala-sbt.org/download.html
+
+Running it
+----------
+
+You need to have sbt in your path. Then from the root of the sandbox repo
+
+     sbt run
+
+The first time sbt will have to download all the dependencies and compile the project, it
+may take a while.
+
+You can also enter the sbt console and issue commands from there
+
+     sbt
+     >
+
+From the prompt you can issue commands like
+
+     > clean
+     > compile
+     > run
+     > assembly
+
+sbt commands auto-complete with the tab key, so you can explore more options. The assembly command produces a jar with all the dependencies included that you run like this, for example
+
+     java -classpath target/scala-2.11/sandbox-assembly-0.1-SNAPSHOT.jar ElectionTest 100
+
+which runs the benchmark with 100 votes. If you wish to attach a profiler (like visualvm), you may need to run this
+
+     java -XX:+StartAttachListener -classpath target/scala-2.11/sandbox-assembly-0.1-SNAPSHOT.jar ElectionTest 3000
