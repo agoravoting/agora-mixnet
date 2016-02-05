@@ -3,7 +3,6 @@ import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import java.math.BigInteger
-import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
 
 /**
  * Minimal tests of crypto for key generation, shuffling and joint decryption
@@ -35,7 +34,7 @@ object CryptoTest extends App {
     val votes = Util.getRandomVotes(10, Csettings.generator, publicKey)
 
     val shuffleResult = MX.shuffle(Util.tupleFromSeq(votes), publicKey, Csettings, "proverId")
-    val shuffled = shuffleResult.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v) )
+    val shuffled = shuffleResult.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
 
     Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),
       shuffleResult.shuffleProof, "proverId", publicKey, Csettings)

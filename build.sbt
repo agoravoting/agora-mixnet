@@ -26,3 +26,4 @@ assemblyMergeStrategy in assembly := {
 }
 
 scalacOptions ++= Seq("-feature", "-language:existentials")
+// javacOptions ++= Seq("-Xlint:unchecked")

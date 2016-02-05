@@ -56,6 +56,8 @@ Setting it up
 
      install sbt - http://www.scala-sbt.org/download.html
 
+You must have java installed and JAVA_HOME set.
+
 Running it
 ----------
 

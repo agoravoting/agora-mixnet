@@ -31,8 +31,6 @@ import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
 import ch.bfh.unicrypt.math.function.classes.ProductFunction
 import ch.bfh.unicrypt.math.function.interfaces.Function
 
-import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
-
 /**
  * Proof settings common for proof generators and verifiers
  *
@@ -131,17 +129,17 @@ object Verifier extends ProofSettings {
     val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, votes.getArity(), elGamal, publicKey)
 
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, votes.getArity())
-    val permutationCommitment = pcs.getCommitmentSpace().asInstanceOf[AbstractSet[_, _]].getElementFrom(shuffleProof.permutationCommitment)
+    val permutationCommitment = pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment)
 
     println("Getting values..")
 
-    val commitment1 = pcps.getCommitmentSpace().asInstanceOf[AbstractSet[_, _]].getElementFrom(shuffleProof.permutationProof.commitment)
+    val commitment1 = pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment)
     val challenge1 = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
-    val response1 = pcps.getResponseSpace().asInstanceOf[AbstractSet[_, _]].getElementFrom(shuffleProof.permutationProof.response)
+    val response1 = pcps.getResponseSpace().getElementFromString(shuffleProof.permutationProof.response)
 
-    val commitment2 = spg.getCommitmentSpace().asInstanceOf[AbstractSet[_, _]].getElementFrom(shuffleProof.mixProof.commitment)
+    val commitment2 = spg.getCommitmentSpace().getElementFromString(shuffleProof.mixProof.commitment)
     val challenge2 = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
-    val response2 = spg.getResponseSpace().asInstanceOf[AbstractSet[_, _]].getElementFrom(shuffleProof.mixProof.response)
+    val response2 = spg.getResponseSpace().getElementFromString(shuffleProof.mixProof.response)
 
     val permutationProofDTO = shuffleProof.permutationProof
     val mixProofDTO = shuffleProof.mixProof

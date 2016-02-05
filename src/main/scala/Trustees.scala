@@ -28,8 +28,6 @@ import ch.bfh.unicrypt.math.function.classes.ProductFunction
 import ch.bfh.unicrypt.math.function.interfaces.Function
 import shapeless.Sized.sizedToRepr
 
-import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
-
 /**
  * Represents a key maker trustee
  *
@@ -46,7 +44,7 @@ class KeyMakerTrustee(val id: String, privateShares: MutableMap[String, String] 
 
   def partialDecryption(e: Election[_, Decryptions[_]]) = {
     val elGamal = ElGamalEncryptionScheme.getInstance(e.state.cSettings.generator)
-    val votes = e.state.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v).asInstanceOf[Pair])
+    val votes = e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v).asInstanceOf[Pair])
     val secretKey = e.state.cSettings.group.getZModOrder().getElementFrom(privateShares(e.state.id))
 
     partialDecrypt(votes, secretKey, id, e.state.cSettings)
@@ -66,8 +64,8 @@ class MixerTrustee(val id: String) extends Mixer {
     val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(e.state.publicKey)
     println("Convert votes..")
     val votes = e.state match {
-      case s: Mixing[_0] => e.state.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v) )
-      case _ => e.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.asInstanceOf[AbstractSet[_, _]].getElementFrom(v) )
+      case s: Mixing[_0] => e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+      case _ => e.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
     }
     println("Mixer creating shuffle..")
     

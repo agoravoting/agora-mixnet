@@ -86,6 +86,7 @@ public class GStarMod
 
     // drb
     public static int modExps = 0;
+    public static boolean gmpModPow = false;
 
     protected GStarMod(SpecialFactorization modulusFactorization, Factorization orderFactorization) {
         super(BigInteger.class);
@@ -272,7 +273,11 @@ public class GStarMod
     public static BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
         modExps++;
 
-        // return Gmp.modPowInsecure(base, pow, mod);
-        return base.modPow(pow, mod);
+        if(gmpModPow) {
+            return Gmp.modPowInsecure(base, pow, mod);
+        }
+        else {
+            return base.modPow(pow, mod);    
+        }
     }
 }
