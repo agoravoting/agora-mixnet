@@ -247,6 +247,29 @@ object ElectionTest3 extends App {
   println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
 }
 
+object Issue3 extends App {
+  val grp = GStarModSafePrime.getInstance(167)
+  // val grp = GStarModSafePrime.getInstance(new BigInteger("170141183460469231731687303715884114527"))
+  // val grp = GStarModSafePrime.getFirstInstance(2048)
+  val gen = grp.getDefaultGenerator()
+  val Csettings = CryptoSettings(grp, gen)
+  val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
+
+  val keyPair = elGamal.getKeyPairGenerator().generateKeyPair()
+  val privateKey = keyPair.getFirst()
+  val publicKey = keyPair.getSecond()
+ 
+  // eventually 0 will be used in Z_q
+  val votes = Util.encryptVotes(List(0, 1, 2), Csettings, publicKey)
+  votes.foreach { v => 
+    val first = v.getFirst
+    println(first)
+    println(v.getFirst.isGenerator)
+    val decryption = elGamal.decrypt(privateKey, v)
+    println("decrypted " + decryption)
+  }
+}
+
 /**
  * An election is a typed, purely function state machine with an immutable history
  *

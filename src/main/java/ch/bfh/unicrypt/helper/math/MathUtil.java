@@ -72,7 +72,7 @@ public final class MathUtil {
   private static final byte[] BIT_MASKS_INV = new byte[Byte.SIZE];
 
   // drb
-  private static final LRUMap<BigInteger,Boolean> cache = new LRUMap<BigInteger, Boolean>();
+  // private static final LRUMap<BigInteger,Boolean> cache = new LRUMap<BigInteger, Boolean>();
 
   static {
     for (int i = 0; i < Byte.SIZE; i++) {
@@ -147,7 +147,7 @@ public final class MathUtil {
    */
   public static boolean isPrime(final BigInteger value) {
     // drb
-    if(cache.containsKey(value)) {
+    /* if(cache.containsKey(value)) {
       return cache.get(value);
     }
     else {
@@ -156,10 +156,10 @@ public final class MathUtil {
       cache.put(value, ret);
 
       return ret;
-    }
+    }*/
 
     // BigInteger.isProbablePrime considers "negative primes" as primes
-    // return value.signum() > 0 && value.isProbablePrime(MathUtil.NUMBER_OF_PRIME_TESTS);
+    return value.signum() > 0 && value.isProbablePrime(MathUtil.NUMBER_OF_PRIME_TESTS);
   }
 
   /**
