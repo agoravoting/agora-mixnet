@@ -190,8 +190,14 @@ trait Mixer extends ProofSettings {
     val rs: Tuple = mixer.generateRandomizations()
 
     println("Mixer: shuffle..")
+    import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod
+
     // Perfom shuffle
+    ///
+    var before = GStarMod.modExps; println("> " + GStarMod.modExps)
     val shuffledVs: Tuple = mixer.shuffle(ciphertexts, psi, rs)
+    println("mixer shuffle shuffle " + (GStarMod.modExps - before))
+    ///
 
     // println("===== shuffled  =====")
     // println(shuffledVs)
@@ -211,7 +217,12 @@ trait Mixer extends ProofSettings {
     println("Mixer: permutation proof..")
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, ciphertexts.getArity())
     val permutationCommitmentRandomizations: Tuple = pcs.getRandomizationSpace().getRandomElement()
+    
+    ///
+    before = GStarMod.modExps; println("> " + GStarMod.modExps)
     val permutationCommitment: Tuple = pcs.commit(psi, permutationCommitmentRandomizations)
+    println("mixer shuffle commit " + (GStarMod.modExps - before))
+    ///
 
     // Create psi commitment proof system
     val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,

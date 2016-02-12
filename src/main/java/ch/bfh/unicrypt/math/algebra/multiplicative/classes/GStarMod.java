@@ -85,7 +85,7 @@ public class GStarMod
     private ZStarMod superGroup;
 
     // drb
-    public static int modExps = 0;
+    public static long modExps = 0;
     public static boolean gmpModPow = false;
 
     protected GStarMod(SpecialFactorization modulusFactorization, Factorization orderFactorization) {
