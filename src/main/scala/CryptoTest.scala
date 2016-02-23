@@ -22,9 +22,9 @@ object CryptoTest extends App {
   object KM extends KeyMaker
   object MX extends Mixer
 
-  // testDkgAndJointDecryption()
-  // testShuffle()
-  testJnaGmp()
+  testDkgAndJointDecryption()
+  testShuffle()
+  // testJnaGmp()
 
   def testShuffle() = {
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
@@ -67,7 +67,8 @@ object CryptoTest extends App {
     println(s"partial decrypts one ****\n$elementsOne")
     println(s"partial decrypts two ****\n $elementsTwo")
     // a^-x = a^-x1 * a^-x2 ...
-    val combined = (elementsOne.partialDecryptions zip elementsTwo.partialDecryptions).map(c => c._1.apply(c._2))
+    val combined = (elementsOne.partialDecryptions.map(Csettings.group.getElementFrom(_)) 
+      zip elementsTwo.partialDecryptions.map(Csettings.group.getElementFrom(_))).map(c => c._1.apply(c._2))
     println(s"a^-x ****\n$combined")
     // a^-x * b = m
     val decrypted = (ciphertexts zip combined).map(c => c._1.getSecond().apply(c._2))

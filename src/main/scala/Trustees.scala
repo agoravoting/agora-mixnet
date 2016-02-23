@@ -28,6 +28,9 @@ import ch.bfh.unicrypt.math.function.classes.ProductFunction
 import ch.bfh.unicrypt.math.function.interfaces.Function
 import shapeless.Sized.sizedToRepr
 
+import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod
+import ch.bfh.unicrypt.math.algebra.multiplicative.classes.ZStarMod
+
 /**
  * Represents a key maker trustee
  *
@@ -63,10 +66,14 @@ class MixerTrustee(val id: String) extends Mixer {
     val keyPairGen = elGamal.getKeyPairGenerator()
     val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(e.state.publicKey)
     println("Convert votes..")
-    val votes = e.state match {
-      case s: Mixing[_0] => e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
-      case _ => e.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
-    }
+    
+    val votes = mpservice.MPE.ex(
+      e.state match {
+        case s: Mixing[_0] => e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+        case _ => e.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+      }, "1"
+    )
+
     println("Mixer creating shuffle..")
     
     shuffle(Util.tupleFromSeq(votes), publicKey, e.state.cSettings, id)
@@ -89,16 +96,19 @@ trait KeyMaker extends ProofSettings {
     val privateKey = keyPair.getFirst()
     val publicKey = keyPair.getSecond()
 
+
     val function = kpg.getPublicKeyGenerationFunction()
     val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
 
     val challengeGenerator: SigmaChallengeGenerator  = FiatShamirSigmaChallengeGenerator.getInstance(
       Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
-
+// println(">>> 2 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     val pg: PlainPreimageProofSystem = PlainPreimageProofSystem.getInstance(challengeGenerator, function)
+// println(">>> 3 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     val proof: Triple = pg.generate(privateKey, publicKey)
-
+// println(">>> 4 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     val success = pg.verify(proof, publicKey)
+// println(">>> 5 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     if (!success) {
       throw new Exception("Failed verifying proof")
     } else {
@@ -135,7 +145,7 @@ trait KeyMaker extends ProofSettings {
     val proofDTO = createProof(proverId, secretKey, publicKey, lists._1, lists._2, Csettings)
     // FIXME missing verification of own proof
 
-    PartialDecryptionDTO(lists._1, proofDTO)
+    PartialDecryptionDTO(lists._1.map(_.convertToString), proofDTO)
   }
 
   private def createProof(proverId: String, secretKey: Element[_],
@@ -143,8 +153,10 @@ trait KeyMaker extends ProofSettings {
 
     val encryptionGenerator = Csettings.generator
 
+// println(s">>> -1 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     // Create proof functions
     val f1: Function = GeneratorFunction.getInstance(encryptionGenerator)
+// println(s">>> 0 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     val f2: Function = CompositeFunction.getInstance(
         InvertFunction.getInstance(Csettings.group.getZModOrder()),
         MultiIdentityFunction.getInstance(Csettings.group.getZModOrder(), generatorFunctions.length),
@@ -155,11 +167,15 @@ trait KeyMaker extends ProofSettings {
     val publicInput: Pair = Pair.getInstance(publicKey, Tuple.getInstance(partialDecryptions:_*))
     val otherInput = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
 
+// println(s">>> 1 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
+// println(s">>> 2 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     val proofSystem: EqualityPreimageProofSystem = EqualityPreimageProofSystem.getInstance(challengeGenerator, f1, f2)
+// println(s">>> 3 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     // Generate and verify proof
     val proof: Triple = proofSystem.generate(privateInput, publicInput)
+// println(s">>> 4 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     val result = proofSystem.verify(proof, publicInput)
     if(!result) throw new Exception
 
@@ -182,21 +198,24 @@ trait Mixer extends ProofSettings {
     // println("===== ciphertexts =====")
     // println(ciphertexts)
     // println("===== ciphertexts =====")
-
+var before = 0
+ch.MP.y();
     val mixer: ReEncryptionMixer = ReEncryptionMixer.getInstance(elGamal, publicKey, ciphertexts.getArity())
+ch.MP.z(); ch.MP.y(); 
     val psi: PermutationElement = mixer.getPermutationGroup().getRandomElement()
 
     println("Mixer: randomizations..")
+// println(s">>> 3 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     val rs: Tuple = mixer.generateRandomizations()
-
+ch.MP.z(); ch.MP.y(); 
     println("Mixer: shuffle..")
-    import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod
+    
 
     // Perfom shuffle
     ///
-    var before = GStarMod.modExps; println("> " + GStarMod.modExps)
+    
     val shuffledVs: Tuple = mixer.shuffle(ciphertexts, psi, rs)
-    println("mixer shuffle shuffle " + (GStarMod.modExps - before))
+ch.MP.z(); ch.MP.y(); 
     ///
 
     // println("===== shuffled  =====")
@@ -216,51 +235,46 @@ trait Mixer extends ProofSettings {
 
     println("Mixer: permutation proof..")
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, ciphertexts.getArity())
-    val permutationCommitmentRandomizations: Tuple = pcs.getRandomizationSpace().getRandomElement()
-    
-    ///
-    before = GStarMod.modExps; println("> " + GStarMod.modExps)
-    val permutationCommitment: Tuple = pcs.commit(psi, permutationCommitmentRandomizations)
-    println("mixer shuffle commit " + (GStarMod.modExps - before))
-    ///
+ch.MP.z(); ch.MP.y(); 
 
+    val permutationCommitmentRandomizations: Tuple = pcs.getRandomizationSpace().getRandomElement()
+ch.MP.l();
+    val permutationCommitment: Tuple = pcs.commit(psi, permutationCommitmentRandomizations)
+ch.MP.z(); ch.MP.y(); 
+ch.MP.l();
     // Create psi commitment proof system
     val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
         Csettings.group, ciphertexts.getArity())
-
+ch.MP.z(); ch.MP.y(); 
     // Create psi commitment proof
     val privateInputPermutation: Pair = Pair.getInstance(psi, permutationCommitmentRandomizations)
     val publicInputPermutation = permutationCommitment
     println("Mixer: permutation proof, generating..")
     val permutationProof: Tuple = pcps.generate(privateInputPermutation, publicInputPermutation)
-
+ch.MP.z(); ch.MP.y(); 
     println("Mixer: shuffle proof..")
     // 2. Shuffle Proof
     //------------------
     // Create shuffle proof system
     val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, ciphertexts.getArity(), elGamal, publicKey)
-
+ch.MP.z(); ch.MP.y(); 
     // Proof and verify
     val privateInputShuffle: Tuple = Tuple.getInstance(psi, permutationCommitmentRandomizations, rs)
     val publicInputShuffle: Tuple = Tuple.getInstance(permutationCommitment, ciphertexts, shuffledVs)
-
     println("Mixer: shuffle proof, generating..")
     // Create shuffle proof
     val mixProof: Tuple = spg.generate(privateInputShuffle, publicInputShuffle)
-
+ch.MP.z(); ch.MP.y(); 
     val bridgingCommitments = pcps.getBridingCommitment(permutationProof).asInstanceOf[Tuple]
     val eValues = pcps.getEValues(permutationProof).asInstanceOf[Tuple]
-
     val permputationProofDTO = PermutationProofDTO(pcps.getCommitment(permutationProof).convertToString(),
       pcps.getChallenge(permutationProof).convertToString(),
       pcps.getResponse(permutationProof).convertToString(),
       bridgingCommitments.map(x => x.convertToString).toSeq,
       eValues.map(x => x.convertToString).toSeq)
-
     // println(s"Permutation proof ****\n$permutationProof")
 
     val eValues2 = spg.getEValues(mixProof).asInstanceOf[Tuple]
-
     val mixProofDTO = MixProofDTO(spg.getCommitment(mixProof).convertToString(),
       spg.getChallenge(mixProof).convertToString(),
       spg.getResponse(mixProof).convertToString(),
@@ -273,14 +287,18 @@ trait Mixer extends ProofSettings {
     println("Mixer: verifying..")
 
     val v1 = pcps.verify(permutationProof, publicInputPermutation)
+ch.MP.z(); ch.MP.y(); 
     // Verify shuffle proof
     val v2 = spg.verify(mixProof, publicInputShuffle)
+ch.MP.z(); ch.MP.y(); 
     // Verify equality of permutation commitments
     val v3 = publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
 
     println("Verification ok: " + (v1 && v2 && v3))
+    if(!(v1 && v2 && v3)) throw new Exception();
 
     val votesString: Seq[String] = Util.seqFromTuple(shuffledVs).map( x => x.convertToString )
+
     ShuffleResultDTO(shuffleProofDTO, votesString)
   }
 }

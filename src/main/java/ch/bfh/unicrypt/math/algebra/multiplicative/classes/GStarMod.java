@@ -85,7 +85,6 @@ public class GStarMod
     private ZStarMod superGroup;
 
     // drb
-    public static long modExps = 0;
     public static boolean gmpModPow = false;
 
     protected GStarMod(SpecialFactorization modulusFactorization, Factorization orderFactorization) {
@@ -271,13 +270,23 @@ public class GStarMod
 
     // drb
     public static BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
-        modExps++;
-
-        if(gmpModPow) {
-            return Gmp.modPowInsecure(base, pow, mod);
+        if(ch.MP.debug) new Exception().printStackTrace();
+        if(ch.MP.isRecording()) {
+            ch.MP.total++;
+            ch.MP.addModPow(base, pow, mod);
+            return ch.MP.dummy;
+        }
+        else if(ch.MP.isReplaying()) {
+            return ch.MP.getModPow();
         }
         else {
-            return base.modPow(pow, mod);    
+            ch.MP.total++;
+            if(gmpModPow) {
+                return Gmp.modPowInsecure(base, pow, mod);
+            }
+            else {
+                return base.modPow(pow, mod);    
+            }
         }
     }
 }

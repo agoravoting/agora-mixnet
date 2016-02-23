@@ -16,7 +16,7 @@ case class CryptoSettings(group: GStarModSafePrime, generator: Element[_])
  */
 case class EncryptionKeyShareDTO(sigmaProofDTO: SigmaProofDTO, keyShare: String)
 // FIXME there should be no uses of Element here, only strings
-case class PartialDecryptionDTO(partialDecryptions: Seq[Element[_]], proofDTO: SigmaProofDTO)
+case class PartialDecryptionDTO(partialDecryptions: Seq[String], proofDTO: SigmaProofDTO)
 case class SigmaProofDTO(commitment: String, challenge: String, response: String)
 
 case class ShuffleResultDTO(shuffleProof: ShuffleProofDTO, votes: Seq[String])

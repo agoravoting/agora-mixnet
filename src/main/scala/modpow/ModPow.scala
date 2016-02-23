@@ -30,17 +30,40 @@ class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends Mo
     inbox.send(modPowService, ModPowArray(work))
     Try(inbox.receive(1000.seconds)) match {
       case Success(ModPowArrayResult(answer)) => answer
-      case _ => println("Fuck up"); Array(new BigInteger("23"))
+      // FIXME
+      case _ => throw new Exception()
     }
   }
 }
 
-class ModPowServiceActor(val sendIntervalMillis: Int, val dataArraySize: Int) extends Actor with ActorLogging {
+class DummyModPowService extends ModPowService {
+  def compute(work: Array[ModPow]): Array[BigInteger] = work.map(x => x.base.modPow(x.pow, x.mod))
+}
+
+
+object AkkaModPowService extends ModPowService {
+  val config = ConfigFactory.load()
+  val system = ActorSystem("ClusterSystem", config)
+  val serviceActor = system.actorOf(ModPowServiceActor.props(200, 0), name = "ModPowService")
+  val service = new AkkaModPowService(system, serviceActor)
+
+  def compute(work: Array[ModPow]): Array[BigInteger] = service.compute(work)
+  def shutdown = system.shutdown
+}
+
+object MPService extends ModPowService {
+  val service = AkkaModPowService
+
+  def compute(work: Array[ModPow]): Array[BigInteger] = service.compute(work)
+  def shutdown = service.shutdown
+}
+
+class ModPowServiceActor(val maxChunkSize: Int, val sendDelay: Int) extends Actor with ActorLogging {
   
   val workerRouter = context.actorOf(WorkerActor.props(0).withRouter(FromConfig()), name = "workerRouter")
+  val minimumParallelism = 2
 
   // actor state
-  var cores = 8
   var requestId = 0
   val requests = mutable.Map[Int, RequestData]()
 
@@ -48,15 +71,15 @@ class ModPowServiceActor(val sendIntervalMillis: Int, val dataArraySize: Int) ex
     
     case ModPowArray(modpows) => {
       requestId = requestId + 1
-      val size = math.min(modpows.length / cores, 3000)
+      val size = math.min(math.max(modpows.length / minimumParallelism, 1), maxChunkSize)
       val chunks = modpows.sliding(size, size).toArray
       requests.put(requestId, RequestData(sender, chunks.length, mutable.ArrayBuffer()))
       println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
-      // YUCK FIXME
-      var counter = 0
       chunks.indices.foreach { i =>
         val work = Work(requestId, i, chunks(i))
-        println(s"Sending chunk $work")
+        // println(s"Sending chunk $work")
+        
+        Thread sleep sendDelay
         workerRouter ! work
       }
     }
@@ -70,15 +93,15 @@ class ModPowServiceActor(val sendIntervalMillis: Int, val dataArraySize: Int) ex
         requestData.client ! ModPowArrayResult(sorted.flatMap(_.result).toArray)
       }
     }
-
   }
 }
 
 class WorkerActor(val processingTimeMillis: Int) extends Actor with ActorLogging {
   def receive: Receive = {
     case Work(requestId, workId, modpows) => {
-      println(s"received request length ${modpows.length} at actor $this")
-      val result = modpows.map(x => x.base.modPow(x.pow, x.mod))
+      // println(s"received request length ${modpows.length} at actor $this")
+      val result = modpows.par.map(x => x.base.modPow(x.pow, x.mod)).seq.toArray
+      print("+")
       sender ! WorkReply(requestId, workId, result)
     }
   }
@@ -89,7 +112,7 @@ object WorkerActor {
 }
 
 object ModPowServiceActor {
-  def props(sendIntervalMillis: Int, dataArraySize: Int): Props = Props(new ModPowServiceActor(sendIntervalMillis, dataArraySize))
+  def props(maxChunkSize: Int, sendDelay: Int): Props = Props(new ModPowServiceActor(maxChunkSize, sendDelay))
 }
 
 object WorkerApp {
@@ -108,24 +131,26 @@ object TestApp {
 
     // val metricsIntervalSeconds = config.getInt("producer.metrics-interval-seconds")
     // system.actorOf(ClusterListener.props(metricsIntervalSeconds))
-    val serviceActor = system.actorOf(ModPowServiceActor.props(2, 2), name = "ModPowService")
+    val serviceActor = system.actorOf(ModPowServiceActor.props(300, 100), name = "ModPowService")
     val service = new AkkaModPowService(system, serviceActor)
 
+    val total = 300000
     // while(true) {
-      Thread sleep 5000
-      val input = Array.fill(100000)(rndModPow)
+      println("Hit return to start")
+      Console.in.read()
+      val input = Array.fill(total)(rndModPow)
 
       println("akka service")
       var now = System.currentTimeMillis
       val answerOne = service.compute(input)
       var elapsed = (System.currentTimeMillis - now) / 1000.0
-      println(s"elapsed $elapsed")
+      println(s"elapsed ${total / elapsed}")
 
       println("serial..")
       now = System.currentTimeMillis
       val answerTwo = input.map(m => m.base.modPow(m.pow, m.mod))
       elapsed = (System.currentTimeMillis - now) / 1000.0
-      println(s"elapsed $elapsed")      
+      println(s"elapsed ${total / elapsed}")      
 
 
       println(answerOne.deep == answerTwo.deep)
@@ -139,5 +164,24 @@ object TestApp {
 
   def rndBigInt = {
     BigInt(1024, new scala.util.Random)  
+  }
+}
+
+object MPE {
+  def ex[T](f: => T, v: String) = {
+    ch.MP.a()
+    ch.MP.startRecord(v)
+    var ret = f
+    val requests = ch.MP.stopRecord()
+    ch.MP.b(3)
+    if(requests.length > 0) {
+        val answers = mpservice.MPService.compute(requests);
+        ch.MP.startReplay(answers)
+        ret = f
+        ch.MP.stopReplay()
+    }
+    ch.MP.reset()
+
+    ret
   }
 }

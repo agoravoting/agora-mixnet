@@ -58,10 +58,12 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  */
 object ElectionTest extends App {
   import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod
+  import ch.bfh.unicrypt.math.algebra.multiplicative.classes.ZStarMod
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
   val gmp = args.toList.lift(1).getOrElse("") == "gmp"
   GStarMod.gmpModPow = gmp
+  ZStarMod.gmpModPow = gmp
 
   // create the keymakers
   // these are responsible for distributed key generation and joint decryption
@@ -101,6 +103,7 @@ object ElectionTest extends App {
 
   // encrypt the votes with the public key of the election
   val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
+  println(votes.length)
 
   // add the votes to the election
   var electionGettingVotes = startVotes
@@ -110,8 +113,7 @@ object ElectionTest extends App {
 
   // we are only timing the mixing phase
   val mixingStart = System.currentTimeMillis()
-  GStarMod.modExps = 0;
-  
+ch.MP.total = 0;  
   // wait for keystroke, this allows us to attach a profiler at the right time
   // println("Hit return to start")
   // Console.in.read()
@@ -126,9 +128,11 @@ object ElectionTest extends App {
   // and performs the shuffle and proofs
   val shuffle1 = m1.shuffleVotes(startMix)
 
+  
   // the proof is verified and the shuffle is then added to the election, advancing its state
   val mixOne = Election.addMix(startMix, shuffle1, m1.id)
 
+  
   // again for the second trustee..
   val shuffle2 = m2.shuffleVotes(mixOne)
   val mixTwo = Election.addMix(mixOne, shuffle2, m2.id)
@@ -137,7 +141,6 @@ object ElectionTest extends App {
   val stopMix = Election.stopMixing(mixTwo)
 
   val mixingEnd = System.currentTimeMillis()
-  val modExps = GStarMod.modExps
 
   // leaving this part out as we want to benchmark only mixing
   /*
@@ -161,8 +164,7 @@ object ElectionTest extends App {
   println(s"Plaintexts $plaintexts")
   println(s"Decrypted ${electionDone.state.decrypted}")
   println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
-
-  */
+*/
 
   val mixTime = (mixingEnd - mixingStart) / 1000.0
 
@@ -170,9 +172,15 @@ object ElectionTest extends App {
   println(s"finished run with votes = $totalVotes")
   println(s"mixTime: $mixTime")
   println(s"sec / vote: ${mixTime / totalVotes}")
-  println(s"modExps: $modExps")
-  println(s"modExps / vote: ${modExps.toFloat / totalVotes}")
+  println(s"total modExps: ${ch.MP.total}")
+  println(s"found modExps: ${ch.MP.found}")
+  println(s"found modExps %: ${ch.MP.found/ch.MP.total.toDouble}")
+  println(s"extracted modExps: ${ch.MP.getExtracted}")
+  println(s"extracted modExps %: ${ch.MP.getExtracted/ch.MP.total.toDouble}")
+  println(s"modExps / vote: ${ch.MP.total.toFloat / totalVotes}")
   println("*************************************************************")
+
+  mpservice.MPService.shutdown
 }
 
 /**
@@ -319,7 +327,7 @@ object Election {
 
   // verify and add a share
   def addShare[W <: Nat, T <: Nat](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) = {
-    println(s"Adding share... $share")
+    println(s"Adding share...")
 
     val result = Verifier.verifyKeyShare(share, in.state.cSettings, proverId)
     if(result) {
@@ -340,7 +348,7 @@ object Election {
     }
     val publicKey = shares.reduce( (a,b) => a.apply(b) )
 
-    println(s"combineShares: public key $publicKey")
+    // println(s"combineShares: public key $publicKey")
     encKey
 
     new Election[W, Combined](Combined(publicKey.convertToString, in.state))
@@ -376,12 +384,37 @@ object Election {
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
     val keyPairGen = elGamal.getKeyPairGenerator()
     val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(in.state.publicKey)
-    val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
-    val votes = in.state match {
+    
+    println("Convert votes...")
+    
+    val (shuffled,votes) = mpservice.MPE.ex({
+      val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+      val votes = in.state match {
+        case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+        case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+      }
+      (shuffled, votes)}, "1"
+    )
+    /* ch.MP.a()
+    ch.MP.startRecord("1")
+    var shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+    var votes = in.state match {
       case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
       case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
     }
-    mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+    val requests = ch.MP.stopRecord()
+    ch.MP.b()
+    if(requests.length > 0) {
+      val answers = mpservice.MPService.compute(requests);
+      ch.MP.startReplay(answers)
+      shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+      votes = in.state match {
+        case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+        case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+      }
+      ch.MP.stopReplay()
+    }
+    ch.MP.reset()*/
 
     println(s"Verifying shuffle..")
     val ok = Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),
@@ -423,9 +456,12 @@ object Election {
   // combine partial decryptions, can only happen if we have all of them
   def combineDecryptions[W <: Nat](in: Election[W, Decryptions[W]]) = {
     println("Combining decryptions...")
+    
 
     // obtain a^-x from individual a^-xi's
-    val combined = in.state.decryptions.map( x => x.partialDecryptions ).reduce { (a, b) =>
+    // val combined = in.state.decryptions.map( x => x.partialDecryptions ).reduce { (a, b) =>
+    val decryptionElements = in.state.decryptions.map(ds => ds.partialDecryptions.map(in.state.cSettings.group.getElementFrom(_)))
+    val combined = decryptionElements.reduce { (a, b) =>
       (a zip b).map(c => c._1.apply(c._2))
     }
     println("Combining decryptions...Ok")
@@ -487,11 +523,11 @@ object Util {
     val elGamal = ElGamalEncryptionScheme.getInstance(cSettings.generator)
     val encoder = ZModPrimeToGStarModSafePrime.getInstance(cSettings.group)
 
-    plaintexts.map { p =>
+    plaintexts.par.map { p =>
       val message = encoder.getDomain().getElementFrom(p)
       val encodedMessage = encoder.encode(message)
       elGamal.encrypt(publicKey, encodedMessage)
-    }
+    }.seq
   }
 
   def getPublicKeyFromString(publicKey: String, generator: Element[_]) = {
