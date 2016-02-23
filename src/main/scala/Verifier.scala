@@ -118,22 +118,22 @@ object Verifier extends ProofSettings {
     proverId: String, publicKey: Element[_], Csettings: CryptoSettings) = {
 
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
-ch.MP.l()
+
     val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
-ch.MP.l()
+
     println("Getting proof systems..")
     // Create e-values challenge generator
     val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
         Csettings.group.getZModOrder(), votes.getArity())
     val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
       Csettings.group, votes.getArity())
-ch.MP.l()
+
     val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, votes.getArity(), elGamal, publicKey)
-ch.MP.l()
+
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, votes.getArity())
-ch.MP.l()
+
     // val permutationCommitment = pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment)
     val permutationCommitment = mpservice.MPE.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
 

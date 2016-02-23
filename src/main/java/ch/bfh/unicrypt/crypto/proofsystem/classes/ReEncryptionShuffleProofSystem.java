@@ -259,7 +259,7 @@ public class ReEncryptionShuffleProofSystem
 
 		@Override
 		protected Tuple abstractApply(Tuple element, RandomByteSequence randomByteSequence) {
-ch.MP.l();
+
 			// Unfold element
 			final Element r = element.getAt(0);
 			final Element w = element.getAt(1);

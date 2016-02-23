@@ -253,11 +253,21 @@ public class ProductSemiGroup
 	protected Tuple defaultSelfApply(Tuple tuple, BigInteger amount) {
 		final Element[] results = new Element[this.getArity()];
 		// this comes from PermutationCommitmentProofSystem:333
-		if(this.getArity() > 2) ch.MP.a();
-		for (int i : this.getAllIndices()) {
-			results[i] = tuple.getAt(i).selfApply(amount);
+		if(this.getArity() > 2) {
+			ch.MP.ex(() -> {
+				for (int i : this.getAllIndices()) {
+					results[i] = tuple.getAt(i).selfApply(amount);
+				}
+				return results;
+			}, "2");
 		}
-		if(this.getArity() > 2) ch.MP.b();
+		else {
+			for (int i : this.getAllIndices()) {
+				results[i] = tuple.getAt(i).selfApply(amount);
+			}
+		}
+		
+
 		return this.abstractGetElement(DenseArray.getInstance(results));
 	}
 

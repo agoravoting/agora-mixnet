@@ -226,7 +226,7 @@ public class PermutationCommitmentProofSystem
 		}
 		ch.MP.b();
 		*/
-ch.MP.l();
+
 		ch.MP.a();
 		ch.MP.startRecord();
 		Element[] temp = new Element[this.size];
@@ -262,7 +262,7 @@ System.out.println("Cannot pararellize..");
 		
 		final Tuple cV = Tuple.getInstance(cs);
 		final Element d = ds[ds.length - 1];
-ch.MP.l();
+
 		// Map ePrimeV to Z_q^N
 		ePrimeV = ProductFunction.getInstance(
 			   ConvertFunction.getInstance(ePrimeV.getFirst().getSet(), cyclicGroup.getZModOrder()),

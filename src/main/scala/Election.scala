@@ -164,7 +164,7 @@ ch.MP.total = 0;
   println(s"Plaintexts $plaintexts")
   println(s"Decrypted ${electionDone.state.decrypted}")
   println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
-*/
+  */
 
   val mixTime = (mixingEnd - mixingStart) / 1000.0
 

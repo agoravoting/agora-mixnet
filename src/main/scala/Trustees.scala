@@ -102,13 +102,13 @@ trait KeyMaker extends ProofSettings {
 
     val challengeGenerator: SigmaChallengeGenerator  = FiatShamirSigmaChallengeGenerator.getInstance(
       Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
-// println(">>> 2 ${GStarMod.modExps - before}"); before = GStarMod.modExps
+
     val pg: PlainPreimageProofSystem = PlainPreimageProofSystem.getInstance(challengeGenerator, function)
-// println(">>> 3 ${GStarMod.modExps - before}"); before = GStarMod.modExps
+
     val proof: Triple = pg.generate(privateKey, publicKey)
-// println(">>> 4 ${GStarMod.modExps - before}"); before = GStarMod.modExps
+
     val success = pg.verify(proof, publicKey)
-// println(">>> 5 ${GStarMod.modExps - before}"); before = GStarMod.modExps
+
     if (!success) {
       throw new Exception("Failed verifying proof")
     } else {
@@ -153,10 +153,9 @@ trait KeyMaker extends ProofSettings {
 
     val encryptionGenerator = Csettings.generator
 
-// println(s">>> -1 ${GStarMod.modExps - before}"); before = GStarMod.modExps
     // Create proof functions
     val f1: Function = GeneratorFunction.getInstance(encryptionGenerator)
-// println(s">>> 0 ${GStarMod.modExps - before}"); before = GStarMod.modExps
+
     val f2: Function = CompositeFunction.getInstance(
         InvertFunction.getInstance(Csettings.group.getZModOrder()),
         MultiIdentityFunction.getInstance(Csettings.group.getZModOrder(), generatorFunctions.length),
@@ -167,15 +166,15 @@ trait KeyMaker extends ProofSettings {
     val publicInput: Pair = Pair.getInstance(publicKey, Tuple.getInstance(partialDecryptions:_*))
     val otherInput = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
 
-// println(s">>> 1 ${GStarMod.modExps - before}"); before = GStarMod.modExps
+
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
-// println(s">>> 2 ${GStarMod.modExps - before}"); before = GStarMod.modExps
+
     val proofSystem: EqualityPreimageProofSystem = EqualityPreimageProofSystem.getInstance(challengeGenerator, f1, f2)
-// println(s">>> 3 ${GStarMod.modExps - before}"); before = GStarMod.modExps
+
     // Generate and verify proof
     val proof: Triple = proofSystem.generate(privateInput, publicInput)
-// println(s">>> 4 ${GStarMod.modExps - before}"); before = GStarMod.modExps
+
     val result = proofSystem.verify(proof, publicInput)
     if(!result) throw new Exception
 
@@ -238,10 +237,10 @@ ch.MP.z(); ch.MP.y();
 ch.MP.z(); ch.MP.y(); 
 
     val permutationCommitmentRandomizations: Tuple = pcs.getRandomizationSpace().getRandomElement()
-ch.MP.l();
+
     val permutationCommitment: Tuple = pcs.commit(psi, permutationCommitmentRandomizations)
 ch.MP.z(); ch.MP.y(); 
-ch.MP.l();
+
     // Create psi commitment proof system
     val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
         Csettings.group, ciphertexts.getArity())
