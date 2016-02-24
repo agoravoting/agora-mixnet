@@ -9,6 +9,7 @@ import scala.collection._
 import com.typesafe.config.ConfigFactory
 import scala.util.Try
 import scala.util.Success
+import com.squareup.jnagmp.Gmp
 
 // public api
 case class ModPow(base: BigInteger, pow: BigInteger, mod: BigInteger)
@@ -23,6 +24,18 @@ case class ModPowArray(modpows: Array[ModPow])
 case class ModPowArrayResult(result: Array[BigInteger])
 case class RequestData(client: ActorRef, length: Int, results: mutable.ArrayBuffer[WorkReply])
 
+object SequentialModPowService extends ModPowService {
+  def compute(work: Array[ModPow]): Array[BigInteger] = work.map(x => x.base.modPow(x.pow, x.mod))
+}
+object GmpParallelModPowService extends ModPowService {
+  def compute(work: Array[ModPow]): Array[BigInteger] = {
+    work.par.map(x => Gmp.modPowInsecure(x.base, x.pow, x.mod)).seq.toArray
+  }
+}
+object ParallelModPowService extends ModPowService {
+  def compute(work: Array[ModPow]): Array[BigInteger] = work.par.map(x => x.base.modPow(x.pow, x.mod)).seq.toArray
+}
+
 class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends ModPowService {
   val inbox = Inbox.create(system)
 
@@ -36,15 +49,15 @@ class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends Mo
   }
 }
 
-class DummyModPowService extends ModPowService {
-  def compute(work: Array[ModPow]): Array[BigInteger] = work.map(x => x.base.modPow(x.pow, x.mod))
-}
-
-
 object AkkaModPowService extends ModPowService {
   val config = ConfigFactory.load()
   val system = ActorSystem("ClusterSystem", config)
-  val serviceActor = system.actorOf(ModPowServiceActor.props(200, 0), name = "ModPowService")
+  val maxChunkSize = config.getInt("master.max-chunk-size")
+  val sendDelay = config.getInt("master.send-delay-ms")
+  val minChunks = config.getInt("master.min-chunk")
+  val useGmp = config.getBoolean("worker.use-gmp")
+
+  val serviceActor = system.actorOf(ModPowServiceActor.props(minChunks, maxChunkSize, sendDelay, useGmp), name = "ModPowService")
   val service = new AkkaModPowService(system, serviceActor)
 
   def compute(work: Array[ModPow]): Array[BigInteger] = service.compute(work)
@@ -58,10 +71,9 @@ object MPService extends ModPowService {
   def shutdown = service.shutdown
 }
 
-class ModPowServiceActor(val maxChunkSize: Int, val sendDelay: Int) extends Actor with ActorLogging {
+class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDelay: Int, val useGmp: Boolean) extends Actor with ActorLogging {
   
-  val workerRouter = context.actorOf(WorkerActor.props(0).withRouter(FromConfig()), name = "workerRouter")
-  val minimumParallelism = 2
+  val workerRouter = context.actorOf(WorkerActor.props(useGmp).withRouter(FromConfig()), name = "workerRouter")
 
   // actor state
   var requestId = 0
@@ -71,7 +83,7 @@ class ModPowServiceActor(val maxChunkSize: Int, val sendDelay: Int) extends Acto
     
     case ModPowArray(modpows) => {
       requestId = requestId + 1
-      val size = math.min(math.max(modpows.length / minimumParallelism, 1), maxChunkSize)
+      val size = math.min(math.max(modpows.length / minChunks, 1), maxChunkSize)
       val chunks = modpows.sliding(size, size).toArray
       requests.put(requestId, RequestData(sender, chunks.length, mutable.ArrayBuffer()))
       println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
@@ -96,7 +108,9 @@ class ModPowServiceActor(val maxChunkSize: Int, val sendDelay: Int) extends Acto
   }
 }
 
-class WorkerActor(val processingTimeMillis: Int) extends Actor with ActorLogging {
+class WorkerActor(val useGmp: Boolean) extends Actor with ActorLogging {
+  val service = if(useGmp) GmpParallelModPowService else ParallelModPowService
+
   def receive: Receive = {
     case Work(requestId, workId, modpows) => {
       // println(s"received request length ${modpows.length} at actor $this")
@@ -108,11 +122,11 @@ class WorkerActor(val processingTimeMillis: Int) extends Actor with ActorLogging
 }
 
 object WorkerActor {
-  def props(processingTimeMillis: Int): Props = Props(new WorkerActor(processingTimeMillis))
+  def props(useGmp: Boolean): Props = Props(new WorkerActor(useGmp))
 }
 
 object ModPowServiceActor {
-  def props(maxChunkSize: Int, sendDelay: Int): Props = Props(new ModPowServiceActor(maxChunkSize, sendDelay))
+  def props(minChunks: Int, maxChunkSize: Int, sendDelay: Int, useGmp: Boolean): Props = Props(new ModPowServiceActor(minChunks, maxChunkSize, sendDelay, useGmp))
 }
 
 object WorkerApp {
@@ -129,9 +143,13 @@ object TestApp {
     val config = ConfigFactory.load()
     val system = ActorSystem("ClusterSystem", config)
 
+    val maxChunkSize = config.getInt("master.max-chunk-size")
+    val sendDelay = config.getInt("master.send-delay-ms")
+    val minChunks = config.getInt("master.min-chunk")
+    val useGmp = config.getBoolean("worker.use-gmp")
     // val metricsIntervalSeconds = config.getInt("producer.metrics-interval-seconds")
     // system.actorOf(ClusterListener.props(metricsIntervalSeconds))
-    val serviceActor = system.actorOf(ModPowServiceActor.props(300, 100), name = "ModPowService")
+    val serviceActor = system.actorOf(ModPowServiceActor.props(minChunks, maxChunkSize, sendDelay, useGmp), name = "ModPowService")
     val service = new AkkaModPowService(system, serviceActor)
 
     val total = 300000
