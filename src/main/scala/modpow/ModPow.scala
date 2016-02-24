@@ -114,7 +114,7 @@ class WorkerActor(val useGmp: Boolean) extends Actor with ActorLogging {
   def receive: Receive = {
     case Work(requestId, workId, modpows) => {
       // println(s"received request length ${modpows.length} at actor $this")
-      val result = modpows.par.map(x => x.base.modPow(x.pow, x.mod)).seq.toArray
+      val result = service.compute(modpows).seq.toArray
       print("+")
       sender ! WorkReply(requestId, workId, result)
     }
