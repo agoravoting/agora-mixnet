@@ -68,6 +68,7 @@ import ch.bfh.unicrypt.math.function.classes.PermutationFunction;
 import ch.bfh.unicrypt.math.function.classes.ProductFunction;
 
 import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractCyclicGroup;
+import mpservice.MPBridge;
 /**
  * The implementation of the re-encryption shuffle proof according to Wikström (@see Wik09 Protocol2:
  * Commitment-Consistent Proof of a Shuffle). It covers only the online part; the proof that the commitment to the
@@ -180,9 +181,9 @@ public class ReEncryptionShuffleProofSystem
 		randomElement = randomElement.append(Tuple.getInstance(randEV));
 
 		/// 
-		long before = ch.MP.total;
+		long before = MPBridge.total;
 		final Element commitment = f.apply(randomElement);                        // [3N+3]
-		System.out.println("renc gen f.apply " + (ch.MP.total - before));
+		System.out.println("renc gen f.apply " + (MPBridge.total - before));
 		///
 
 		final Element challenge = this.getSigmaChallengeGenerator().generate(publicInput, commitment);
@@ -207,12 +208,12 @@ public class ReEncryptionShuffleProofSystem
 		final Element[] ps = new Element[2];
 		
 		/// 
-		long before = ch.MP.total;
+		long before = MPBridge.total;
 		// - p_1 == c_pi^e                                                              [N]
 		ps[0] = computeInnerProduct(cPiV, eV);
 		// - p_2 = u                                                                   [2N]
 		ps[1] = computeInnerProduct(uV, eV);
-		System.out.println("renc ver computeInnerProduct, loop in AbstractShuffleProofSystem " + (ch.MP.total - before));
+		System.out.println("renc ver computeInnerProduct, loop in AbstractShuffleProofSystem " + (MPBridge.total - before));
 		///
 		
 		final Tuple pV = Tuple.getInstance(ps);
@@ -224,9 +225,9 @@ public class ReEncryptionShuffleProofSystem
 		final Element challenge = this.getSigmaChallengeGenerator().generate(publicInput, commitment);
 		
 		///
-		before = ch.MP.total;
+		before = MPBridge.total;
 		final Element left = f.apply(response);                                   // [3N+3]
-		System.out.println("renc ver f.apply " + (ch.MP.total - before));
+		System.out.println("renc ver f.apply " + (MPBridge.total - before));
 		///
 
 		final Element right = commitment.apply(pV.selfApply(challenge));          //    [3]
@@ -275,14 +276,14 @@ public class ReEncryptionShuffleProofSystem
 			for (int i = 0; i < ePrimeV.getArity(); i++) {
 				ePrimeVs[i] = zMod.getElement(((ZModElement) ePrimeV.getAt(i)).getValue().mod(zMod.getOrder()));
 			}
-			long before = ch.MP.total;
+			long before = MPBridge.total;
 			cV[0] = gpcs.commit(Tuple.getInstance(ePrimeVs), w);
-			System.out.println("renc ver gpcs.commit " + (ch.MP.total - before));
+			System.out.println("renc ver gpcs.commit " + (MPBridge.total - before));
 
 			// - Prod(u'_i^(e'_i)) * Enc(1, -r)         [2n+2]
-			before = ch.MP.total;
+			before = MPBridge.total;
 			final Element a = computeInnerProduct(this.uPrimeV, ePrimeV);
-			System.out.println("renc ver compute inner, loop in AbstractShuffleProofSystem " + (ch.MP.total - before));			
+			System.out.println("renc ver compute inner, loop in AbstractShuffleProofSystem " + (MPBridge.total - before));			
 			final Element b
 				   = encryptionScheme.encrypt(encryptionPK, encryptionScheme.getMessageSpace().getIdentityElement(), r.invert());
 			cV[1] = a.apply(b);
@@ -354,10 +355,10 @@ public class ReEncryptionShuffleProofSystem
 		}
 		
 		///
-		// ch.MP.a();
+		// MPBridge.a();
 		// Tuple independentGenerators = Tuple.getInstance(elgamal.getCyclicGroup().getIndependentGenerators(randomByteSequence).limit(size + 1));
 		Tuple independentGenerators = Tuple.getInstance(((AbstractCyclicGroup) elgamal.getCyclicGroup()).getIndependentGeneratorsParallel(randomByteSequence, 0, size + 1));
-		// ch.MP.b();
+		// MPBridge.b();
 		///
 
 		return getInstance(sigmaChallengeGenerator, eValuesGenerator, independentGenerators,

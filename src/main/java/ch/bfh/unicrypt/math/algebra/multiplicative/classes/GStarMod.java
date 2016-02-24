@@ -57,6 +57,7 @@ import java.math.BigInteger;
 
 // drb
 import com.squareup.jnagmp.Gmp;
+import mpservice.MPBridge;
 
 /**
  * This interface represents the concept of a sub-group G_m (of order m) of a cyclic group of integers Z*_n with the
@@ -83,9 +84,6 @@ public class GStarMod
     private final SpecialFactorization modulusFactorization;
     private final Factorization orderFactorization;
     private ZStarMod superGroup;
-
-    // drb
-    public static boolean gmpModPow = false;
 
     protected GStarMod(SpecialFactorization modulusFactorization, Factorization orderFactorization) {
         super(BigInteger.class);
@@ -153,7 +151,7 @@ public class GStarMod
     @Override
     protected GStarModElement defaultSelfApplyAlgorithm(final GStarModElement element, final BigInteger posExponent) {
         // return this.abstractGetElement(element.getValue().modPow(posExponent, this.modulus));
-        return this.abstractGetElement(modPow(element.getValue(), posExponent, this.modulus));
+        return this.abstractGetElement(MPBridge.modPow(element.getValue(), posExponent, this.modulus));
     }
 
     @Override
@@ -166,7 +164,7 @@ public class GStarMod
         return value.signum() > 0
                && value.compareTo(this.modulus) < 0
                && MathUtil.areRelativelyPrime(value, this.modulus)
-               && modPow(value, this.getOrder(), this.modulus).equals(MathUtil.ONE);
+               && MPBridge.modPow(value, this.getOrder(), this.modulus).equals(MathUtil.ONE);
                // && value.modPow(this.getOrder(), this.modulus).equals(MathUtil.ONE);
     }
 
@@ -269,18 +267,18 @@ public class GStarMod
     }
 
     // drb
-    public static BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
-        if(ch.MP.debug) new Exception().printStackTrace();
-        if(ch.MP.isRecording()) {
-            ch.MP.total++;
-            ch.MP.addModPow(base, pow, mod);
-            return ch.MP.dummy;
+    /*public static BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
+        if(MPBridge.debug) new Exception().printStackTrace();
+        if(MPBridge.isRecording()) {
+            MPBridge.total++;
+            MPBridge.addModPow(base, pow, mod);
+            return MPBridge.dummy;
         }
-        else if(ch.MP.isReplaying()) {
-            return ch.MP.getModPow();
+        else if(MPBridge.isReplaying()) {
+            return MPBridge.getModPow();
         }
         else {
-            ch.MP.total++;
+            MPBridge.total++;
             if(gmpModPow) {
                 return Gmp.modPowInsecure(base, pow, mod);
             }
@@ -288,5 +286,5 @@ public class GStarMod
                 return base.modPow(pow, mod);    
             }
         }
-    }
+    }*/
 }

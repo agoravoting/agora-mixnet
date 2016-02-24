@@ -57,6 +57,7 @@ import ch.bfh.unicrypt.math.function.abstracts.AbstractFunction;
 import ch.bfh.unicrypt.math.function.interfaces.Function;
 
 import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractCyclicGroup;
+import mpservice.MPBridge;
 
 //
 // @see [Wik09] Construction 1: Pedersen Commitment
@@ -115,10 +116,10 @@ public class PermutationCommitmentScheme
 		// the generators are calculated lazily only when tuple.get instance is called|
 		// at ch.bfh.unicrypt.helper.array.classes.DenseArray.getInstance(DenseArray.java:122)
         // at ch.bfh.unicrypt.math.algebra.general.classes.Tuple.getInstance(Tuple.java:335)
-		// ch.MP.a();
+		// MPBridge.a();
 		// Tuple messageGenerators = Tuple.getInstance(cyclicGroup.getIndependentGenerators(randomByteSequence).skip(1).limit(size));
 		Tuple messageGenerators = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsParallel(randomByteSequence, 1, size));
-		// ch.MP.b();
+		// MPBridge.b();
 		return new PermutationCommitmentScheme(cyclicGroup, size, randomizationGenerator, messageGenerators);
 	}
 
@@ -148,24 +149,24 @@ public class PermutationCommitmentScheme
 			final Tuple randomizations = (Tuple) element.getSecond();
 			Element[] ret = new Element[size];
 			
-			ch.MP.a();
-			ch.MP.startRecord();
+			MPBridge.a();
+			MPBridge.startRecord();
 			for (int i = 0; i < size; i++) {
 				ret[i] = randomizationGenerator.selfApply(randomizations.getAt(i)).apply(
 					   messageGenerators.getAt(permutation.permute(i)));
 			}
-			mpservice.ModPow[] requests = ch.MP.stopRecord();
-			ch.MP.b();
+			mpservice.ModPow[] requests = MPBridge.stopRecord();
+			MPBridge.b();
 			if(requests.length > 0) {
 				java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-				ch.MP.startReplay(answers);
+				MPBridge.startReplay(answers);
 				for (int i = 0; i < size; i++) {
 					ret[i] = randomizationGenerator.selfApply(randomizations.getAt(i)).apply(
 					   messageGenerators.getAt(permutation.permute(i)));
 				}
-				ch.MP.stopReplay();
+				MPBridge.stopReplay();
 			}
-			ch.MP.reset();
+			MPBridge.reset();
 
 			return Tuple.getInstance(ret);
 		}

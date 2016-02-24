@@ -30,6 +30,7 @@ import ch.bfh.unicrypt.math.function.classes.InvertFunction
 import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
 import ch.bfh.unicrypt.math.function.classes.ProductFunction
 import ch.bfh.unicrypt.math.function.interfaces.Function
+import mpservice.MPBridgeS
 
 /**
  * Proof settings common for proof generators and verifiers
@@ -135,11 +136,11 @@ object Verifier extends ProofSettings {
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, votes.getArity())
 
     // val permutationCommitment = pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment)
-    val permutationCommitment = mpservice.MPE.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
+    val permutationCommitment = MPBridgeS.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
 
     println("Getting values..")
 
-    val commitment1 = mpservice.MPE.ex(pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment), "1")
+    val commitment1 = MPBridgeS.ex(pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment), "1")
 
     val challenge1 = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
     val response1 = pcps.getResponseSpace().getElementFromString(shuffleProof.permutationProof.response)
@@ -154,7 +155,7 @@ object Verifier extends ProofSettings {
 
     println("Converting bridging commitments..")
     // Assume bridging commitments: GStarmod
-    val bridgingCommitments = mpservice.MPE.ex(permutationProofDTO.bridgingCommitments.map { x =>
+    val bridgingCommitments = MPBridgeS.ex(permutationProofDTO.bridgingCommitments.map { x =>
       Csettings.group.getElementFrom(x)
     }, "1")
 

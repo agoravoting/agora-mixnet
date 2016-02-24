@@ -28,8 +28,8 @@ import ch.bfh.unicrypt.math.function.classes.ProductFunction
 import ch.bfh.unicrypt.math.function.interfaces.Function
 import shapeless.Sized.sizedToRepr
 
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.ZStarMod
+import mpservice.MPBridgeS
+import mpservice.MPBridge
 
 /**
  * Represents a key maker trustee
@@ -67,7 +67,7 @@ class MixerTrustee(val id: String) extends Mixer {
     val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(e.state.publicKey)
     println("Convert votes..")
     
-    val votes = mpservice.MPE.ex(
+    val votes = MPBridgeS.ex(
       e.state match {
         case s: Mixing[_0] => e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
         case _ => e.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
@@ -198,15 +198,15 @@ trait Mixer extends ProofSettings {
     // println(ciphertexts)
     // println("===== ciphertexts =====")
 var before = 0
-ch.MP.y();
+MPBridge.y();
     val mixer: ReEncryptionMixer = ReEncryptionMixer.getInstance(elGamal, publicKey, ciphertexts.getArity())
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
     val psi: PermutationElement = mixer.getPermutationGroup().getRandomElement()
 
     println("Mixer: randomizations..")
-// println(s">>> 3 ${GStarMod.modExps - before}"); before = GStarMod.modExps
+
     val rs: Tuple = mixer.generateRandomizations()
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
     println("Mixer: shuffle..")
     
 
@@ -214,7 +214,7 @@ ch.MP.z(); ch.MP.y();
     ///
     
     val shuffledVs: Tuple = mixer.shuffle(ciphertexts, psi, rs)
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
     ///
 
     // println("===== shuffled  =====")
@@ -234,36 +234,36 @@ ch.MP.z(); ch.MP.y();
 
     println("Mixer: permutation proof..")
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, ciphertexts.getArity())
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
 
     val permutationCommitmentRandomizations: Tuple = pcs.getRandomizationSpace().getRandomElement()
 
     val permutationCommitment: Tuple = pcs.commit(psi, permutationCommitmentRandomizations)
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
 
     // Create psi commitment proof system
     val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
         Csettings.group, ciphertexts.getArity())
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
     // Create psi commitment proof
     val privateInputPermutation: Pair = Pair.getInstance(psi, permutationCommitmentRandomizations)
     val publicInputPermutation = permutationCommitment
     println("Mixer: permutation proof, generating..")
     val permutationProof: Tuple = pcps.generate(privateInputPermutation, publicInputPermutation)
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
     println("Mixer: shuffle proof..")
     // 2. Shuffle Proof
     //------------------
     // Create shuffle proof system
     val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, ciphertexts.getArity(), elGamal, publicKey)
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
     // Proof and verify
     val privateInputShuffle: Tuple = Tuple.getInstance(psi, permutationCommitmentRandomizations, rs)
     val publicInputShuffle: Tuple = Tuple.getInstance(permutationCommitment, ciphertexts, shuffledVs)
     println("Mixer: shuffle proof, generating..")
     // Create shuffle proof
     val mixProof: Tuple = spg.generate(privateInputShuffle, publicInputShuffle)
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
     val bridgingCommitments = pcps.getBridingCommitment(permutationProof).asInstanceOf[Tuple]
     val eValues = pcps.getEValues(permutationProof).asInstanceOf[Tuple]
     val permputationProofDTO = PermutationProofDTO(pcps.getCommitment(permutationProof).convertToString(),
@@ -286,10 +286,10 @@ ch.MP.z(); ch.MP.y();
     println("Mixer: verifying..")
 
     val v1 = pcps.verify(permutationProof, publicInputPermutation)
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
     // Verify shuffle proof
     val v2 = spg.verify(mixProof, publicInputShuffle)
-ch.MP.z(); ch.MP.y(); 
+MPBridge.z(); MPBridge.y(); 
     // Verify equality of permutation commitments
     val v3 = publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
 

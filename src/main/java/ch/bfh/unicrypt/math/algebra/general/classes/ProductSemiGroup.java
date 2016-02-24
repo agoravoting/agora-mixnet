@@ -53,6 +53,8 @@ import ch.bfh.unicrypt.math.algebra.general.interfaces.SemiGroup;
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Set;
 import java.math.BigInteger;
 
+import mpservice.MPBridge;
+
 /**
  *
  * @author R. Haenni
@@ -254,7 +256,7 @@ public class ProductSemiGroup
 		final Element[] results = new Element[this.getArity()];
 		// this comes from PermutationCommitmentProofSystem:333
 		if(this.getArity() > 2) {
-			ch.MP.ex(() -> {
+			MPBridge.ex(() -> {
 				for (int i : this.getAllIndices()) {
 					results[i] = tuple.getAt(i).selfApply(amount);
 				}

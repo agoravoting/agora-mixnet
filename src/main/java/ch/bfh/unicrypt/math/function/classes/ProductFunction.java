@@ -52,7 +52,7 @@ import ch.bfh.unicrypt.math.algebra.general.interfaces.Set;
 import ch.bfh.unicrypt.math.function.abstracts.AbstractCompoundFunction;
 import ch.bfh.unicrypt.math.function.interfaces.Function;
 
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod;
+import mpservice.MPBridge;
 
 /**
  * This class represents the concept of a product function f:(X_1x...xX_n)->(Y_1x...xY_n). It consists of multiple
@@ -86,29 +86,29 @@ public final class ProductFunction
 		final Element[] elements = new Element[this.getArity()];
 		
 		if(this.getAt(0) instanceof GeneratorFunction ) {
-			ch.MP.ex(() -> {
+			MPBridge.ex(() -> {
 				for (int i : this.getAllIndices()) {
 					elements[i] = this.getAt(i).apply(element.getAt(i), randomByteSequence);
 				}
 				return elements;
 			}, "2");
 
-			/*ch.MP.a();
-			ch.MP.startRecord();
+			/*MPBridge.a();
+			MPBridge.startRecord();
 			for (int i : this.getAllIndices()) {
 				elements[i] = this.getAt(i).apply(element.getAt(i), randomByteSequence);
 			}
-			mpservice.ModPow[] requests = ch.MP.stopRecord();
-			ch.MP.b();
+			mpservice.ModPow[] requests = MPBridge.stopRecord();
+			MPBridge.b();
 			if(requests.length > 0) {
 				java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-				ch.MP.startReplay(answers);
+				MPBridge.startReplay(answers);
 				for (int i : this.getAllIndices()) {
 					elements[i] = this.getAt(i).apply(element.getAt(i), randomByteSequence);
 				}	
-				ch.MP.stopReplay();
+				MPBridge.stopReplay();
 			}
-			ch.MP.reset();*/
+			MPBridge.reset();*/
 
 		}
 		else {

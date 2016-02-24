@@ -53,7 +53,7 @@ import ch.bfh.unicrypt.math.algebra.general.interfaces.Set;
 import ch.bfh.unicrypt.math.function.classes.PermutationFunction;
 import ch.bfh.unicrypt.math.function.interfaces.Function;
 
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod;
+import mpservice.MPBridge;
 
 /**
  *
@@ -126,29 +126,29 @@ public abstract class AbstractMixer<C extends Set, R extends Set>
 		}
 		final Element[] elementsPrime = new Element[this.getSize()];
 
-		ch.MP.ex(() -> {
+		MPBridge.ex(() -> {
 			for (int i = 0; i < this.getSize(); i++) {
 				elementsPrime[i] = this.getShuffleFunction().apply(elements.getAt(i), randomizations.getAt(i));
 			}
 			return elementsPrime;
 		}, "2");
 
-		/*ch.MP.a();
-		ch.MP.startRecord();
+		/*MPBridge.a();
+		MPBridge.startRecord();
 		for (int i = 0; i < this.getSize(); i++) {
 			elementsPrime[i] = this.getShuffleFunction().apply(elements.getAt(i), randomizations.getAt(i));
 		}
-		mpservice.ModPow[] requests = ch.MP.stopRecord();
-		ch.MP.b();
+		mpservice.ModPow[] requests = MPBridge.stopRecord();
+		MPBridge.b();
 		if(requests.length > 0) {
 			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			ch.MP.startReplay(answers);
+			MPBridge.startReplay(answers);
 			for (int i = 0; i < this.getSize(); i++) {
 				elementsPrime[i] = this.getShuffleFunction().apply(elements.getAt(i), randomizations.getAt(i));
 			}
-			ch.MP.stopReplay();
+			MPBridge.stopReplay();
 		}
-		ch.MP.reset();*/
+		MPBridge.reset();*/
 
 		return this.getPermutationFunction().apply(Tuple.getInstance(elementsPrime), permutation);
 	}

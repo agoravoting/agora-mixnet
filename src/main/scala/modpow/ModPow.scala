@@ -167,20 +167,20 @@ object TestApp {
   }
 }
 
-object MPE {
+object MPBridgeS {
   def ex[T](f: => T, v: String) = {
-    ch.MP.a()
-    ch.MP.startRecord(v)
+    MPBridge.a()
+    MPBridge.startRecord(v)
     var ret = f
-    val requests = ch.MP.stopRecord()
-    ch.MP.b(3)
+    val requests = MPBridge.stopRecord()
+    MPBridge.b(3)
     if(requests.length > 0) {
         val answers = mpservice.MPService.compute(requests);
-        ch.MP.startReplay(answers)
+        MPBridge.startReplay(answers)
         ret = f
-        ch.MP.stopReplay()
+        MPBridge.stopReplay()
     }
-    ch.MP.reset()
+    MPBridge.reset()
 
     ret
   }

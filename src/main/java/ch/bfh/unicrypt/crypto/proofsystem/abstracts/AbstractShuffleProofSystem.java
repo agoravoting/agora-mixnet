@@ -57,7 +57,7 @@ import ch.bfh.unicrypt.math.algebra.general.interfaces.CyclicGroup;
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element;
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Group;
 
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod;
+import mpservice.MPBridge;
 
 /**
  * This class is an abstract base implementation for shuffle proof systems according to Wikström (@see Wik09, TW10). It
@@ -226,7 +226,7 @@ public abstract class AbstractShuffleProofSystem
 		}
 		final Element innerProduct = ((Group) t1.getSet().getAt(0)).getIdentityElement();
 		
-		Element ret = ch.MP.ex(() -> {
+		Element ret = MPBridge.ex(() -> {
 			Element ip = innerProduct;
 			for (int i = 0; i < t1.getArity(); i++) {
 				ip = ip.apply(t1.getAt(i).selfApply(t2.getAt(i)));
@@ -234,23 +234,23 @@ public abstract class AbstractShuffleProofSystem
 			return ip;
 			}, "2"
 		);
-		/*ch.MP.a();
-		ch.MP.startRecord();
+		/*MPBridge.a();
+		MPBridge.startRecord();
 		for (int i = 0; i < t1.getArity(); i++) {
 			innerProduct = innerProduct.apply(t1.getAt(i).selfApply(t2.getAt(i)));
 		}
-		mpservice.ModPow[] requests = ch.MP.stopRecord();
-		ch.MP.b();
+		mpservice.ModPow[] requests = MPBridge.stopRecord();
+		MPBridge.b();
 		if(requests.length > 0) {
 			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			ch.MP.startReplay(answers);
+			MPBridge.startReplay(answers);
 			innerProduct = ((Group) t1.getSet().getAt(0)).getIdentityElement();
 			for (int i = 0; i < t1.getArity(); i++) {
 				innerProduct = innerProduct.apply(t1.getAt(i).selfApply(t2.getAt(i)));
 			}	
-			ch.MP.stopReplay();
+			MPBridge.stopReplay();
 		}
-		ch.MP.reset();*/
+		MPBridge.reset();*/
 
 		// return innerProduct;
 		return ret;

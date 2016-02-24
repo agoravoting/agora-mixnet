@@ -57,6 +57,7 @@ import ch.bfh.unicrypt.math.algebra.multiplicative.abstracts.AbstractMultiplicat
 import java.math.BigInteger;
 
 import com.squareup.jnagmp.Gmp;
+import mpservice.MPBridge;
 
 /**
  * This class implements the group of integers Z*_n with the operation of multiplication modulo n. Its identity element
@@ -77,9 +78,6 @@ public class ZStarMod
 
 	private final BigInteger modulus;
 	private final Factorization modulusFactorization;
-
-	// drb
-    public static boolean gmpModPow = false;
     
 	protected ZStarMod(final BigInteger modulus) {
 		this(modulus, Factorization.getInstance());
@@ -125,7 +123,7 @@ public class ZStarMod
 	@Override
 	protected ZStarModElement defaultSelfApplyAlgorithm(final ZStarModElement element, final BigInteger posExponent) {
 		// return this.abstractGetElement(element.getValue().modPow(posExponent, this.modulus));
-		return this.abstractGetElement(modPow(element.getValue(), posExponent, this.modulus));
+		return this.abstractGetElement(MPBridge.modPow(element.getValue(), posExponent, this.modulus));
 	}
 
 	@Override
@@ -270,18 +268,18 @@ public class ZStarMod
 	}
 
 	// drb
-    public static BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
-        if(ch.MP.debug) new Exception().printStackTrace();
-        if(ch.MP.isRecording()) {
-            ch.MP.total++;
-            ch.MP.addModPow(base, pow, mod);
-            return ch.MP.dummy;
+    /*public static BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
+        if(MPBridge.debug) new Exception().printStackTrace();
+        if(MPBridge.isRecording()) {
+            MPBridge.total++;
+            MPBridge.addModPow(base, pow, mod);
+            return MPBridge.dummy;
         }
-        else if(ch.MP.isReplaying()) {
-            return ch.MP.getModPow();
+        else if(MPBridge.isReplaying()) {
+            return MPBridge.getModPow();
         }
         else {
-            ch.MP.total++;
+            MPBridge.total++;
             if(gmpModPow) {
                 return Gmp.modPowInsecure(base, pow, mod);
             }
@@ -289,6 +287,5 @@ public class ZStarMod
                 return base.modPow(pow, mod);    
             }
         }
-    }
-
+    }*/
 }

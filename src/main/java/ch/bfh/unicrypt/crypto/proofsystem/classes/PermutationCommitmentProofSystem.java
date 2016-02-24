@@ -69,9 +69,9 @@ import ch.bfh.unicrypt.math.function.classes.ConvertFunction;
 import ch.bfh.unicrypt.math.function.classes.PermutationFunction;
 import ch.bfh.unicrypt.math.function.classes.ProductFunction;
 
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod;
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.ZStarMod;
+
 import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractCyclicGroup;
+import mpservice.MPBridge;
 
 //
 // @see [TW10] Protocol 1: Permutation Matrix
@@ -216,7 +216,7 @@ public class PermutationCommitmentProofSystem
 		final Element[] ds = new Element[this.size];
 		ds[0] = rV.getAt(0);		
 		
-		/*ch.MP.a();
+		/*MPBridge.a();
 		for (int i = 0; i < this.size; i++) {
 			Element c_i_1 = i == 0 ? h : cs[i - 1];
 			cs[i] = g.selfApply(rV.getAt(i)).apply(c_i_1.selfApply(ePrimeV.getAt(i)));  //   [2n]
@@ -224,11 +224,11 @@ public class PermutationCommitmentProofSystem
 				ds[i] = rV.getAt(i).apply(ds[i - 1].selfApply(ePrimeV.getAt(i)));
 			}
 		}
-		ch.MP.b();
+		MPBridge.b();
 		*/
 
-		ch.MP.a();
-		ch.MP.startRecord();
+		MPBridge.a();
+		MPBridge.startRecord();
 		Element[] temp = new Element[this.size];
 		for (int i = 0; i < this.size; i++) {	
 			temp[i] = g.selfApply(rV.getAt(i));  //   [2n]
@@ -236,28 +236,28 @@ public class PermutationCommitmentProofSystem
 				ds[i] = rV.getAt(i).apply(ds[i - 1].selfApply(ePrimeV.getAt(i)));
 			}
 		}
-		mpservice.ModPow[] requests = ch.MP.stopRecord();
-		ch.MP.b();
+		mpservice.ModPow[] requests = MPBridge.stopRecord();
+		MPBridge.b();
 		if(requests.length > 0) {
 			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			ch.MP.startReplay(answers);
+			MPBridge.startReplay(answers);
 			for (int i = 0; i < this.size; i++) {	
 				temp[i] = g.selfApply(rV.getAt(i));  //   [2n]
 				if (i > 0) {
 					ds[i] = rV.getAt(i).apply(ds[i - 1].selfApply(ePrimeV.getAt(i)));
 				}
 			}	
-			ch.MP.stopReplay();
+			MPBridge.stopReplay();
 		}
-		ch.MP.reset();
+		MPBridge.reset();
 System.out.println("Cannot pararellize..");
 		// CANT BE PARALLELIZED
-		ch.MP.a();
+		MPBridge.a();
 		for (int i = 0; i < this.size; i++) {
 			Element c_i_1 = i == 0 ? h : cs[i - 1];
 			cs[i] = temp[i].apply(c_i_1.selfApply(ePrimeV.getAt(i)));  //   [2n]
 		}
-		ch.MP.b();
+		MPBridge.b();
 		
 		
 		final Tuple cV = Tuple.getInstance(cs);
@@ -286,9 +286,9 @@ System.out.println("Cannot pararellize..");
 
 	
 		///
-		long before = ch.MP.total;
+		long before = MPBridge.total;
 		final Element commitment = f.apply(randomElement);                              // [3n+3]
-		System.out.println("perm gen f.apply " + (ch.MP.total - before));
+		System.out.println("perm gen f.apply " + (MPBridge.total - before));
 		///
 
 		
@@ -324,10 +324,10 @@ System.out.println("Cannot pararellize..");
 		
 
 		///
-		long before = ch.MP.total;
+		long before = MPBridge.total;
 		// - p_1 = c_pi^e                                                                     [N]
 		ps[1] = computeInnerProduct(publicInput, eV);
-		System.out.println("perm ver computeInnerProduct " + (ch.MP.total - before));
+		System.out.println("perm ver computeInnerProduct " + (MPBridge.total - before));
 		///
 		
 		// - p_2...p_(N+2) = c_1 ... c_N
@@ -357,16 +357,16 @@ System.out.println("Cannot pararellize..");
 		
 
 		///
-		before = ch.MP.total;
+		before = MPBridge.total;
 		final Element left = f.apply(response);                                         // [3N+3]
-		System.out.println("perm ver f.apply " + (ch.MP.total - before));
+		System.out.println("perm ver f.apply " + (MPBridge.total - before));
 		///
 		
 		///
-		before = ch.MP.total;
-		// ch.MP.debug = true;
+		before = MPBridge.total;
+		// MPBridge.debug = true;
 		final Element right = commitment.apply(pV.selfApply(challenge));                //  [N+3]
-		System.out.println("*** perm ver pv.selfApply " + (ch.MP.total - before));
+		System.out.println("*** perm ver pv.selfApply " + (MPBridge.total - before));
 		///
 
 		//                                                                                -------
@@ -384,23 +384,23 @@ System.out.println("Cannot pararellize..");
 			throw new IllegalArgumentException();
 		}
 		Element innerProduct = ((Group) t1.getSet().getAt(0)).getIdentityElement();
-		ch.MP.a();
-		ch.MP.startRecord();
+		MPBridge.a();
+		MPBridge.startRecord();
 		for (int i = 0; i < t1.getArity(); i++) {
 			innerProduct = innerProduct.apply(t1.getAt(i).selfApply(t2.getAt(i)));
 		}
-		mpservice.ModPow[] requests = ch.MP.stopRecord();
-		ch.MP.b();
+		mpservice.ModPow[] requests = MPBridge.stopRecord();
+		MPBridge.b();
 		if(requests.length > 0) {
 			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			ch.MP.startReplay(answers);
+			MPBridge.startReplay(answers);
 			innerProduct = ((Group) t1.getSet().getAt(0)).getIdentityElement();
 			for (int i = 0; i < t1.getArity(); i++) {
 				innerProduct = innerProduct.apply(t1.getAt(i).selfApply(t2.getAt(i)));
 			}
-			ch.MP.stopReplay();
+			MPBridge.stopReplay();
 		}
-		ch.MP.reset();
+		MPBridge.reset();
 
 		return innerProduct;
 	}
@@ -458,56 +458,56 @@ System.out.println("Cannot pararellize..");
 			}
 			
 			
-			long before = ch.MP.total;
+			long before = MPBridge.total;
 			pV[1] = this.gpcs.commit(Tuple.getInstance(ePrimeVs), w);
-			System.out.println("perm preimageproof gpcs.commit " + (ch.MP.total - before));
+			System.out.println("perm preimageproof gpcs.commit " + (MPBridge.total - before));
 
 
-			// ch.MP.a();
+			// MPBridge.a();
 			// - g^r_i * c_i-1^e'_i                [2n]
 			// for (int i = 0; i < this.size; i++) {
 			//	Element c_i_1 = i == 0 ? this.h : this.cV.getAt(i - 1);
 			//	pV[i + 2] = g.selfApply(rV.getAt(i)).apply(c_i_1.selfApply(ePrimeV.getAt(i)));
 			//}
-			//ch.MP.b();
+			//MPBridge.b();
 
-			ch.MP.a();
-			ch.MP.startRecord();
+			MPBridge.a();
+			MPBridge.startRecord();
 			// - g^r_i * c_i-1^e'_i                [2n]
 			Element[] temp = new Element[this.size];
 			for (int i = 0; i < this.size; i++) {
 				Element c_i_1 = i == 0 ? this.h : this.cV.getAt(i - 1);
 				temp[i] = c_i_1.selfApply(ePrimeV.getAt(i));
 			}
-			mpservice.ModPow[] requests = ch.MP.stopRecord();
-			ch.MP.b();
+			mpservice.ModPow[] requests = MPBridge.stopRecord();
+			MPBridge.b();
 			if(requests.length > 0) {
 				java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-				ch.MP.startReplay(answers);
+				MPBridge.startReplay(answers);
 				for (int i = 0; i < this.size; i++) {
 					Element c_i_1 = i == 0 ? this.h : this.cV.getAt(i - 1);
 					temp[i] = c_i_1.selfApply(ePrimeV.getAt(i));
 				}	
-				ch.MP.stopReplay();
+				MPBridge.stopReplay();
 			}
-			ch.MP.reset();
+			MPBridge.reset();
 			
-			ch.MP.a();
-			ch.MP.startRecord();
+			MPBridge.a();
+			MPBridge.startRecord();
 			for (int i = 0; i < this.size; i++) {
 				pV[i + 2] = g.selfApply(rV.getAt(i)).apply(temp[i]);
 			}
-			requests = ch.MP.stopRecord();
-			ch.MP.b();
+			requests = MPBridge.stopRecord();
+			MPBridge.b();
 			if(requests.length > 0) {
 				java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-				ch.MP.startReplay(answers);
+				MPBridge.startReplay(answers);
 				for (int i = 0; i < this.size; i++) {
 					pV[i + 2] = g.selfApply(rV.getAt(i)).apply(temp[i]);
 				}	
-				ch.MP.stopReplay();
+				MPBridge.stopReplay();
 			}
-			ch.MP.reset();
+			MPBridge.reset();
 
 			// - Com(0, d)                          [1]
 			pV[this.size + 2] = this.gpcs.getRandomizationGenerator().selfApply(d);
@@ -562,10 +562,10 @@ System.out.println("Cannot pararellize..");
 		// the generators are calculated lazily only when tuple.get instance is called|
 		// at ch.bfh.unicrypt.helper.array.classes.DenseArray.getInstance(DenseArray.java:122)
         // at ch.bfh.unicrypt.math.algebra.general.classes.Tuple.getInstance(Tuple.java:335)
-		// ch.MP.a();
+		// MPBridge.a();
 		// Tuple generators = Tuple.getInstance(cyclicGroup.getIndependentGenerators(randomByteSequence).limit(size + 1));
 		Tuple generators = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsParallel(randomByteSequence, 0, size + 1));
-		// ch.MP.b();
+		// MPBridge.b();
 		/// 
 		
 		return getInstance(sigmaChallengeGenerator, eValuesGenerator, generators, kr);

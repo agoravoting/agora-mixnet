@@ -53,7 +53,7 @@ import ch.bfh.unicrypt.math.algebra.general.interfaces.CyclicGroup;
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element;
 import ch.bfh.unicrypt.helper.array.classes.DenseArray;
 
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod;
+import mpservice.MPBridge;
 
 /**
  * This abstract class provides a base implementation for the interface {@link CyclicGroup}.
@@ -108,28 +108,28 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		
 		
 		// cause the sequence to materialize
-		ch.MP.a();
-		ch.MP.startRecord();
+		MPBridge.a();
+		MPBridge.startRecord();
 		int i = 0;
 		for (E value : sequence) {
 			array[i++] = value;
 		}
-		mpservice.ModPow[] requests = ch.MP.stopRecord();
-		ch.MP.b();
+		mpservice.ModPow[] requests = MPBridge.stopRecord();
+		MPBridge.b();
 		if(requests.length > 0) {
 			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			ch.MP.startReplay(answers);
+			MPBridge.startReplay(answers);
 			i = 0;
 			for (E value : sequence) {
 				array[i++] = value;
 			}	
-			ch.MP.stopReplay();
+			MPBridge.stopReplay();
 		}
-		ch.MP.reset();
+		MPBridge.reset();
 
 		Element<V>[] array2 = new Element[size];
-		ch.MP.a();
-		ch.MP.startRecord();
+		MPBridge.a();
+		MPBridge.startRecord();
 		for(i = 0; i < array.length; i++) {
 			if(array[i].isGenerator()) {
 				array2[i] = array[i];
@@ -139,11 +139,11 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 				throw new RuntimeException();
 			}
 		}
-		requests = ch.MP.stopRecord();
-		ch.MP.b();
+		requests = MPBridge.stopRecord();
+		MPBridge.b();
 		if(requests.length > 0) {
 			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			ch.MP.startReplay(answers);
+			MPBridge.startReplay(answers);
 			for(i = 0; i < array.length; i++) {
 				if(array[i].isGenerator()) {
 					array2[i] = array[i];
@@ -153,9 +153,9 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 					throw new RuntimeException();
 				}
 			}		
-			ch.MP.stopReplay();
+			MPBridge.stopReplay();
 		}
-		ch.MP.reset();
+		MPBridge.reset();
 
 
 		return DenseArray.getInstance(array2);
@@ -198,9 +198,9 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 
 			@Override
 			public boolean test(E value) {
-				// ch.MP.a();
+				// MPBridge.a();
 				// boolean ret = isGenerator(value);
-				// ch.MP.b();
+				// MPBridge.b();
 				// return ret;
 				return isGenerator(value);
 			}

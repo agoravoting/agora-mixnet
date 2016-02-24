@@ -12,6 +12,8 @@ import ch.bfh.unicrypt.math.algebra.general.classes.Pair
 import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
 import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
 import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
+import mpservice.MPBridgeS
+import mpservice.MPBridge
 
 /**
  * An election process DEMO
@@ -57,13 +59,10 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
  * This demo uses two trustees, ElectionTest3 below shows how number of trustees generalizes
  */
 object ElectionTest extends App {
-  import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod
-  import ch.bfh.unicrypt.math.algebra.multiplicative.classes.ZStarMod
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
   val gmp = args.toList.lift(1).getOrElse("") == "gmp"
-  GStarMod.gmpModPow = gmp
-  ZStarMod.gmpModPow = gmp
+  MPBridge.gmpModPow = gmp
 
   // create the keymakers
   // these are responsible for distributed key generation and joint decryption
@@ -113,7 +112,7 @@ object ElectionTest extends App {
 
   // we are only timing the mixing phase
   val mixingStart = System.currentTimeMillis()
-ch.MP.total = 0;  
+MPBridge.total = 0;  
   // wait for keystroke, this allows us to attach a profiler at the right time
   // println("Hit return to start")
   // Console.in.read()
@@ -172,12 +171,12 @@ ch.MP.total = 0;
   println(s"finished run with votes = $totalVotes")
   println(s"mixTime: $mixTime")
   println(s"sec / vote: ${mixTime / totalVotes}")
-  println(s"total modExps: ${ch.MP.total}")
-  println(s"found modExps: ${ch.MP.found}")
-  println(s"found modExps %: ${ch.MP.found/ch.MP.total.toDouble}")
-  println(s"extracted modExps: ${ch.MP.getExtracted}")
-  println(s"extracted modExps %: ${ch.MP.getExtracted/ch.MP.total.toDouble}")
-  println(s"modExps / vote: ${ch.MP.total.toFloat / totalVotes}")
+  println(s"total modExps: ${MPBridge.total}")
+  println(s"found modExps: ${MPBridge.found}")
+  println(s"found modExps %: ${MPBridge.found/MPBridge.total.toDouble}")
+  println(s"extracted modExps: ${MPBridge.getExtracted}")
+  println(s"extracted modExps %: ${MPBridge.getExtracted/MPBridge.total.toDouble}")
+  println(s"modExps / vote: ${MPBridge.total.toFloat / totalVotes}")
   println("*************************************************************")
 
   mpservice.MPService.shutdown
@@ -387,7 +386,7 @@ object Election {
     
     println("Convert votes...")
     
-    val (shuffled,votes) = mpservice.MPE.ex({
+    val (shuffled,votes) = MPBridgeS.ex({
       val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
       val votes = in.state match {
         case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
@@ -395,26 +394,26 @@ object Election {
       }
       (shuffled, votes)}, "1"
     )
-    /* ch.MP.a()
-    ch.MP.startRecord("1")
+    /* MPBridge.a()
+    MPBridge.startRecord("1")
     var shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
     var votes = in.state match {
       case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
       case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
     }
-    val requests = ch.MP.stopRecord()
-    ch.MP.b()
+    val requests = MPBridge.stopRecord()
+    MPBridge.b()
     if(requests.length > 0) {
       val answers = mpservice.MPService.compute(requests);
-      ch.MP.startReplay(answers)
+      MPBridge.startReplay(answers)
       shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
       votes = in.state match {
         case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
         case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
       }
-      ch.MP.stopReplay()
+      MPBridge.stopReplay()
     }
-    ch.MP.reset()*/
+    MPBridge.reset()*/
 
     println(s"Verifying shuffle..")
     val ok = Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),

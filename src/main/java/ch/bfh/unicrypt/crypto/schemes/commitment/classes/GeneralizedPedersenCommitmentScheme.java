@@ -55,7 +55,7 @@ import ch.bfh.unicrypt.math.function.classes.GeneratorFunction;
 import ch.bfh.unicrypt.math.function.classes.ProductFunction;
 import ch.bfh.unicrypt.math.function.interfaces.Function;
 
-import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarMod;
+import mpservice.MPBridge;
 
 public class GeneralizedPedersenCommitmentScheme
 	   extends AbstractRandomizedCommitmentScheme<ProductGroup, Tuple, CyclicGroup, Element, ZMod> {
@@ -94,28 +94,28 @@ public class GeneralizedPedersenCommitmentScheme
 	protected Function abstractGetCommitmentFunction() {
 		final Function[] generatorFunctions = new Function[this.size];
 		
-		ch.MP.ex(() -> {
+		MPBridge.ex(() -> {
 			for (int i = 0; i < this.size; i++) {
 				generatorFunctions[i] = GeneratorFunction.getInstance(this.messageGenerators.getAt(i));
 			}
 			return generatorFunctions;
 		}, "2");
-		/*ch.MP.a();
-		ch.MP.startRecord();
+		/*MPBridge.a();
+		MPBridge.startRecord();
 		for (int i = 0; i < this.size; i++) {
 			generatorFunctions[i] = GeneratorFunction.getInstance(this.messageGenerators.getAt(i));
 		}
-		mpservice.ModPow[] requests = ch.MP.stopRecord();
-		ch.MP.b();
+		mpservice.ModPow[] requests = MPBridge.stopRecord();
+		MPBridge.b();
 		if(requests.length > 0) {
 			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			ch.MP.startReplay(answers);
+			MPBridge.startReplay(answers);
 			for (int i = 0; i < this.size; i++) {
 				generatorFunctions[i] = GeneratorFunction.getInstance(this.messageGenerators.getAt(i));
 			}
-			ch.MP.stopReplay();
+			MPBridge.stopReplay();
 		}
-		ch.MP.reset();*/
+		MPBridge.reset();*/
 
 		return CompositeFunction.getInstance(
 			   ProductFunction.getInstance(
