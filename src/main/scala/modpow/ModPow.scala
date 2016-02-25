@@ -119,7 +119,7 @@ class WorkerActor(val useGmp: Boolean) extends Actor with ActorLogging {
       // println(s"received request length ${modpows.length} at actor $this")
       val before = System.currentTimeMillis
       val result = service.compute(modpows).seq.toArray
-      val diff = (System.currentTimeMillis - before) / 1000.0
+      val diff = (System.currentTimeMillis - before)
       println(s"$requestId $diff")
       sender ! WorkReply(requestId, workId, result)
     }
