@@ -22,7 +22,7 @@ case class Work(requestId: Int, workId: Int, work: Array[ModPow])
 case class WorkReply(requestId: Int, workId: Int, result: Array[BigInteger])
 case class ModPowArray(modpows: Array[ModPow])
 case class ModPowArrayResult(result: Array[BigInteger])
-case class RequestData(client: ActorRef, length: Int, results: mutable.ArrayBuffer[WorkReply])
+case class RequestData(client: ActorRef, length: Int, results: mutable.ArrayBuffer[WorkReply], sent: Long = System.currentTimeMillis)
 
 object SequentialModPowService extends ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger] = work.map(x => x.base.modPow(x.pow, x.mod))
@@ -43,10 +43,7 @@ class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends Mo
     val before = System.currentTimeMillis
     inbox.send(modPowService, ModPowArray(work))
     Try(inbox.receive(1000.seconds)) match {
-      case Success(ModPowArrayResult(answer)) => {
-        val diff = (System.currentTimeMillis - before) / 1000.0
-        answer
-      }
+      case Success(ModPowArrayResult(answer)) => answer
       // FIXME
       case _ => throw new Exception()
     }
@@ -103,6 +100,8 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
     case w: WorkReply => {
       val requestData = requests.get(w.requestId).get
       requestData.results += w
+      val diff = System.currentTimeMillis - requestData.sent
+      println(s"${w.requestId} $diff")
       if(requestData.results.length == requestData.length) {
         requests.remove(w.requestId)
         val sorted = requestData.results.sortWith(_.workId < _.workId)
@@ -121,7 +120,7 @@ class WorkerActor(val useGmp: Boolean) extends Actor with ActorLogging {
       val before = System.currentTimeMillis
       val result = service.compute(modpows).seq.toArray
       val diff = (System.currentTimeMillis - before) / 1000.0
-      println(diff)
+      println(s"$requestId $diff")
       sender ! WorkReply(requestId, workId, result)
     }
   }
