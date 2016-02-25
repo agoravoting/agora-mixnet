@@ -129,7 +129,7 @@ trait KeyMaker extends ProofSettings {
     val decryptionKey = secretKey.invert()
     val publicKey = encryptionGenerator.selfApply(secretKey)
 
-    val lists = votes.map { v =>
+    val lists = votes.par.map { v =>
 
       val element = v.getFirst()
       if(element.convertToString == "1") {
@@ -140,7 +140,7 @@ trait KeyMaker extends ProofSettings {
       val partialDecryption = function.apply(decryptionKey).asInstanceOf[GStarModElement]
 
       (partialDecryption, function)
-    }.unzip
+    }.seq.unzip
 
     val proofDTO = createProof(proverId, secretKey, publicKey, lists._1, lists._2, Csettings)
     // FIXME missing verification of own proof
@@ -257,8 +257,8 @@ MPBridge.z(); MPBridge.y();
     val permputationProofDTO = PermutationProofDTO(pcps.getCommitment(permutationProof).convertToString(),
       pcps.getChallenge(permutationProof).convertToString(),
       pcps.getResponse(permutationProof).convertToString(),
-      bridgingCommitments.map(x => x.convertToString).toSeq,
-      eValues.map(x => x.convertToString).toSeq)
+      bridgingCommitments.par.map(x => x.convertToString).seq.toSeq,
+      eValues.par.map(x => x.convertToString).seq.toSeq)
 
     val eValues2 = spg.getEValues(mixProof).asInstanceOf[Tuple]
     val mixProofDTO = MixProofDTO(spg.getCommitment(mixProof).convertToString(),
@@ -287,7 +287,7 @@ MPBridge.z(); MPBridge.y();
         if(!(v1 && v2 && v3)) throw new Exception();
     */
     
-    val votesString: Seq[String] = Util.seqFromTuple(shuffledVs).map( x => x.convertToString )
+    val votesString: Seq[String] = Util.seqFromTuple(shuffledVs).par.map( x => x.convertToString ).seq
 
     ShuffleResultDTO(shuffleProofDTO, votesString)
   }
