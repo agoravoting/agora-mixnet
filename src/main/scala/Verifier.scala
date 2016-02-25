@@ -155,19 +155,19 @@ object Verifier extends ProofSettings {
 
     println("Converting bridging commitments..")
     // Assume bridging commitments: GStarmod
-    val bridgingCommitments = MPBridgeS.ex(permutationProofDTO.bridgingCommitments.map { x =>
+    val bridgingCommitments = MPBridgeS.ex(permutationProofDTO.bridgingCommitments.par.map { x =>
       Csettings.group.getElementFrom(x)
-    }, "1")
+    }, "1").seq
 
     println("Converting permutation e values..")
     // Assume evalues: ZMod
-    val eValues = permutationProofDTO.eValues.map { x =>
+    val eValues = permutationProofDTO.eValues.par.map { x =>
       Csettings.group.getZModOrder.getElementFrom(x)
-    }
+    }.seq
     println("Converting shuffle e values..")
-    val eValues2 = mixProofDTO.eValues.map { x =>
+    val eValues2 = mixProofDTO.eValues.par.map { x =>
       Csettings.group.getZModOrder.getElementFrom(x)
-    }
+    }.seq
 
     println("Getting proof instances..")
     val permutationProof: Tuple = Tuple.getInstance(Util.tupleFromSeq(eValues), Util.tupleFromSeq(bridgingCommitments),
