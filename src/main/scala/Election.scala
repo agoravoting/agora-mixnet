@@ -386,10 +386,10 @@ object Election {
     println("Convert votes...")
     
     val (shuffled,votes) = MPBridgeS.ex({
-      val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+      val shuffled = mix.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
       val votes = in.state match {
-        case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
-        case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+        case s: Mixing[_0] => in.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+        case _ => in.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
       }
       (shuffled, votes)}, "1"
     )

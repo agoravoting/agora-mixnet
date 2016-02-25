@@ -69,8 +69,8 @@ class MixerTrustee(val id: String) extends Mixer {
     
     val votes = MPBridgeS.ex(
       e.state match {
-        case s: Mixing[_0] => e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
-        case _ => e.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+        case s: Mixing[_0] => e.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+        case _ => e.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
       }, "1"
     )
 

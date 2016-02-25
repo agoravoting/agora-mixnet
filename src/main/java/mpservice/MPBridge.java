@@ -82,7 +82,7 @@ public class MPBridge {
 		return recording;
 	}
 
-	public static void addModPow(BigInteger base, BigInteger pow, BigInteger mod) {
+	public static synchronized void addModPow(BigInteger base, BigInteger pow, BigInteger mod) {
 		if(!recording) throw new IllegalStateException();
 		if(modulus == null) {
 			modulus = mod;
