@@ -40,9 +40,13 @@ class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends Mo
   val inbox = Inbox.create(system)
 
   def compute(work: Array[ModPow]): Array[BigInteger] = {
+    val before = System.currentTimeMillis
     inbox.send(modPowService, ModPowArray(work))
     Try(inbox.receive(1000.seconds)) match {
-      case Success(ModPowArrayResult(answer)) => answer
+      case Success(ModPowArrayResult(answer)) => {
+        val diff = (System.currentTimeMillis - before) / 1000.0
+        answer
+      }
       // FIXME
       case _ => throw new Exception()
     }
@@ -114,8 +118,10 @@ class WorkerActor(val useGmp: Boolean) extends Actor with ActorLogging {
   def receive: Receive = {
     case Work(requestId, workId, modpows) => {
       // println(s"received request length ${modpows.length} at actor $this")
+      val before = System.currentTimeMillis
       val result = service.compute(modpows).seq.toArray
-      print("+")
+      val diff = (System.currentTimeMillis - before) / 1000.0
+      println(diff)
       sender ! WorkReply(requestId, workId, result)
     }
   }
