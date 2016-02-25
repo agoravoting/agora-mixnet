@@ -194,10 +194,6 @@ trait Mixer extends ProofSettings {
 
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
 
-    // println("===== ciphertexts =====")
-    // println(ciphertexts)
-    // println("===== ciphertexts =====")
-var before = 0
 MPBridge.y();
     val mixer: ReEncryptionMixer = ReEncryptionMixer.getInstance(elGamal, publicKey, ciphertexts.getArity())
 MPBridge.z(); MPBridge.y(); 
@@ -209,17 +205,9 @@ MPBridge.z(); MPBridge.y();
 MPBridge.z(); MPBridge.y(); 
     println("Mixer: shuffle..")
     
-
     // Perfom shuffle
-    ///
-    
     val shuffledVs: Tuple = mixer.shuffle(ciphertexts, psi, rs)
 MPBridge.z(); MPBridge.y(); 
-    ///
-
-    // println("===== shuffled  =====")
-    // println(shuffledVs)
-    // println("===== shuffled  =====")
 
     println("Mixer: generators..")
     // Create sigma challenge generator
@@ -271,7 +259,6 @@ MPBridge.z(); MPBridge.y();
       pcps.getResponse(permutationProof).convertToString(),
       bridgingCommitments.map(x => x.convertToString).toSeq,
       eValues.map(x => x.convertToString).toSeq)
-    // println(s"Permutation proof ****\n$permutationProof")
 
     val eValues2 = spg.getEValues(mixProof).asInstanceOf[Tuple]
     val mixProofDTO = MixProofDTO(spg.getCommitment(mixProof).convertToString(),
@@ -281,21 +268,25 @@ MPBridge.z(); MPBridge.y();
 
     val shuffleProofDTO = ShuffleProofDTO(mixProofDTO, permputationProofDTO, permutationCommitment.convertToString)
 
-    // println(s"Mix proof *****\n$mixProof")
-    // println(shuffleProofDTO)
+
     println("Mixer: verifying..")
 
-    val v1 = pcps.verify(permutationProof, publicInputPermutation)
-MPBridge.z(); MPBridge.y(); 
-    // Verify shuffle proof
-    val v2 = spg.verify(mixProof, publicInputShuffle)
-MPBridge.z(); MPBridge.y(); 
-    // Verify equality of permutation commitments
-    val v3 = publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
+    // 
+    // Not doing self verification, enough to do it at the BB
+    //
+    /*
+        val v1 = pcps.verify(permutationProof, publicInputPermutation)
+        MPBridge.z(); MPBridge.y(); 
+        // Verify shuffle proof
+        val v2 = spg.verify(mixProof, publicInputShuffle)
+        MPBridge.z(); MPBridge.y(); 
+        // Verify equality of permutation commitments
+        val v3 = publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
 
-    println("Verification ok: " + (v1 && v2 && v3))
-    if(!(v1 && v2 && v3)) throw new Exception();
-
+        println("Verification ok: " + (v1 && v2 && v3))
+        if(!(v1 && v2 && v3)) throw new Exception();
+    */
+    
     val votesString: Seq[String] = Util.seqFromTuple(shuffledVs).map( x => x.convertToString )
 
     ShuffleResultDTO(shuffleProofDTO, votesString)

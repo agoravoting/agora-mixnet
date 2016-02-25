@@ -262,7 +262,7 @@ public class PermutationCommitmentProofSystem
 			return 0;
 		}, "2");
 
-System.out.println("Cannot pararellize..");
+System.out.println("Cannot parallelize..");
 		// CANT BE PARALLELIZED
 		MPBridge.a();
 		for (int i = 0; i < this.size; i++) {
