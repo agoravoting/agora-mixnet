@@ -495,16 +495,17 @@ trait HasHistory {
  */
 object Util {
   def tupleFromSeq(items: Seq[Element[_]]) = {
-    var tuple = Tuple.getInstance()
-    items.foreach(v => tuple = tuple.add(v))
+    // var tuple = Tuple.getInstance()
+    // items.foreach(v => tuple = tuple.add(v))
 
-    tuple
+    // tuple
+    Tuple.getInstance(items:_*)
   }
 
   def seqFromTuple(tuple: Tuple): Seq[Element[_]] = {
     import scala.collection.JavaConversions._
 
-    tuple.map{ x => x }.toSeq
+    tuple.par.map{ x => x }.seq.toSeq
   }
 
   def getRandomVotes(size: Int, generator: Element[_], publicKey: Element[_]) = {
