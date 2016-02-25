@@ -101,7 +101,7 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
       val requestData = requests.get(w.requestId).get
       requestData.results += w
       val diff = System.currentTimeMillis - requestData.sent
-      println(s"${w.workId} $diff")
+      println(s"${w.requestId} ${w.workId} $diff")
       if(requestData.results.length == requestData.length) {
         requests.remove(w.requestId)
         val sorted = requestData.results.sortWith(_.workId < _.workId)
@@ -120,7 +120,7 @@ class WorkerActor(val useGmp: Boolean) extends Actor with ActorLogging {
       val before = System.currentTimeMillis
       val result = service.compute(modpows).seq.toArray
       val diff = (System.currentTimeMillis - before)
-      println(s"$workId $diff")
+      println(s"$requestId $workId $diff")
       sender ! WorkReply(requestId, workId, result)
     }
   }
