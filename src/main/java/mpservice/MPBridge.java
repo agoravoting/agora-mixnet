@@ -152,7 +152,7 @@ public class MPBridge {
 		return ex(f, "2");
 	}
 
-	public static synchronized BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
+	public static BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
         if(MPBridge.debug) new Exception().printStackTrace();
         if(MPBridge.isRecording()) {
             MPBridge.total++;
