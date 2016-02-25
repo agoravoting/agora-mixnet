@@ -90,6 +90,7 @@ object MPService extends ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger] = service.compute(work)
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = service.compute(work, mod)
   def shutdown = service.shutdown
+  def init = {}
 }
 
 class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDelay: Int, val useGmp: Boolean) extends Actor with ActorLogging {
@@ -247,7 +248,7 @@ object MPBridgeS {
     val requests = MPBridge.stopRecord()
     MPBridge.b(3)
     if(requests.length > 0) {
-        val answers = mpservice.MPService.compute(requests, MPBridge.modulus);
+        val answers = MPService.compute(requests, MPBridge.modulus);
         MPBridge.startReplay(answers)
         ret = f
         MPBridge.stopReplay()
@@ -256,4 +257,6 @@ object MPBridgeS {
 
     ret
   }
+
+  def init = MPService.init
 }

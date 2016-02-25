@@ -61,8 +61,7 @@ import mpservice.MPBridge
 object ElectionTest extends App {
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
-  val gmp = args.toList.lift(1).getOrElse("") == "gmp"
-  MPBridge.gmpModPow = gmp
+  MPBridgeS.init
 
   // create the keymakers
   // these are responsible for distributed key generation and joint decryption
