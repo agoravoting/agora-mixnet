@@ -126,15 +126,19 @@ object Verifier extends ProofSettings {
 
     println("Getting proof systems..")
     // Create e-values challenge generator
+    mpservice.MPBridge.l();
     val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
         Csettings.group.getZModOrder(), votes.getArity())
+    mpservice.MPBridge.l();
     val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
       Csettings.group, votes.getArity())
 
+    mpservice.MPBridge.l();
     val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, votes.getArity(), elGamal, publicKey)
 
+    mpservice.MPBridge.l();
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, votes.getArity())
-
+    mpservice.MPBridge.l();
     // val permutationCommitment = pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment)
     val permutationCommitment = MPBridgeS.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
 
