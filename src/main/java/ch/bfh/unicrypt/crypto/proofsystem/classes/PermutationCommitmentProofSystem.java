@@ -227,7 +227,7 @@ public class PermutationCommitmentProofSystem
 		MPBridge.b();
 		*/
 
-		MPBridge.a();
+		/* MPBridge.a();
 		MPBridge.startRecord();
 		Element[] temp = new Element[this.size];
 		for (int i = 0; i < this.size; i++) {	
@@ -249,7 +249,19 @@ public class PermutationCommitmentProofSystem
 			}	
 			MPBridge.stopReplay();
 		}
-		MPBridge.reset();
+		MPBridge.reset();*/
+		final Element[] temp = new Element[this.size];
+		final Tuple ePrimeVFinal = ePrimeV;
+		MPBridge.ex(() -> {
+			for (int i = 0; i < this.size; i++) {	
+				temp[i] = g.selfApply(rV.getAt(i));  //   [2n]
+				if (i > 0) {
+					ds[i] = rV.getAt(i).apply(ds[i - 1].selfApply(ePrimeVFinal.getAt(i)));
+				}
+			}
+			return 0;
+		}, "2");
+
 System.out.println("Cannot pararellize..");
 		// CANT BE PARALLELIZED
 		MPBridge.a();
@@ -384,7 +396,7 @@ System.out.println("Cannot pararellize..");
 			throw new IllegalArgumentException();
 		}
 		Element innerProduct = ((Group) t1.getSet().getAt(0)).getIdentityElement();
-		MPBridge.a();
+		/*MPBridge.a();
 		MPBridge.startRecord();
 		for (int i = 0; i < t1.getArity(); i++) {
 			innerProduct = innerProduct.apply(t1.getAt(i).selfApply(t2.getAt(i)));
@@ -400,9 +412,17 @@ System.out.println("Cannot pararellize..");
 			}
 			MPBridge.stopReplay();
 		}
-		MPBridge.reset();
+		MPBridge.reset();*/
+		Element ret = MPBridge.ex(() -> {
+			Element ip = innerProduct;
+			for (int i = 0; i < t1.getArity(); i++) {
+				ip = ip.apply(t1.getAt(i).selfApply(t2.getAt(i)));
+			}
+			return ip;
+		}, "2");
 
-		return innerProduct;
+		return ret;
+		// return innerProduct;
 	}
 
 	//===================================================================================
@@ -471,7 +491,7 @@ System.out.println("Cannot pararellize..");
 			//}
 			//MPBridge.b();
 
-			MPBridge.a();
+			/*MPBridge.a();
 			MPBridge.startRecord();
 			// - g^r_i * c_i-1^e'_i                [2n]
 			Element[] temp = new Element[this.size];
@@ -490,9 +510,19 @@ System.out.println("Cannot pararellize..");
 				}	
 				MPBridge.stopReplay();
 			}
-			MPBridge.reset();
+			MPBridge.reset();*/
+
+			final Element[] temp = new Element[this.size];
+			MPBridge.ex(() -> {
+				for (int i = 0; i < this.size; i++) {
+					Element c_i_1 = i == 0 ? this.h : this.cV.getAt(i - 1);
+					temp[i] = c_i_1.selfApply(ePrimeV.getAt(i));
+				}
+				return temp;
+			}, "2");
 			
-			MPBridge.a();
+
+			/*MPBridge.a();
 			MPBridge.startRecord();
 			for (int i = 0; i < this.size; i++) {
 				pV[i + 2] = g.selfApply(rV.getAt(i)).apply(temp[i]);
@@ -508,6 +538,15 @@ System.out.println("Cannot pararellize..");
 				MPBridge.stopReplay();
 			}
 			MPBridge.reset();
+			*/
+
+			MPBridge.ex(() -> {
+				for (int i = 0; i < this.size; i++) {
+					pV[i + 2] = g.selfApply(rV.getAt(i)).apply(temp[i]);
+				}
+				return pV;
+			}, "2");
+
 
 			// - Com(0, d)                          [1]
 			pV[this.size + 2] = this.gpcs.getRandomizationGenerator().selfApply(d);

@@ -19,10 +19,11 @@ public class MPBridge {
 
 	public static BigInteger dummy = new BigInteger("2");
 	
+	public static BigInteger modulus = null;
 	private static long extracted = 0;
 	private static boolean recording = false;
 	private static boolean replaying = false;
-	private static LinkedList<ModPow> requests = new LinkedList<ModPow>();
+	private static LinkedList<ModPow2> requests = new LinkedList<ModPow2>();
 	private static List<BigInteger> answers = null;
 
 	public static void l() {
@@ -68,12 +69,13 @@ public class MPBridge {
 		dummy = new BigInteger(value);
 		if(requests.size() != 0)	throw new IllegalStateException();
 		recording = true;
+		modulus = null;
 	}
 
-	public static ModPow[] stopRecord() {
+	public static ModPow2[] stopRecord() {
 		recording = false;
 
-		return requests.toArray(new ModPow[0]);
+		return requests.toArray(new ModPow2[0]);
 	}
 
 	public static boolean isRecording() {
@@ -82,8 +84,14 @@ public class MPBridge {
 
 	public static void addModPow(BigInteger base, BigInteger pow, BigInteger mod) {
 		if(!recording) throw new IllegalStateException();
+		if(modulus == null) {
+			modulus = mod;
+		}
+		else if(!modulus.equals(mod)) {
+			throw new RuntimeException(modulus + "!=" + mod);
+		}
 		extracted++;
-		requests.add(new ModPow(base, pow, mod));
+		requests.add(new ModPow2(base, pow));
 	}
 
 	public static BigInteger getModPow() {
@@ -92,7 +100,7 @@ public class MPBridge {
 		return answers.remove(0);
 	}
 
-	public static LinkedList<ModPow> getRequests() {
+	public static LinkedList<ModPow2> getRequests() {
 		if(recording) throw new IllegalStateException();
 
 		return requests;
@@ -127,10 +135,10 @@ public class MPBridge {
 		a();
 	 	startRecord(v);
 	 	T ret = f.get();
-	 	mpservice.ModPow[] requests = MPBridge.stopRecord();
+	 	mpservice.ModPow2[] requests = MPBridge.stopRecord();
 		b(3);
 		if(requests.length > 0) {
-			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
+			java.math.BigInteger[] answers = mpservice.MPService.compute(requests, modulus);
 			MPBridge.startReplay(answers);
 			ret = f.get();	
 			MPBridge.stopReplay();

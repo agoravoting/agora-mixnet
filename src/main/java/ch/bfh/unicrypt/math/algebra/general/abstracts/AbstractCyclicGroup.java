@@ -104,11 +104,11 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, randomByteSequence);
 		}
 		Sequence<E> sequence = this.abstractGetRandomElements(randomByteSequence).skip(skip).limit(size);
-		Element<V>[] array = new Element[size];
+		final Element<V>[] array = new Element[size];
 		
 		
 		// cause the sequence to materialize
-		MPBridge.a();
+		/* MPBridge.a();
 		MPBridge.startRecord();
 		int i = 0;
 		for (E value : sequence) {
@@ -125,10 +125,31 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 			}	
 			MPBridge.stopReplay();
 		}
-		MPBridge.reset();
+		MPBridge.reset();*/
 
-		Element<V>[] array2 = new Element[size];
-		MPBridge.a();
+		MPBridge.ex(() -> {
+			int i = 0;
+			for (E value : sequence) {
+				array[i++] = value;
+			}
+			return array;
+		}, "2");
+
+
+		final Element<V>[] array2 = new Element[size];
+		MPBridge.ex(() -> {
+			for(int i = 0; i < array.length; i++) {
+				if(array[i].isGenerator()) {
+					array2[i] = array[i];
+				}	
+				// FIXME
+				else {
+					throw new RuntimeException();
+				}
+			}
+			return 0;	
+		}, "2");
+		/* MPBridge.a();
 		MPBridge.startRecord();
 		for(i = 0; i < array.length; i++) {
 			if(array[i].isGenerator()) {
@@ -155,7 +176,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 			}		
 			MPBridge.stopReplay();
 		}
-		MPBridge.reset();
+		MPBridge.reset();*/
 
 
 		return DenseArray.getInstance(array2);

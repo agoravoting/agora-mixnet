@@ -13,27 +13,36 @@ import com.squareup.jnagmp.Gmp
 
 // public api
 case class ModPow(base: BigInteger, pow: BigInteger, mod: BigInteger)
+case class ModPow2(base: BigInteger, pow: BigInteger)
 trait ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger]
+  def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger]
 }
 
 // implementation
 case class Work(requestId: Int, workId: Int, work: Array[ModPow])
+case class Work2(requestId: Int, workId: Int, work: Array[ModPow2], mod: BigInteger)
 case class WorkReply(requestId: Int, workId: Int, result: Array[BigInteger])
 case class ModPowArray(modpows: Array[ModPow])
+case class ModPowArray2(modpows: Array[ModPow2], mod: BigInteger)
 case class ModPowArrayResult(result: Array[BigInteger])
 case class RequestData(client: ActorRef, length: Int, results: mutable.ArrayBuffer[WorkReply], sent: Long = System.currentTimeMillis)
 
 object SequentialModPowService extends ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger] = work.map(x => x.base.modPow(x.pow, x.mod))
+  def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = work.map(x => x.base.modPow(x.pow, mod))
 }
 object GmpParallelModPowService extends ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger] = {
     work.par.map(x => Gmp.modPowInsecure(x.base, x.pow, x.mod)).seq.toArray
   }
+  def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = {
+    work.par.map(x => Gmp.modPowInsecure(x.base, x.pow, mod)).seq.toArray 
+  }
 }
 object ParallelModPowService extends ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger] = work.par.map(x => x.base.modPow(x.pow, x.mod)).seq.toArray
+  def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = work.par.map(x => x.base.modPow(x.pow, mod)).seq.toArray
 }
 
 class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends ModPowService {
@@ -42,6 +51,15 @@ class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends Mo
   def compute(work: Array[ModPow]): Array[BigInteger] = {
     val before = System.currentTimeMillis
     inbox.send(modPowService, ModPowArray(work))
+    Try(inbox.receive(1000.seconds)) match {
+      case Success(ModPowArrayResult(answer)) => answer
+      // FIXME
+      case _ => throw new Exception()
+    }
+  }
+  def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = {
+    val before = System.currentTimeMillis
+    inbox.send(modPowService, ModPowArray2(work, mod))
     Try(inbox.receive(1000.seconds)) match {
       case Success(ModPowArrayResult(answer)) => answer
       // FIXME
@@ -62,6 +80,7 @@ object AkkaModPowService extends ModPowService {
   val service = new AkkaModPowService(system, serviceActor)
 
   def compute(work: Array[ModPow]): Array[BigInteger] = service.compute(work)
+  def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = service.compute(work, mod)
   def shutdown = system.shutdown
 }
 
@@ -69,6 +88,7 @@ object MPService extends ModPowService {
   val service = AkkaModPowService
 
   def compute(work: Array[ModPow]): Array[BigInteger] = service.compute(work)
+  def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = service.compute(work, mod)
   def shutdown = service.shutdown
 }
 
@@ -90,7 +110,22 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
       println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
       chunks.indices.foreach { i =>
         val work = Work(requestId, i, chunks(i))
-        // println(s"Sending chunk $work")
+        print(s" ${chunks(i).size}")
+        
+        Thread sleep sendDelay
+        workerRouter ! work
+      }
+    }
+
+    case ModPowArray2(modpows, mod) => {
+      requestId = requestId + 1
+      val size = math.min(math.max(modpows.length / minChunks, 1), maxChunkSize)
+      val chunks = modpows.sliding(size, size).toArray
+      requests.put(requestId, RequestData(sender, chunks.length, mutable.ArrayBuffer()))
+      println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
+      chunks.indices.foreach { i =>
+        val work = Work2(requestId, i, chunks(i), mod)
+        print(s" ${chunks(i).size}")
         
         Thread sleep sendDelay
         workerRouter ! work
@@ -101,13 +136,17 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
       val requestData = requests.get(w.requestId).get
       requestData.results += w
       val diff = System.currentTimeMillis - requestData.sent
-      println(s"${w.requestId} ${w.workId} $diff")
+      // println(s"${w.requestId} ${w.workId} $diff")
       if(requestData.results.length == requestData.length) {
         requests.remove(w.requestId)
         val sorted = requestData.results.sortWith(_.workId < _.workId)
         requestData.client ! ModPowArrayResult(sorted.flatMap(_.result).toArray)
       }
     }
+  }
+
+  def split[T](array: Array[T]) = {
+
   }
 }
 
@@ -120,7 +159,17 @@ class WorkerActor(val useGmp: Boolean) extends Actor with ActorLogging {
       val before = System.currentTimeMillis
       val result = service.compute(modpows).seq.toArray
       val diff = (System.currentTimeMillis - before)
-      println(s"$requestId $workId $diff")
+      print("+")
+      // println(s"$requestId $workId $diff")
+      sender ! WorkReply(requestId, workId, result)
+    }
+    case Work2(requestId, workId, modpows, mod) => {
+      // println(s"received request length ${modpows.length} at actor $this")
+      val before = System.currentTimeMillis
+      val result = service.compute(modpows, mod).seq.toArray
+      val diff = (System.currentTimeMillis - before)
+      print("=")
+      // println(s"$requestId $workId $diff")
       sender ! WorkReply(requestId, workId, result)
     }
   }
@@ -198,7 +247,7 @@ object MPBridgeS {
     val requests = MPBridge.stopRecord()
     MPBridge.b(3)
     if(requests.length > 0) {
-        val answers = mpservice.MPService.compute(requests);
+        val answers = mpservice.MPService.compute(requests, MPBridge.modulus);
         MPBridge.startReplay(answers)
         ret = f
         MPBridge.stopReplay()

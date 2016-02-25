@@ -147,9 +147,9 @@ public class PermutationCommitmentScheme
 		protected Tuple abstractApply(Pair element, RandomByteSequence randomByteSequence) {
 			final Permutation permutation = ((PermutationElement) element.getFirst()).getValue().invert();
 			final Tuple randomizations = (Tuple) element.getSecond();
-			Element[] ret = new Element[size];
+			final Element[] ret = new Element[size];
 			
-			MPBridge.a();
+			/*MPBridge.a();
 			MPBridge.startRecord();
 			for (int i = 0; i < size; i++) {
 				ret[i] = randomizationGenerator.selfApply(randomizations.getAt(i)).apply(
@@ -166,7 +166,14 @@ public class PermutationCommitmentScheme
 				}
 				MPBridge.stopReplay();
 			}
-			MPBridge.reset();
+			MPBridge.reset();*/
+			MPBridge.ex(() -> {
+				for (int i = 0; i < size; i++) {
+					ret[i] = randomizationGenerator.selfApply(randomizations.getAt(i)).apply(
+					   messageGenerators.getAt(permutation.permute(i)));
+				}
+				return ret;
+			}, "2");
 
 			return Tuple.getInstance(ret);
 		}
