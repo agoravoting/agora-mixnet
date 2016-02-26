@@ -356,8 +356,8 @@ public class ReEncryptionShuffleProofSystem
 		
 		///
 		// MPBridge.a();
-		Tuple independentGenerators = Tuple.getInstance(elgamal.getCyclicGroup().getIndependentGenerators(randomByteSequence).limit(size + 1));
-		// Tuple independentGenerators = Tuple.getInstance(((AbstractCyclicGroup) elgamal.getCyclicGroup()).getIndependentGeneratorsParallel(randomByteSequence, 0, size + 1));
+		// Tuple independentGenerators = Tuple.getInstance(elgamal.getCyclicGroup().getIndependentGenerators(randomByteSequence).limit(size + 1));
+		Tuple independentGenerators = Tuple.getInstance(((AbstractCyclicGroup) elgamal.getCyclicGroup()).getIndependentGeneratorsParallel(randomByteSequence, 0, size + 1));
 		// MPBridge.b();
 		///
 
