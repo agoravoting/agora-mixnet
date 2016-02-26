@@ -68,6 +68,7 @@ public class MPBridge {
 	public static void startRecord(String value) {
 		dummy = new BigInteger(value);
 		if(requests.size() != 0)	throw new IllegalStateException();
+		// commenting the following line disables modpow extraction
 		recording = true;
 		modulus = null;
 	}

@@ -125,7 +125,6 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
       println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
       chunks.indices.foreach { i =>
         val work = Work2(requestId, i, chunks(i), mod)
-        print(s" ${chunks(i).size}")
         
         Thread sleep sendDelay
         workerRouter ! work
