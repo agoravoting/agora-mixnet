@@ -244,7 +244,9 @@ object MPBridgeS {
   def ex[T](f: => T, v: String) = {
     MPBridge.a()
     MPBridge.startRecord(v)
+    val now = System.currentTimeMillis
     var ret = f
+    println(s"R: ${System.currentTimeMillis - now}")
     val requests = MPBridge.stopRecord()
     MPBridge.b(3)
     if(requests.length > 0) {

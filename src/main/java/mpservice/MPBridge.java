@@ -134,7 +134,9 @@ public class MPBridge {
 	public static <T> T ex(Supplier<T> f, String v) {
 		a();
 	 	startRecord(v);
+	 	long now = System.currentTimeMillis();
 	 	T ret = f.get();
+	 	System.out.println("R: " + (System.currentTimeMillis() - now));
 	 	mpservice.ModPow2[] requests = MPBridge.stopRecord();
 		b(3);
 		if(requests.length > 0) {

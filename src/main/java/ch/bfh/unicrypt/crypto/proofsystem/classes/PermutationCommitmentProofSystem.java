@@ -192,7 +192,7 @@ public class PermutationCommitmentProofSystem
 	@Override
 	protected Tuple abstractGenerate(Pair privateInput, Tuple publicInput, RandomByteSequence randomByteSequence) {
 
-		// Unfold privat and public input
+		// Unfold private and public input
 		final PermutationElement pi = (PermutationElement) privateInput.getFirst();
 		final Tuple sV = (Tuple) privateInput.getSecond();
 		final Tuple eV = (Tuple) this.eValuesGenerator.generate(publicInput);
@@ -226,30 +226,7 @@ public class PermutationCommitmentProofSystem
 		}
 		MPBridge.b();
 		*/
-
-		/* MPBridge.a();
-		MPBridge.startRecord();
-		Element[] temp = new Element[this.size];
-		for (int i = 0; i < this.size; i++) {	
-			temp[i] = g.selfApply(rV.getAt(i));  //   [2n]
-			if (i > 0) {
-				ds[i] = rV.getAt(i).apply(ds[i - 1].selfApply(ePrimeV.getAt(i)));
-			}
-		}
-		mpservice.ModPow[] requests = MPBridge.stopRecord();
-		MPBridge.b();
-		if(requests.length > 0) {
-			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			MPBridge.startReplay(answers);
-			for (int i = 0; i < this.size; i++) {	
-				temp[i] = g.selfApply(rV.getAt(i));  //   [2n]
-				if (i > 0) {
-					ds[i] = rV.getAt(i).apply(ds[i - 1].selfApply(ePrimeV.getAt(i)));
-				}
-			}	
-			MPBridge.stopReplay();
-		}
-		MPBridge.reset();*/
+		
 		final Element[] temp = new Element[this.size];
 		final Tuple ePrimeVFinal = ePrimeV;
 		MPBridge.ex(() -> {
@@ -262,7 +239,8 @@ public class PermutationCommitmentProofSystem
 			return 0;
 		}, "2");
 
-System.out.println("Cannot parallelize..");
+		System.out.println("Cannot parallelize..");
+		long now = System.currentTimeMillis();
 		// CANT BE PARALLELIZED
 		MPBridge.a();
 		for (int i = 0; i < this.size; i++) {
@@ -270,6 +248,7 @@ System.out.println("Cannot parallelize..");
 			cs[i] = temp[i].apply(c_i_1.selfApply(ePrimeV.getAt(i)));  //   [2n]
 		}
 		MPBridge.b();
+		System.out.println("Bad loop: " + ((System.currentTimeMillis() - now) / 1000.0));
 		
 		
 		final Tuple cV = Tuple.getInstance(cs);
@@ -296,13 +275,11 @@ System.out.println("Cannot parallelize..");
 		randEV = Tuple.getInstance(randEVs);
 		randomElement = randomElement.append(Tuple.getInstance(randEV));
 
-	
 		///
 		long before = MPBridge.total;
 		final Element commitment = f.apply(randomElement);                              // [3n+3]
 		System.out.println("perm gen f.apply " + (MPBridge.total - before));
 		///
-
 		
 		final Element challenge = this.sigmaChallengeGenerator.generate(Pair.getInstance(publicInput, cV), commitment);
 		

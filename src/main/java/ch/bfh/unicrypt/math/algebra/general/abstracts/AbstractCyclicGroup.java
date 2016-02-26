@@ -149,35 +149,6 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 			}
 			return 0;	
 		}, "2");
-		/* MPBridge.a();
-		MPBridge.startRecord();
-		for(i = 0; i < array.length; i++) {
-			if(array[i].isGenerator()) {
-				array2[i] = array[i];
-			}	
-			// FIXME
-			else {
-				throw new RuntimeException();
-			}
-		}
-		requests = MPBridge.stopRecord();
-		MPBridge.b();
-		if(requests.length > 0) {
-			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			MPBridge.startReplay(answers);
-			for(i = 0; i < array.length; i++) {
-				if(array[i].isGenerator()) {
-					array2[i] = array[i];
-				}	
-				// FIXME
-				else {
-					throw new RuntimeException();
-				}
-			}		
-			MPBridge.stopReplay();
-		}
-		MPBridge.reset();*/
-
 
 		return DenseArray.getInstance(array2);
 	}
