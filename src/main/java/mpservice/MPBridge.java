@@ -15,7 +15,7 @@ public class MPBridge {
 	public static long beforeZ = 0;
 	public static long foundZ = 0;
 	public static boolean debug = false;
-	public static boolean gmpModPow = false;
+	public static boolean gmpModPow = true;
 
 	public static BigInteger dummy = new BigInteger("2");
 	

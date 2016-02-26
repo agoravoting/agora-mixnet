@@ -28,5 +28,5 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
-scalacOptions ++= Seq("-feature", "-language:existentials")
-// javacOptions ++= Seq("-Xlint:unchecked")
+scalacOptions ++= Seq("-feature", "-language:existentials", "-deprecation")
+javacOptions ++= Seq("-deprecation")

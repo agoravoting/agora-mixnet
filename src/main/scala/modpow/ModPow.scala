@@ -81,7 +81,7 @@ object AkkaModPowService extends ModPowService {
 
   def compute(work: Array[ModPow]): Array[BigInteger] = service.compute(work)
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = service.compute(work, mod)
-  def shutdown = system.shutdown
+  def shutdown = system.terminate
 }
 
 object MPService extends ModPowService {
@@ -111,7 +111,6 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
       println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
       chunks.indices.foreach { i =>
         val work = Work(requestId, i, chunks(i))
-        print(s" ${chunks(i).size}")
         
         Thread sleep sendDelay
         workerRouter ! work
@@ -227,7 +226,7 @@ object TestApp {
 
 
       println(answerOne.deep == answerTwo.deep)
-      system.shutdown() 
+      system.terminate
     // }
   }
 
