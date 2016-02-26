@@ -105,27 +105,6 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		}
 		Sequence<E> sequence = this.abstractGetRandomElements(randomByteSequence).skip(skip).limit(size);
 		final Element<V>[] array = new Element[size];
-		
-		
-		// cause the sequence to materialize
-		/* MPBridge.a();
-		MPBridge.startRecord();
-		int i = 0;
-		for (E value : sequence) {
-			array[i++] = value;
-		}
-		mpservice.ModPow[] requests = MPBridge.stopRecord();
-		MPBridge.b();
-		if(requests.length > 0) {
-			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			MPBridge.startReplay(answers);
-			i = 0;
-			for (E value : sequence) {
-				array[i++] = value;
-			}	
-			MPBridge.stopReplay();
-		}
-		MPBridge.reset();*/
 
 		MPBridge.ex(() -> {
 			int i = 0;

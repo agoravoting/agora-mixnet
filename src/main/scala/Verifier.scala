@@ -125,6 +125,7 @@ object Verifier extends ProofSettings {
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
 
     println("Getting proof systems..")
+    val before = System.currentTimeMillis
     // Create e-values challenge generator
     mpservice.MPBridge.l();
     val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
@@ -141,6 +142,7 @@ object Verifier extends ProofSettings {
     mpservice.MPBridge.l();
     // val permutationCommitment = pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment)
     val permutationCommitment = MPBridgeS.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
+    System.out.println(System.currentTimeMillis - before)
 
     println("Getting values..")
 
