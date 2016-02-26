@@ -106,20 +106,24 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		Sequence<E> sequence = this.abstractGetRandomElements(randomByteSequence).skip(skip).limit(size);
 		final Element<V>[] array = new Element[size];
 
-		MPBridge.ex(() -> {
+		/*MPBridge.ex(() -> {
 			int i = 0;
 			for (E value : sequence) {
 				array[i++] = value;
 			}
 			return array;
-		}, "2");
+		}, "2");*/
 
+		int i = 0;
+		for (E value : sequence) {
+			array[i++] = value;
+		}
 
 		final Element<V>[] array2 = new Element[size];
 		MPBridge.ex(() -> {
-			for(int i = 0; i < array.length; i++) {
-				if(array[i].isGenerator()) {
-					array2[i] = array[i];
+			for(int j = 0; j < array.length; j++) {
+				if(array[j].isGenerator()) {
+					array2[j] = array[j];
 				}	
 				// FIXME
 				else {
