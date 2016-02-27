@@ -355,7 +355,7 @@ public class PermutationCommitmentProofSystem
 		before = MPBridge.total;
 		// MPBridge.debug = true;
 		final Element right = commitment.apply(pV.selfApply(challenge));                //  [N+3]
-		System.out.println("*** perm ver pv.selfApply " + (MPBridge.total - before));
+		System.out.println("perm ver pv.selfApply " + (MPBridge.total - before));
 		///
 
 		//                                                                                -------

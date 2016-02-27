@@ -106,6 +106,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		Sequence<E> sequence = this.abstractGetRandomElements(randomByteSequence).skip(skip).limit(size);
 		final Element<V>[] array = new Element[size];
 
+		// not worth it
 		/*MPBridge.ex(() -> {
 			int i = 0;
 			for (E value : sequence) {
@@ -114,10 +115,12 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 			return array;
 		}, "2");*/
 
+		MPBridge.a();
 		int i = 0;
 		for (E value : sequence) {
 			array[i++] = value;
 		}
+		MPBridge.b();
 
 		final Element<V>[] array2 = new Element[size];
 		MPBridge.ex(() -> {
