@@ -11,7 +11,7 @@ import com.squareup.jnagmp.Gmp;
 public class MPBridge {
 	public static long total = 0;
 	public static long found = 0;
-	public static boolean gmpModPow = false;
+	public static boolean gmpModPow = true;
 	private static long extracted = 0;
 
 	public long before = 0;
