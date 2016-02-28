@@ -119,12 +119,16 @@ MPBridge.total = 0;
   // stop the voting period
   val stopVotes = Election.stopVotes(electionGettingVotes)
 
+  val (predata1, proof1) = m1.preShuffleVotes(stopVotes)
+  val (predata2, proof2) = m2.preShuffleVotes(stopVotes)
+
   // prepare for mixing
   val startMix = Election.startMixing(stopVotes)
 
   // each mixing trustee extracts the needed information from the election
   // and performs the shuffle and proofs
-  val shuffle1 = m1.shuffleVotes(startMix)
+  // val shuffle1 = m1.shuffleVotes(startMix)
+  val shuffle1 = m2.postShuffleVotes(startMix, predata1, proof1)
 
   
   // the proof is verified and the shuffle is then added to the election, advancing its state
@@ -132,7 +136,9 @@ MPBridge.total = 0;
 
   
   // again for the second trustee..
-  val shuffle2 = m2.shuffleVotes(mixOne)
+  // val shuffle2 = m2.shuffleVotes(mixOne)
+  val shuffle2 = m2.postShuffleVotes(mixOne, predata2, proof2)
+
   val mixTwo = Election.addMix(mixOne, shuffle2, m2.id)
 
   // we are done mixing
