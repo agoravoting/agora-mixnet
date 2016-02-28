@@ -161,9 +161,9 @@ object Verifier extends ProofSettings {
 
     println("Converting bridging commitments..")
     // Assume bridging commitments: GStarmod
-    val bridgingCommitments = MPBridgeS.ex(permutationProofDTO.bridgingCommitments.par.map { x =>
+    val bridgingCommitments = permutationProofDTO.bridgingCommitments.par.map { x =>
       Csettings.group.getElementFrom(x)
-    }, "1").seq
+    }.seq
 
     println("Converting permutation e values..")
     // Assume evalues: ZMod

@@ -384,15 +384,16 @@ object Election {
     val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(in.state.publicKey)
     
     println("Convert votes...")
+     
+    MPBridge.a()
+    val shuffled = mix.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+    val votes = in.state match {
+      case s: Mixing[_0] => in.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+      case _ => in.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+    }
+    MPBridge.b()
+      
     
-    val (shuffled,votes) = MPBridgeS.ex({
-      val shuffled = mix.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
-      val votes = in.state match {
-        case s: Mixing[_0] => in.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
-        case _ => in.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
-      }
-      (shuffled, votes)}, "1"
-    )
     /* MPBridge.a()
     MPBridge.startRecord("1")
     var shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )

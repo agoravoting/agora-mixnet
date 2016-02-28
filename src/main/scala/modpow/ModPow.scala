@@ -248,7 +248,7 @@ object MPBridgeS {
     val requests = MPBridge.stopRecord()
     MPBridge.b(3)
     if(requests.length > 0) {
-        val answers = MPService.compute(requests, MPBridge.modulus);
+        val answers = MPService.compute(requests, MPBridge.getModulus);
         MPBridge.startReplay(answers)
         ret = f
         MPBridge.stopReplay()

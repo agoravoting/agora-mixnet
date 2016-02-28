@@ -202,8 +202,6 @@ public class PermutationCommitmentProofSystem
 		final Element v = this.cyclicGroup.getZModOrder().add(sV);
 		// w = <sV,eV>
 
-		final Element w = computeInnerProduct(sV, eV);
-
 		final Tuple rV
 			   = ProductGroup.getInstance(this.cyclicGroup.getZModOrder(), this.size).getRandomElement(randomByteSequence);
 		Tuple ePrimeV = PermutationFunction.getInstance(eV.getSet()).apply(eV, pi);
@@ -282,6 +280,7 @@ public class PermutationCommitmentProofSystem
 		///
 		
 		final Element challenge = this.sigmaChallengeGenerator.generate(Pair.getInstance(publicInput, cV), commitment);
+		final Element w = computeInnerProduct(sV, eV);
 		
 		final Element response = randomElement.apply(Tuple.getInstance(v, w, rV, d, ePrimeV).selfApply(challenge));
 	

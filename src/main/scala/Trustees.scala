@@ -30,6 +30,9 @@ import shapeless.Sized.sizedToRepr
 
 import mpservice.MPBridgeS
 import mpservice.MPBridge
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Represents a key maker trustee
@@ -67,12 +70,12 @@ class MixerTrustee(val id: String) extends Mixer {
     val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(e.state.publicKey)
     println("Convert votes..")
     
-    val votes = MPBridgeS.ex(
-      e.state match {
-        case s: Mixing[_0] => e.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
-        case _ => e.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
-      }, "1"
-    )
+    MPBridge.a()
+    val votes = e.state match {
+      case s: Mixing[_0] => e.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+      case _ => e.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+    }
+    MPBridge.b()
 
     println("Mixer creating shuffle..")
     
@@ -199,6 +202,48 @@ MPBridge.y();
 MPBridge.z(); MPBridge.y(); 
     val psi: PermutationElement = mixer.getPermutationGroup().getRandomElement()
 
+    val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, ciphertexts.getArity())
+    val permutationCommitmentRandomizations: Tuple = pcs.getRandomizationSpace().getRandomElement()
+
+    val permutationCommitment: Tuple = pcs.commit(psi, permutationCommitmentRandomizations)
+MPBridge.z(); MPBridge.y();
+    
+    println("Mixer: generators..")
+    // Create sigma challenge generator
+    
+    val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
+    val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
+        Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
+
+    // Create e-values challenge generator
+    val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
+        Csettings.group.getZModOrder(), ciphertexts.getArity())
+
+    val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
+        Csettings.group, ciphertexts.getArity())
+MPBridge.z(); MPBridge.y(); 
+    // Create psi commitment proof
+    val privateInputPermutation: Pair = Pair.getInstance(psi, permutationCommitmentRandomizations)
+    val publicInputPermutation = permutationCommitment
+
+    // Create psi commitment proof system
+    println("Mixer: permutation proof, generating..")
+    // val permutationProof: Tuple = pcps.generate(privateInputPermutation, publicInputPermutation)
+    val permutationProofFuture = Future {
+      pcps.generate(privateInputPermutation, publicInputPermutation)
+    }.map { permutationProof =>
+      
+      val bridgingCommitments = pcps.getBridingCommitment(permutationProof).asInstanceOf[Tuple]
+      val eValues = pcps.getEValues(permutationProof).asInstanceOf[Tuple]
+      val permutationProofDTO = PermutationProofDTO(pcps.getCommitment(permutationProof).convertToString(),
+        pcps.getChallenge(permutationProof).convertToString(),
+        pcps.getResponse(permutationProof).convertToString(),
+        bridgingCommitments.par.map(x => x.convertToString).seq.toSeq,
+        eValues.par.map(x => x.convertToString).seq.toSeq)
+
+      permutationProofDTO
+    }
+
     println("Mixer: randomizations..")
 
     val rs: Tuple = mixer.generateRandomizations()
@@ -209,35 +254,14 @@ MPBridge.z(); MPBridge.y();
     val shuffledVs: Tuple = mixer.shuffle(ciphertexts, psi, rs)
 MPBridge.z(); MPBridge.y(); 
 
-    println("Mixer: generators..")
-    // Create sigma challenge generator
-    val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
-
-    val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
-        Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
-
-    // Create e-values challenge generator
-    val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
-        Csettings.group.getZModOrder(), ciphertexts.getArity())
+    
+    
 
     println("Mixer: permutation proof..")
-    val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, ciphertexts.getArity())
+    
 MPBridge.z(); MPBridge.y(); 
 
-    val permutationCommitmentRandomizations: Tuple = pcs.getRandomizationSpace().getRandomElement()
 
-    val permutationCommitment: Tuple = pcs.commit(psi, permutationCommitmentRandomizations)
-MPBridge.z(); MPBridge.y(); 
-
-    // Create psi commitment proof system
-    val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
-        Csettings.group, ciphertexts.getArity())
-MPBridge.z(); MPBridge.y(); 
-    // Create psi commitment proof
-    val privateInputPermutation: Pair = Pair.getInstance(psi, permutationCommitmentRandomizations)
-    val publicInputPermutation = permutationCommitment
-    println("Mixer: permutation proof, generating..")
-    val permutationProof: Tuple = pcps.generate(privateInputPermutation, publicInputPermutation)
 MPBridge.z(); MPBridge.y(); 
     println("Mixer: shuffle proof..")
     // 2. Shuffle Proof
@@ -252,13 +276,7 @@ MPBridge.z(); MPBridge.y();
     // Create shuffle proof
     val mixProof: Tuple = spg.generate(privateInputShuffle, publicInputShuffle)
 MPBridge.z(); MPBridge.y(); 
-    val bridgingCommitments = pcps.getBridingCommitment(permutationProof).asInstanceOf[Tuple]
-    val eValues = pcps.getEValues(permutationProof).asInstanceOf[Tuple]
-    val permputationProofDTO = PermutationProofDTO(pcps.getCommitment(permutationProof).convertToString(),
-      pcps.getChallenge(permutationProof).convertToString(),
-      pcps.getResponse(permutationProof).convertToString(),
-      bridgingCommitments.par.map(x => x.convertToString).seq.toSeq,
-      eValues.par.map(x => x.convertToString).seq.toSeq)
+    
 
     val eValues2 = spg.getEValues(mixProof).asInstanceOf[Tuple]
     val mixProofDTO = MixProofDTO(spg.getCommitment(mixProof).convertToString(),
@@ -266,15 +284,19 @@ MPBridge.z(); MPBridge.y();
       spg.getResponse(mixProof).convertToString(),
       eValues2.map(x => x.convertToString).toSeq)
 
-    val shuffleProofDTO = ShuffleProofDTO(mixProofDTO, permputationProofDTO, permutationCommitment.convertToString)
+    val permutationProofDTO = Await.result(permutationProofFuture, Duration.Inf)
+
+    val shuffleProofDTO = ShuffleProofDTO(mixProofDTO, permutationProofDTO, permutationCommitment.convertToString)
 
 
-    println("Mixer: verifying..")
+    
 
     // 
     // Not doing self verification, enough to do it at the BB
     //
     /*
+        println("Mixer: verifying..")
+
         val v1 = pcps.verify(permutationProof, publicInputPermutation)
         MPBridge.z(); MPBridge.y(); 
         // Verify shuffle proof
@@ -288,6 +310,8 @@ MPBridge.z(); MPBridge.y();
     */
     
     val votesString: Seq[String] = Util.seqFromTuple(shuffledVs).par.map( x => x.convertToString ).seq
+
+
 
     ShuffleResultDTO(shuffleProofDTO, votesString)
   }
