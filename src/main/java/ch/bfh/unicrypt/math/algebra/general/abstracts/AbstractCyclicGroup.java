@@ -122,6 +122,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		}
 		MPBridge.b();
 
+		// not worth it
 		/*final Element<V>[] array2 = new Element[size];
 		MPBridge.ex(() -> {
 			for(int j = 0; j < array.length; j++) {

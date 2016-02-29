@@ -1,4 +1,3 @@
-import scala.collection.JavaConversions
 import scala.collection.mutable.{ Map => MutableMap }
 
 import ch.bfh.unicrypt.crypto.mixer.classes.ReEncryptionMixer
@@ -27,6 +26,7 @@ import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
 import ch.bfh.unicrypt.math.function.classes.ProductFunction
 import ch.bfh.unicrypt.math.function.interfaces.Function
 import shapeless.Sized.sizedToRepr
+import scala.collection.JavaConversions._
 
 import mpservice.MPBridgeS
 import mpservice.MPBridge
@@ -54,7 +54,7 @@ class KeyMakerTrustee(val id: String, privateShares: MutableMap[String, String] 
 
   def partialDecryption(e: Election[_, Decryptions[_]]) = {
     val elGamal = ElGamalEncryptionScheme.getInstance(e.state.cSettings.generator)
-    val votes = e.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v).asInstanceOf[Pair])
+    val votes = e.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v).asInstanceOf[Pair]).seq
     val secretKey = e.state.cSettings.group.getZModOrder().getElementFrom(privateShares(e.state.id))
 
     partialDecrypt(votes, secretKey, id, e.state.cSettings)
@@ -94,7 +94,7 @@ class MixerTrustee(val id: String) extends Mixer {
     preShuffle(e.state.votes.size, publicKey, e.state.cSettings, id)
   }
 
-  def postShuffleVotes(e: Election[_, Mixing[_]], preData: PreShuffleData, pdtoFuture: Future[PermutationProofDTO]) = {
+  def shuffleVotes(e: Election[_, Mixing[_]], preData: PreShuffleData, pdtoFuture: Future[PermutationProofDTO]) = {
     println("Mixer..")
     val elGamal = ElGamalEncryptionScheme.getInstance(e.state.cSettings.generator)
     val keyPairGen = elGamal.getKeyPairGenerator()
@@ -110,7 +110,7 @@ class MixerTrustee(val id: String) extends Mixer {
 
     println("Mixer creating shuffle..")
     
-    postShuffle(Util.tupleFromSeq(votes), publicKey, e.state.cSettings, id, preData, pdtoFuture)
+    shuffle(Util.tupleFromSeq(votes), publicKey, e.state.cSettings, id, preData, pdtoFuture)
   }
 }
 
@@ -177,9 +177,8 @@ trait KeyMaker extends ProofSettings {
     }.seq.unzip
 
     val proofDTO = createProof(proverId, secretKey, publicKey, lists._1, lists._2, Csettings)
-    // FIXME missing verification of own proof
 
-    PartialDecryptionDTO(lists._1.map(_.convertToString), proofDTO)
+    PartialDecryptionDTO(lists._1.par.map(_.convertToString).seq, proofDTO)
   }
 
   private def createProof(proverId: String, secretKey: Element[_],
@@ -200,7 +199,6 @@ trait KeyMaker extends ProofSettings {
     val publicInput: Pair = Pair.getInstance(publicKey, Tuple.getInstance(partialDecryptions:_*))
     val otherInput = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
 
-
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
 
@@ -209,8 +207,11 @@ trait KeyMaker extends ProofSettings {
     // Generate and verify proof
     val proof: Triple = proofSystem.generate(privateInput, publicInput)
 
-    val result = proofSystem.verify(proof, publicInput)
-    if(!result) throw new Exception
+    // 
+    // Not doing self verification, enough to do it at the BB
+    //
+    // val result = proofSystem.verify(proof, publicInput)
+    // if(!result) throw new Exception
 
     SigmaProofDTO(proofSystem.getCommitment(proof).convertToString(), proofSystem.getChallenge(proof).convertToString(), proofSystem.getResponse(proof).convertToString())
   }
@@ -224,8 +225,7 @@ trait KeyMaker extends ProofSettings {
 trait Mixer extends ProofSettings {
 
   def preShuffle(voteCount: Int, publicKey: Element[_], Csettings: CryptoSettings, proverId: String) = {
-    import scala.collection.JavaConversions._
-
+    
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
 
     val mixer: ReEncryptionMixer = ReEncryptionMixer.getInstance(elGamal, publicKey, voteCount)
@@ -246,6 +246,8 @@ trait Mixer extends ProofSettings {
     // Create e-values challenge generator
     val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
         Csettings.group.getZModOrder(), voteCount)
+
+    println("Mixer: permutation proof..")
 
     val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
         Csettings.group, voteCount)
@@ -276,8 +278,7 @@ trait Mixer extends ProofSettings {
     (preShuffleData, permutationProofFuture)
   }
 
-  def postShuffle(ciphertexts: Tuple, publicKey: Element[_], Csettings: CryptoSettings, proverId: String, pre: PreShuffleData, pdtoFuture: Future[PermutationProofDTO]) = {
-    import scala.collection.JavaConversions._
+  def shuffle(ciphertexts: Tuple, publicKey: Element[_], Csettings: CryptoSettings, proverId: String, pre: PreShuffleData, pdtoFuture: Future[PermutationProofDTO]) = {
 
     println("Mixer: randomizations..")
 
@@ -289,15 +290,6 @@ MPBridge.z(); MPBridge.y();
     val shuffledVs: Tuple = pre.mixer.shuffle(ciphertexts, pre.psi, rs)
 MPBridge.z(); MPBridge.y(); 
 
-    
-    
-
-    println("Mixer: permutation proof..")
-    
-MPBridge.z(); MPBridge.y(); 
-
-
-MPBridge.z(); MPBridge.y(); 
     println("Mixer: shuffle proof..")
     // 2. Shuffle Proof
     //------------------
@@ -319,37 +311,38 @@ MPBridge.z(); MPBridge.y();
       spg.getResponse(mixProof).convertToString(),
       eValues2.map(x => x.convertToString).toSeq)
 
-    val permutationProofDTO = Await.result(pdtoFuture, Duration.Inf)
+    // val permutationProofDTO = Await.result(pdtoFuture, Duration.Inf)
 
-    val shuffleProofDTO = ShuffleProofDTO(mixProofDTO, permutationProofDTO, pre.permutationCommitment.convertToString)
+    pdtoFuture.map { permutationProofDTO => 
+      val shuffleProofDTO = ShuffleProofDTO(mixProofDTO, permutationProofDTO, pre.permutationCommitment.convertToString)
 
-    // 
-    // Not doing self verification, enough to do it at the BB
-    //
-    /*
-        println("Mixer: verifying..")
+      // 
+      // Not doing self verification, enough to do it at the BB
+      //
+      /*
+          println("Mixer: verifying..")
 
-        val v1 = pcps.verify(permutationProof, publicInputPermutation)
-        MPBridge.z(); MPBridge.y(); 
-        // Verify shuffle proof
-        val v2 = spg.verify(mixProof, publicInputShuffle)
-        MPBridge.z(); MPBridge.y(); 
-        // Verify equality of permutation commitments
-        val v3 = publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
+          val v1 = pcps.verify(permutationProof, publicInputPermutation)
+          MPBridge.z(); MPBridge.y(); 
+          // Verify shuffle proof
+          val v2 = spg.verify(mixProof, publicInputShuffle)
+          MPBridge.z(); MPBridge.y(); 
+          // Verify equality of permutation commitments
+          val v3 = publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
 
-        println("Verification ok: " + (v1 && v2 && v3))
-        if(!(v1 && v2 && v3)) throw new Exception();
-    */
-    
-    val votesString: Seq[String] = Util.seqFromTuple(shuffledVs).par.map( x => x.convertToString ).seq
+          println("Verification ok: " + (v1 && v2 && v3))
+          if(!(v1 && v2 && v3)) throw new Exception();
+      */
+      
+      val votesString: Seq[String] = Util.seqFromTuple(shuffledVs).par.map( x => x.convertToString ).seq
 
 
 
-    ShuffleResultDTO(shuffleProofDTO, votesString)
+      ShuffleResultDTO(shuffleProofDTO, votesString)
+    }
   }
 
   def shuffle(ciphertexts: Tuple, publicKey: Element[_], Csettings: CryptoSettings, proverId: String) = {
-    import scala.collection.JavaConversions._
 
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
 

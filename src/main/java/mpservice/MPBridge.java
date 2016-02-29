@@ -94,7 +94,7 @@ public class MPBridge {
 		return i().recording;
 	}
 
-	public static synchronized void addModPow(BigInteger base, BigInteger pow, BigInteger mod) {
+	public static void addModPow(BigInteger base, BigInteger pow, BigInteger mod) {
 		MPBridge i = i();
 		if(!i.recording) throw new IllegalStateException();
 		if(i.modulus == null) {
@@ -107,7 +107,7 @@ public class MPBridge {
 		i.requests.add(new ModPow2(base, pow));
 	}
 
-	public static synchronized BigInteger getModPow() {
+	public static BigInteger getModPow() {
 		if(i().recording) throw new IllegalStateException();
 
 		return i().answers.remove(0);
