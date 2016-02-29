@@ -122,7 +122,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		}
 		MPBridge.b();
 
-		final Element<V>[] array2 = new Element[size];
+		/*final Element<V>[] array2 = new Element[size];
 		MPBridge.ex(() -> {
 			for(int j = 0; j < array.length; j++) {
 				if(array[j].isGenerator()) {
@@ -134,7 +134,17 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 				}
 			}
 			return 0;	
-		}, "2");
+		}, "2");*/
+		Element<V>[] array2 = new Element[size];
+		for(i = 0; i < array.length; i++) {
+			if(array[i].isGenerator()) {
+				array2[i] = array[i];
+			}	
+			// FIXME
+			else {
+				throw new RuntimeException();
+			}
+		}
 
 		return DenseArray.getInstance(array2);
 	}

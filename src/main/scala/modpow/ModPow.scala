@@ -74,7 +74,7 @@ object AkkaModPowService extends ModPowService {
   val maxChunkSize = config.getInt("master.max-chunk-size")
   val sendDelay = config.getInt("master.send-delay-ms")
   val minChunks = config.getInt("master.min-chunk")
-  val useGmp = config.getBoolean("worker.use-gmp")
+  val useGmp = config.getBoolean("use-gmp")
 
   val serviceActor = system.actorOf(ModPowServiceActor.props(minChunks, maxChunkSize, sendDelay, useGmp), name = "ModPowService")
   val service = new AkkaModPowService(system, serviceActor)
@@ -199,7 +199,7 @@ object TestApp {
     val maxChunkSize = config.getInt("master.max-chunk-size")
     val sendDelay = config.getInt("master.send-delay-ms")
     val minChunks = config.getInt("master.min-chunk")
-    val useGmp = config.getBoolean("worker.use-gmp")
+    val useGmp = config.getBoolean("use-gmp")
     // val metricsIntervalSeconds = config.getInt("producer.metrics-interval-seconds")
     // system.actorOf(ClusterListener.props(metricsIntervalSeconds))
     val serviceActor = system.actorOf(ModPowServiceActor.props(minChunks, maxChunkSize, sendDelay, useGmp), name = "ModPowService")

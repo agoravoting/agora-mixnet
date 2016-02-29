@@ -4,6 +4,7 @@ import syntax.sized._
 import ops.nat._
 import LT._
 import com.github.nscala_time.time.Imports._
+import com.typesafe.config.ConfigFactory
 
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
@@ -14,6 +15,7 @@ import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
 import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
 import mpservice.MPBridgeS
 import mpservice.MPBridge
+
 
 /**
  * An election process DEMO
@@ -60,8 +62,12 @@ import mpservice.MPBridge
  */
 object ElectionTest extends App {
 
-  val totalVotes = args.toList.lift(0).getOrElse("100").toInt
+  val config = ConfigFactory.load()
+  val useGmp = config.getBoolean("use-gmp")
+  MPBridge.gmpModPow = useGmp
   MPBridgeS.init
+
+  val totalVotes = args.toList.lift(0).getOrElse("100").toInt
 
   // create the keymakers
   // these are responsible for distributed key generation and joint decryption

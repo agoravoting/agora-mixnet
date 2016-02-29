@@ -11,7 +11,7 @@ import com.squareup.jnagmp.Gmp;
 public class MPBridge {
 	public static long total = 0;
 	public static long found = 0;
-	public static boolean gmpModPow = true;
+	public static boolean gmpModPow = false;
 	private static long extracted = 0;
 
 	public long before = 0;
@@ -153,7 +153,9 @@ public class MPBridge {
 	 	mpservice.ModPow2[] reqs = stopRecord();
 		b(3);
 		if(reqs.length > 0) {
+			now = System.currentTimeMillis();
 			java.math.BigInteger[] answers = mpservice.MPService.compute(reqs, i().modulus);
+			System.out.println("\nC: " + (System.currentTimeMillis() - now));
 			startReplay(answers);
 			ret = f.get();	
 			stopReplay();
