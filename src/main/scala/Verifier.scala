@@ -31,6 +31,7 @@ import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
 import ch.bfh.unicrypt.math.function.classes.ProductFunction
 import ch.bfh.unicrypt.math.function.interfaces.Function
 import mpservice.MPBridgeS
+import mpservice.MPBridge
 
 /**
  * Proof settings common for proof generators and verifiers
@@ -82,10 +83,12 @@ object Verifier extends ProofSettings {
 
   def verifyPartialDecryptions(pd: PartialDecryptionDTO, votes: Seq[Tuple], Csettings: CryptoSettings, proverId: String, publicKey: Element[_]) = {
 
+    
     val encryptionGenerator = Csettings.generator
     val generatorFunctions = votes.map { x: Tuple =>
       GeneratorFunction.getInstance(x.getFirst)
     }
+
 
     // Create proof functions
     val f1: Function = GeneratorFunction.getInstance(encryptionGenerator)
@@ -93,22 +96,25 @@ object Verifier extends ProofSettings {
         InvertFunction.getInstance(Csettings.group.getZModOrder()),
         MultiIdentityFunction.getInstance(Csettings.group.getZModOrder(), generatorFunctions.length),
         ProductFunction.getInstance(generatorFunctions :_*))
+    
 
-    val pdElements = pd.partialDecryptions.map(Csettings.group.getElementFrom(_))
+    val pdElements = MPBridgeS.ex(pd.partialDecryptions.map(Csettings.group.getElementFromString(_)), "1")
+
     // val publicInput: Pair = Pair.getInstance(publicKey, Tuple.getInstance(pd.partialDecryptions:_*))
+    
+    
     val publicInput: Pair = Pair.getInstance(publicKey, Tuple.getInstance(pdElements:_*))
     val otherInput = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
-
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
     val proofSystem: EqualityPreimageProofSystem = EqualityPreimageProofSystem.getInstance(challengeGenerator, f1, f2)
-
-    val commitment = proofSystem.getCommitmentSpace().getElementFrom(pd.proofDTO.commitment)
+    
+    val commitment = MPBridgeS.ex(proofSystem.getCommitmentSpace().getElementFrom(pd.proofDTO.commitment), "1")
     val challenge = proofSystem.getChallengeSpace().getElementFrom(pd.proofDTO.challenge)
     val response = proofSystem.getResponseSpace().getElementFrom(pd.proofDTO.response)
 
     val proof: Triple = Triple.getInstance(commitment, challenge, response)
-    val result = proofSystem.verify(proof, publicInput)
+    val result = proofSystem.verify(proof, publicInput)    
 
     println(s"Verifier: verifyPartialDecryptions $result")
 
@@ -151,7 +157,7 @@ object Verifier extends ProofSettings {
     val challenge1 = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
     val response1 = pcps.getResponseSpace().getElementFromString(shuffleProof.permutationProof.response)
 
-    val commitment2 = spg.getCommitmentSpace().getElementFromString(shuffleProof.mixProof.commitment)
+    val commitment2 = MPBridgeS.ex(spg.getCommitmentSpace().getElementFromString(shuffleProof.mixProof.commitment), "1")
     val challenge2 = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
     val response2 = spg.getResponseSpace().getElementFromString(shuffleProof.mixProof.response)
 

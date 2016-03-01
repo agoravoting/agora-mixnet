@@ -151,7 +151,7 @@ trait KeyMaker extends ProofSettings {
 
     val sigmaProofDTO = SigmaProofDTO(pg.getCommitment(proof).convertToString(), pg.getChallenge(proof).convertToString(), pg.getResponse(proof).convertToString())
 
-    (EncryptionKeyShareDTO(sigmaProofDTO, publicKey.convertToBigInteger().toString(10)), privateKey.convertToBigInteger().toString)
+    (EncryptionKeyShareDTO(sigmaProofDTO, publicKey.convertToBigInteger().toString), privateKey.convertToBigInteger().toString)
   }
 
   def partialDecrypt(votes: Seq[Tuple], privateKey: Element[_], proverId: String, Csettings: CryptoSettings) = {
@@ -163,6 +163,7 @@ trait KeyMaker extends ProofSettings {
     val decryptionKey = secretKey.invert()
     val publicKey = encryptionGenerator.selfApply(secretKey)
 
+    MPBridge.a()
     val lists = votes.par.map { v =>
 
       val element = v.getFirst()
@@ -170,11 +171,13 @@ trait KeyMaker extends ProofSettings {
         // FIXME
         println("********** Crash incoming!")
       }
+      
       val function: GeneratorFunction = GeneratorFunction.getInstance(element)
       val partialDecryption = function.apply(decryptionKey).asInstanceOf[GStarModElement]
 
       (partialDecryption, function)
     }.seq.unzip
+    MPBridge.b()
 
     val proofDTO = createProof(proverId, secretKey, publicKey, lists._1, lists._2, Csettings)
 
@@ -184,6 +187,7 @@ trait KeyMaker extends ProofSettings {
   private def createProof(proverId: String, secretKey: Element[_],
       publicKey: Element[_], partialDecryptions: Seq[Element[_]], generatorFunctions: Seq[Function], Csettings: CryptoSettings) = {
 
+    MPBridge.a()
     val encryptionGenerator = Csettings.generator
 
     // Create proof functions
@@ -202,10 +206,14 @@ trait KeyMaker extends ProofSettings {
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
 
+    
     val proofSystem: EqualityPreimageProofSystem = EqualityPreimageProofSystem.getInstance(challengeGenerator, f1, f2)
+    MPBridge.b()
 
     // Generate and verify proof
+    val now = System.currentTimeMillis
     val proof: Triple = proofSystem.generate(privateInput, publicInput)
+    System.out.println(">> " + (System.currentTimeMillis - now))
 
     // 
     // Not doing self verification, enough to do it at the BB
@@ -403,15 +411,6 @@ MPBridge.z(); MPBridge.y();
     val shuffledVs: Tuple = mixer.shuffle(ciphertexts, psi, rs)
 MPBridge.z(); MPBridge.y(); 
 
-    
-    
-
-    println("Mixer: permutation proof..")
-    
-MPBridge.z(); MPBridge.y(); 
-
-
-MPBridge.z(); MPBridge.y(); 
     println("Mixer: shuffle proof..")
     // 2. Shuffle Proof
     //------------------

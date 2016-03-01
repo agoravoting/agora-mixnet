@@ -16,6 +16,8 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
 import mpservice.MPBridgeS
 import mpservice.MPBridge
 
+import scala.collection.JavaConversions._
+
 
 /**
  * An election is a typed, purely function state machine with an immutable history
@@ -80,7 +82,7 @@ object Election {
   // combine the shares into a public key, can only happen if we have all the shares
   def combineShares[W <: Nat](in: Election[W, Shares[W]]) = {
     println("Combining shares..")
-    var encKey = in.state.cSettings.group.getIdentityElement()
+    // var encKey = in.state.cSettings.group.getIdentityElement()
 
     val shares = in.state.shares.map { s =>
       Util.getPublicKeyFromString(s._2, in.state.cSettings.generator)
@@ -88,7 +90,7 @@ object Election {
     val publicKey = shares.reduce( (a,b) => a.apply(b) )
 
     // println(s"combineShares: public key $publicKey")
-    encKey
+    // encKey
 
     new Election[W, Combined](Combined(publicKey.convertToString, in.state))
   }
@@ -254,7 +256,6 @@ object Util {
   }
 
   def seqFromTuple(tuple: Tuple): Seq[Element[_]] = {
-    import scala.collection.JavaConversions._
 
     tuple.par.map{ x => x }.seq.toSeq
   }

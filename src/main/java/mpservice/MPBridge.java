@@ -18,6 +18,7 @@ public class MPBridge {
 	public long beforeZ = 0;
 	public long foundZ = 0;
 	public boolean debug = false;
+	private long beforeTime = 0;
 
 	private BigInteger dummy = new BigInteger("2");
 	private BigInteger modulus = null;
@@ -44,6 +45,7 @@ public class MPBridge {
 
 	public static void a() {
 		i().before = total;
+		i().beforeTime = System.currentTimeMillis();
 	}
 
 	public static void b(int trace) {
@@ -52,7 +54,8 @@ public class MPBridge {
 		StackTraceElement[] traces = Thread.currentThread().getStackTrace();
 		StackTraceElement caller = traces[trace];
 		found += diff;
-		System.err.println(">>> " + caller.getFileName() + ":" + caller.getLineNumber() + " [" + diff + "]" + " (" + found + ", " + total + ") (" + extracted + ")");	
+		long diffTime = System.currentTimeMillis() - i.beforeTime;
+		System.err.println(">>> " + caller.getFileName() + ":" + caller.getLineNumber() + "[" + diffTime + " ms] [" + diff + "]" + " (" + found + ", " + total + ") (" + extracted + ")");	
 	}
 
 	public static void b() {
@@ -92,6 +95,10 @@ public class MPBridge {
 
 	public static boolean isRecording() {
 		return i().recording;
+	}
+
+	public static void setDebug(boolean debug) {
+		i().debug = debug;
 	}
 
 	public static void addModPow(BigInteger base, BigInteger pow, BigInteger mod) {
