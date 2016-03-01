@@ -26,10 +26,10 @@ import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
 import ch.bfh.unicrypt.math.function.classes.ProductFunction
 import ch.bfh.unicrypt.math.function.interfaces.Function
 import shapeless.Sized.sizedToRepr
-import scala.collection.JavaConversions._
 
 import mpservice.MPBridgeS
 import mpservice.MPBridge
+import scala.collection.JavaConversions._
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -41,7 +41,7 @@ case class PreShuffleData(mixer: ReEncryptionMixer, psi: PermutationElement, elG
 /**
  * Represents a key maker trustee
  *
- * Simply mixes in the KeyMaker trait (below) as well as managing an identity and private shares
+ * Mixes in the KeyMaker trait (below) as well as managing an identity and private shares
  */
 class KeyMakerTrustee(val id: String, privateShares: MutableMap[String, String] = MutableMap()) extends KeyMaker {
   def createKeyShare(e: Election[_, Shares[_]]) = {
@@ -163,22 +163,30 @@ trait KeyMaker extends ProofSettings {
     val decryptionKey = secretKey.invert()
     val publicKey = encryptionGenerator.selfApply(secretKey)
 
-    MPBridge.a()
-    val lists = votes.par.map { v =>
+    
+    /*val lists = votes.par.map { v =>
 
       val element = v.getFirst()
-      if(element.convertToString == "1") {
-        // FIXME
-        println("********** Crash incoming!")
-      }
+      // FIXME
+      // if(element.convertToString == "1") {
+      //  
+      //  println("********** Crash incoming!")
+      //}
       
       val function: GeneratorFunction = GeneratorFunction.getInstance(element)
       val partialDecryption = function.apply(decryptionKey).asInstanceOf[GStarModElement]
 
       (partialDecryption, function)
-    }.seq.unzip
-    MPBridge.b()
-
+    }.seq.unzip*/
+    val generators = votes.par.map { v =>
+      val element = v.getFirst()
+      GeneratorFunction.getInstance(element)
+    }.seq
+    val lists = MPBridgeS.ex(generators.map{ generator =>
+      val partialDecryption = generator.apply(decryptionKey).asInstanceOf[GStarModElement]
+      (partialDecryption, generator) 
+    }, "2").unzip
+    
     val proofDTO = createProof(proverId, secretKey, publicKey, lists._1, lists._2, Csettings)
 
     PartialDecryptionDTO(lists._1.par.map(_.convertToString).seq, proofDTO)
@@ -351,7 +359,7 @@ MPBridge.z(); MPBridge.y();
   }
 
   def shuffle(ciphertexts: Tuple, publicKey: Element[_], Csettings: CryptoSettings, proverId: String) = {
-
+    import scala.collection.JavaConversions._
     val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
 
 MPBridge.y();
@@ -389,8 +397,8 @@ MPBridge.z(); MPBridge.y();
     val permutationProofFuture = Future {
       pcps.generate(privateInputPermutation, publicInputPermutation)
     }.map { permutationProof =>
-      
-      val bridgingCommitments = pcps.getBridingCommitment(permutationProof).asInstanceOf[Tuple]
+
+      val bridgingCommitments = pcps.getBridingCommitment(permutationProof).asInstanceOf[Tuple].toList
       val eValues = pcps.getEValues(permutationProof).asInstanceOf[Tuple]
       val permutationProofDTO = PermutationProofDTO(pcps.getCommitment(permutationProof).convertToString(),
         pcps.getChallenge(permutationProof).convertToString(),
@@ -457,7 +465,7 @@ MPBridge.z(); MPBridge.y();
         if(!(v1 && v2 && v3)) throw new Exception();
     */
     
-    val votesString: Seq[String] = Util.seqFromTuple(shuffledVs).par.map( x => x.convertToString ).seq
+    val votesString: Seq[String] = shuffledVs.par.map( x => x.convertToString ).seq.toList
 
 
 

@@ -156,8 +156,6 @@ object ElectionTest extends App {
     val stopMix = Election.stopMixing(mixTwo)
 
     val mixingEnd = System.currentTimeMillis()
-
-    // leaving this part out as we want to benchmark only mixing
     
     // start the partial decryptions
     // if we tried to do this before the mixing was completed, the compiler would protest
@@ -170,7 +168,7 @@ object ElectionTest extends App {
 
     val decryptions = for {
       pd1 <- pd1Future
-      pd2 <-pd2Future
+      pd2 <- pd2Future
     } yield(pd1, pd2)
     
     decryptions.map { case (pd1, pd2) => 
@@ -186,10 +184,12 @@ object ElectionTest extends App {
       println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
 
       val mixTime = (mixingEnd - mixingStart) / 1000.0
+      val totalTime = (System.currentTimeMillis() - mixingStart) / 1000.0
 
       println("*************************************************************")
       println(s"finished run with votes = $totalVotes")
       println(s"mixTime: $mixTime")
+      println(s"totalTime: $totalTime")
       println(s"sec / vote: ${mixTime / totalVotes}")
       println(s"total modExps: ${MPBridge.total}")
       println(s"found modExps: ${MPBridge.found}")
