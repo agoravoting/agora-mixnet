@@ -338,3 +338,122 @@ object DecryptionTest extends App {
 
   mpservice.MPService.shutdown
 }
+
+object ElectionTestSerial extends App {
+
+  val totalVotes = args.toList.lift(0).getOrElse("100").toInt
+  MPBridgeS.init
+
+  // create the keymakers
+  // these are responsible for distributed key generation and joint decryption
+  val k1 = new KeyMakerTrustee("keymaker one")
+  val k2 = new KeyMakerTrustee("keymaker two")
+
+  // create the mixers
+  // these are responsible for shuffling the votes
+  val m1 = new MixerTrustee("mixer one")
+  val m2 = new MixerTrustee("mixer two")
+
+  // create the election,
+  // we are using privacy level 2, two trustees of each kind
+  // we are 2048 bits for the size of the group modulus
+  val start = Election.create[_2]("my election", 2048)
+
+  // the election is now ready to receive key shares
+  val readyForShares = Election.startShares(start)
+
+  // each keymaker creates the shares and their proofs, these are added to the election
+  val oneShare = Election.addShare(readyForShares, k1.createKeyShare(readyForShares), k1.id)
+  val twoShares = Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
+
+  // combine the shares from the keymaker trustees, this produces the election public key
+  val combined = Election.combineShares(twoShares)
+
+  // since we are storing information in election as if it were a bulletin board, all
+  // the data is stored in a wire-compatible format, that is strings/jsons whatever
+  // we reconstruct the public key as if it had been read from such a format
+  val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
+
+  // open the election period
+  val startVotes = Election.startVotes(combined)
+
+  // generate dummy votes
+  val plaintexts = Seq.fill(totalVotes)(scala.util.Random.nextInt(10))
+
+  // encrypt the votes with the public key of the election
+  val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
+  println(votes.length)
+
+  // add the votes to the election
+  var electionGettingVotes = startVotes
+  votes.foreach { v =>
+    electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
+  }
+
+  // we are only timing the mixing phase
+  val mixingStart = System.currentTimeMillis()
+MPBridge.total = 0;  
+  // wait for keystroke, this allows us to attach a profiler at the right time
+  // println("Hit return to start")
+  // Console.in.read()
+
+  // stop the voting period
+  val stopVotes = Election.stopVotes(electionGettingVotes)
+
+  // prepare for mixing
+  val startMix = Election.startMixing(stopVotes)
+
+  // each mixing trustee extracts the needed information from the election
+  // and performs the shuffle and proofs
+  val shuffle1 = m1.shuffleVotes(startMix)
+
+  
+  // the proof is verified and the shuffle is then added to the election, advancing its state
+  val mixOne = Election.addMix(startMix, shuffle1, m1.id)
+
+  
+  // again for the second trustee..
+  val shuffle2 = m2.shuffleVotes(mixOne)
+  val mixTwo = Election.addMix(mixOne, shuffle2, m2.id)
+
+  // we are done mixing
+  val stopMix = Election.stopMixing(mixTwo)
+
+  val mixingEnd = System.currentTimeMillis()
+
+  // leaving this part out as we want to benchmark only mixing
+  /*
+  // start the partial decryptions
+  // if we tried to do this before the mixing was completed, the compiler would protest
+  val startDecryptions = Election.startDecryptions(stopMix)
+  // each keymaker trustee extracts the votes from the last shuffle from the election and
+  // uses their private keys to do the partial decryption and create proofs
+  val pd1 = k1.partialDecryption(startDecryptions)
+  val pd2 = k2.partialDecryption(startDecryptions)
+  // the proofs are verified and the partial decryptions are added to the election,
+  val partialOne = Election.addDecryption(startDecryptions, pd1, k1.id)
+  val partialTwo = Election.addDecryption(partialOne, pd2, k2.id)
+  // the partial decryptions are combined, yielding the plaintexts
+  val electionDone = Election.combineDecryptions(partialTwo)
+  // lets check that everything went well
+  println(s"Plaintexts $plaintexts")
+  println(s"Decrypted ${electionDone.state.decrypted}")
+  println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
+  */
+
+  val mixTime = (mixingEnd - mixingStart) / 1000.0
+
+  println("*************************************************************")
+  println(s"finished run with votes = $totalVotes")
+  println(s"mixTime: $mixTime")
+  println(s"sec / vote: ${mixTime / totalVotes}")
+  println(s"total modExps: ${MPBridge.total}")
+  println(s"found modExps: ${MPBridge.found}")
+  println(s"found modExps %: ${MPBridge.found/MPBridge.total.toDouble}")
+  println(s"extracted modExps: ${MPBridge.getExtracted}")
+  println(s"extracted modExps %: ${MPBridge.getExtracted/MPBridge.total.toDouble}")
+  println(s"modExps / vote: ${MPBridge.total.toFloat / totalVotes}")
+  println("*************************************************************")
+
+  mpservice.MPService.shutdown
+}
