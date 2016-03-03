@@ -133,19 +133,19 @@ object Verifier extends ProofSettings {
     println("Getting proof systems..")
     val before = System.currentTimeMillis
     // Create e-values challenge generator
-    mpservice.MPBridge.l();
+    mpservice.MPBridge.l()
     val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
         Csettings.group.getZModOrder(), votes.getArity())
-    mpservice.MPBridge.l();
+    mpservice.MPBridge.l()
     val pcps: PermutationCommitmentProofSystem = PermutationCommitmentProofSystem.getInstance(challengeGenerator, ecg,
       Csettings.group, votes.getArity())
 
-    mpservice.MPBridge.l();
+    mpservice.MPBridge.l()
     val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, votes.getArity(), elGamal, publicKey)
 
-    mpservice.MPBridge.l();
+    mpservice.MPBridge.l()
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, votes.getArity())
-    mpservice.MPBridge.l();
+    mpservice.MPBridge.l()
     // val permutationCommitment = pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment)
     val permutationCommitment = MPBridgeS.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
     System.out.println(System.currentTimeMillis - before)
@@ -157,7 +157,7 @@ object Verifier extends ProofSettings {
     val challenge1 = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
     val response1 = pcps.getResponseSpace().getElementFromString(shuffleProof.permutationProof.response)
 
-    val commitment2 = MPBridgeS.ex(spg.getCommitmentSpace().getElementFromString(shuffleProof.mixProof.commitment), "1")
+    val commitment2 = spg.getCommitmentSpace().getElementFromString(shuffleProof.mixProof.commitment)
     val challenge2 = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
     val response2 = spg.getResponseSpace().getElementFromString(shuffleProof.mixProof.response)
 
@@ -170,6 +170,8 @@ object Verifier extends ProofSettings {
     val bridgingCommitments = permutationProofDTO.bridgingCommitments.par.map { x =>
       Csettings.group.getElementFrom(x)
     }.seq
+
+    // System.exit(1)
 
     println("Converting permutation e values..")
     // Assume evalues: ZMod
@@ -185,13 +187,6 @@ object Verifier extends ProofSettings {
     val permutationProof: Tuple = Tuple.getInstance(Util.tupleFromSeq(eValues), Util.tupleFromSeq(bridgingCommitments),
       commitment1, challenge1, response1)
     val mixProof: Tuple = Tuple.getInstance(Util.tupleFromSeq(eValues2), commitment2, challenge2, response2)
-
-    // println("===== Permutation proof =====")
-    // println(permutationProof)
-    // println("===== Permutation proof =====")
-    // println("===== Mix proof =====")
-    // println(mixProof)
-    // println("===== Mix proof =====")
 
     println("Getting public inputs..")
     val publicInputShuffle: Tuple = Tuple.getInstance(permutationCommitment, votes, shuffledVotes)

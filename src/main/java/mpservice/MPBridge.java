@@ -160,11 +160,12 @@ public class MPBridge {
 	 	mpservice.ModPow2[] reqs = stopRecord();
 		b(3);
 		if(reqs.length > 0) {
-			now = System.currentTimeMillis();
+			long now2 = System.currentTimeMillis();
 			java.math.BigInteger[] answers = mpservice.MPService.compute(reqs, i().modulus);
-			System.out.println("\nC: " + (System.currentTimeMillis() - now));
+			System.out.println("\nC: " + (System.currentTimeMillis() - now2));
 			startReplay(answers);
-			ret = f.get();	
+			ret = f.get();
+			System.out.println("\nT: " + (System.currentTimeMillis() - now));
 			stopReplay();
 		}
 		reset();

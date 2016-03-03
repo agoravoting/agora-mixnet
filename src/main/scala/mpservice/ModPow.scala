@@ -242,17 +242,18 @@ object MPBridgeS {
   def ex[T](f: => T, v: String) = {
     MPBridge.a()
     MPBridge.startRecord(v)
-    var now = System.currentTimeMillis
+    val now = System.currentTimeMillis
     var ret = f
     println(s"R: ${System.currentTimeMillis - now}")
     val requests = MPBridge.stopRecord()
     MPBridge.b(3)
     if(requests.length > 0) {
-        now = System.currentTimeMillis
+        val now2 = System.currentTimeMillis
         val answers = MPService.compute(requests, MPBridge.getModulus);
-        println(s"C: ${System.currentTimeMillis - now}")
+        println(s"C: ${System.currentTimeMillis - now2}")
         MPBridge.startReplay(answers)
         ret = f
+        println(s"T: ${System.currentTimeMillis - now}")
         MPBridge.stopReplay()
     }
     MPBridge.reset()

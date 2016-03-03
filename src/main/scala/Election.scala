@@ -127,36 +127,28 @@ object Election {
     val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(in.state.publicKey)
     
     println("Convert votes...")
-     
+    
     MPBridge.a()
+    // println("Hit return to start")
+    // Console.in.read()
+    val now = System.currentTimeMillis
     val shuffled = mix.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
     val votes = in.state match {
       case s: Mixing[_0] => in.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
       case _ => in.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
     }
-    MPBridge.b()
-      
-    
-    /* MPBridge.a()
-    MPBridge.startRecord("1")
-    var shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
-    var votes = in.state match {
-      case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
-      case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
-    }
-    val requests = MPBridge.stopRecord()
-    MPBridge.b()
-    if(requests.length > 0) {
-      val answers = mpservice.MPService.compute(requests);
-      MPBridge.startReplay(answers)
-      shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
-      votes = in.state match {
-        case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
-        case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) )
+    /*val (shuffled, votes) = MPBridgeS.ex({
+      val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+      val votes = in.state match {
+        case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+        case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
       }
-      MPBridge.stopReplay()
-    }
-    MPBridge.reset()*/
+      (shuffled, votes)
+    }, "1")
+    */
+    MPBridge.b()
+    // println(System.currentTimeMillis - now)
+    // System.exit(1)
 
     println(s"Verifying shuffle..")
     val ok = Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),
