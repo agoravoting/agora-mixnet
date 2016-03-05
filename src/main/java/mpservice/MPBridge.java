@@ -163,7 +163,7 @@ public class MPBridge {
 		if(reqs.length > 0) {
 			long now2 = System.currentTimeMillis();
 			java.math.BigInteger[] answers = mpservice.MPService.compute(reqs, i().modulus);
-			long c = System.currentTimeMillis() - now;
+			long c = System.currentTimeMillis() - now2;
 			startReplay(answers);
 			ret = f.get();
 			long t = System.currentTimeMillis() - now;
