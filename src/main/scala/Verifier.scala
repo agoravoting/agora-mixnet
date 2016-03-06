@@ -143,14 +143,14 @@ object Verifier extends ProofSettings {
     mpservice.MPBridge.l()
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, votes.getArity())
     mpservice.MPBridge.l()
-    val permutationCommitment = pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment)
-    // val permutationCommitment = MPBridgeS.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
+    // val permutationCommitment = pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment)
+    val permutationCommitment = MPBridgeS.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
     System.out.println(s"time: ${System.currentTimeMillis - before}")
 
     println("Getting values..")
 
-    val commitment1 = pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment)
-    // val commitment1 = MPBridgeS.ex(pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment), "1")
+    // val commitment1 = pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment)
+    val commitment1 = MPBridgeS.ex(pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment), "1")
 
     val challenge1 = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
     val response1 = pcps.getResponseSpace().getElementFromString(shuffleProof.permutationProof.response)
