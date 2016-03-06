@@ -182,9 +182,9 @@ object ElectionTest extends App {
       val electionDone = Election.combineDecryptions(partialTwo)
 
       // lets check that everything went well
-      println(s"Plaintexts $plaintexts")
-      println(s"Decrypted ${electionDone.state.decrypted}")
-      println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
+      // println(s"Plaintexts $plaintexts")
+      // println(s"Decrypted ${electionDone.state.decrypted}")
+      // println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
 
       val mixTime = (mixingEnd - mixingStart) / 1000.0
       val totalTime = (System.currentTimeMillis() - mixingStart) / 1000.0
