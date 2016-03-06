@@ -128,16 +128,18 @@ object Election {
     
     println("Convert votes...")
     
-    MPBridge.a()
-    // println("Hit return to start")
-    // Console.in.read()
     val now = System.currentTimeMillis
+    /*
+    will be slightly faster but will not scale over the cluster
+    MPBridge.a()
     val shuffled = mix.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
     val votes = in.state match {
       case s: Mixing[_0] => in.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
       case _ => in.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
     }
-    /*val (shuffled, votes) = MPBridgeS.ex({
+    MPBridge.b()
+    */
+    val (shuffled, votes) = MPBridgeS.ex({
       val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
       val votes = in.state match {
         case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
@@ -145,10 +147,6 @@ object Election {
       }
       (shuffled, votes)
     }, "1")
-    */
-    MPBridge.b()
-    // println(System.currentTimeMillis - now)
-    // System.exit(1)
 
     println(s"Verifying shuffle..")
     val ok = Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),

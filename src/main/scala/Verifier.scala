@@ -158,7 +158,6 @@ object Verifier extends ProofSettings {
     val challenge2 = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
     val response2 = spg.getResponseSpace().getElementFromString(shuffleProof.mixProof.response)
 
-
     val permutationProofDTO = shuffleProof.permutationProof
     val mixProofDTO = shuffleProof.mixProof
 
@@ -168,6 +167,7 @@ object Verifier extends ProofSettings {
       Csettings.group.getElementFrom(x)
     }.seq
 
+    println(s"time: ${System.currentTimeMillis - before}")
     // System.exit(1)
 
     println("Converting permutation e values..")

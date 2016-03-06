@@ -127,6 +127,8 @@ object ElectionTest extends App {
   // stop the voting period
   val stopVotes = Election.stopVotes(electionGettingVotes)
 
+  // we can start preshuffling for both mixers
+  // that way the second preshuffle will be concurrent with the first mix
   val (predata1, proof1) = m1.preShuffleVotes(stopVotes)
   val (predata2, proof2) = m2.preShuffleVotes(stopVotes)
 
@@ -166,6 +168,7 @@ object ElectionTest extends App {
     val pd1Future = Future { k1.partialDecryption(startDecryptions) }
     val pd2Future = Future { k2.partialDecryption(startDecryptions) }
 
+    // the two decryption futures execute in parallel
     val decryptions = for {
       pd1 <- pd1Future
       pd2 <- pd2Future
