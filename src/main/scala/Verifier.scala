@@ -127,7 +127,9 @@ object Verifier extends ProofSettings {
     val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
         Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
 
-    println("Getting proof systems..")
+    // println("Getting proof systems..")
+    // println("Hit return to start")
+    // Console.in.read()
     val before = System.currentTimeMillis
     // Create e-values challenge generator
     mpservice.MPBridge.l()
@@ -143,6 +145,8 @@ object Verifier extends ProofSettings {
     mpservice.MPBridge.l()
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, votes.getArity())
     mpservice.MPBridge.l()
+    System.out.println(s"time0: ${System.currentTimeMillis - before}")
+
     // val permutationCommitment = pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment)
     val permutationCommitment = MPBridgeS.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
     System.out.println(s"time: ${System.currentTimeMillis - before}")
@@ -152,23 +156,33 @@ object Verifier extends ProofSettings {
     // val commitment1 = pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment)
     val commitment1 = MPBridgeS.ex(pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment), "1")
 
+    System.out.println(s"time2: ${System.currentTimeMillis - before}")
+
     val challenge1 = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
     val response1 = pcps.getResponseSpace().getElementFromString(shuffleProof.permutationProof.response)
+
+    System.out.println(s"time3: ${System.currentTimeMillis - before}")
 
     val commitment2 = spg.getCommitmentSpace().getElementFromString(shuffleProof.mixProof.commitment)
     val challenge2 = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
     val response2 = spg.getResponseSpace().getElementFromString(shuffleProof.mixProof.response)
+
+    System.out.println(s"time4: ${System.currentTimeMillis - before}")
 
     val permutationProofDTO = shuffleProof.permutationProof
     val mixProofDTO = shuffleProof.mixProof
 
     println("Converting bridging commitments..")
     // Assume bridging commitments: GStarmod
-    val bridgingCommitments = permutationProofDTO.bridgingCommitments.par.map { x =>
+    val bridgingCommitments = MPBridgeS.ex(permutationProofDTO.bridgingCommitments.map { x =>
       Csettings.group.getElementFrom(x)
-    }.seq
+    }, "1")
 
-    println(s"time: ${System.currentTimeMillis - before}")
+    /* val bridgingCommitments = permutationProofDTO.bridgingCommitments.par.map { x =>
+      Csettings.group.getElementFrom(x)
+    }.seq */
+
+    println(s"time5: ${System.currentTimeMillis - before}")
     // System.exit(1)
 
     println("Converting permutation e values..")
