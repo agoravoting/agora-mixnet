@@ -72,7 +72,7 @@ public class MPBridge {
 		StackTraceElement caller = traces[trace];
 		found += diff;
 		long diffTime = System.currentTimeMillis() - i.beforeTime;
-		System.err.println(">>> " + caller.getFileName() + ":" + caller.getLineNumber() + "[" + diffTime + " ms] [" + diff + "]" + " (" + found + ", " + total + ") (" + extracted + ")");	
+		System.err.println(">>> " + caller.getFileName() + ":" + caller.getLineNumber() + " [" + diffTime + " ms] [" + diff + "]" + " (" + found + ", " + total + ") (" + extracted + ")");	
 	}
 
 	public static void b() {

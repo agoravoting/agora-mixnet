@@ -100,9 +100,16 @@ object Election {
   }
 
   // votes are cast here
-  // FIXME add test for group membership here
   def addVotes[W <: Nat](in: Election[W, Votes], vote: String) = {
     print("+")
+    
+    // removed for testing faster
+    /*
+    val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
+    // this will throw exception if the vote is invalid
+    elGamal.getEncryptionSpace.getElementFromString(vote)
+    */
+
     new Election[W, Votes](Votes(vote :: in.state.votes, in.state))
   }
 
@@ -145,7 +152,7 @@ object Election {
       case s: Mixing[_0] => in.state.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
       case _ => in.state.mixes.toList.last.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
     }
-    println(s"****************** conversion: ${System.currentTimeMillis - now}")
+    println(s"*********** conversion: ${System.currentTimeMillis - now}")
     
     /*val (shuffled, votes) = MPBridgeS.ex({
       val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
