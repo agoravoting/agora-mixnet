@@ -13,6 +13,7 @@ import ch.bfh.unicrypt.math.algebra.general.classes.Pair
 import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
 import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
 import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
+import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
 import mpservice.MPBridgeS
 import mpservice.MPBridge
 
@@ -82,15 +83,11 @@ object Election {
   // combine the shares into a public key, can only happen if we have all the shares
   def combineShares[W <: Nat](in: Election[W, Shares[W]]) = {
     println("Combining shares..")
-    // var encKey = in.state.cSettings.group.getIdentityElement()
 
     val shares = in.state.shares.map { s =>
       Util.getPublicKeyFromString(s._2, in.state.cSettings.generator)
     }
     val publicKey = shares.reduce( (a,b) => a.apply(b) )
-
-    // println(s"combineShares: public key $publicKey")
-    // encKey
 
     new Election[W, Combined](Combined(publicKey.convertToString, in.state))
   }
@@ -101,7 +98,8 @@ object Election {
     new Election[W, Votes](Votes(List[String](), in.state))
   }
 
-  // votes are casted here
+  // votes are cast here
+  // FIXME add test for group membership here
   def addVotes[W <: Nat](in: Election[W, Votes], vote: String) = {
     print("+")
     new Election[W, Votes](Votes(vote :: in.state.votes, in.state))
@@ -129,24 +127,33 @@ object Election {
     println("Convert votes...")
     
     val now = System.currentTimeMillis
+    
+    // will be slightly faster but will not scale over the cluster
     /*
-    will be slightly faster but will not scale over the cluster
     MPBridge.a()
-    val shuffled = mix.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+    val shuffled = mix.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v, true) ).seq
     val votes = in.state match {
-      case s: Mixing[_0] => in.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
-      case _ => in.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+      case s: Mixing[_0] => in.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v, true) ).seq
+      case _ => in.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v, true) ).seq
     }
     MPBridge.b()
     */
-    val (shuffled, votes) = MPBridgeS.ex({
+
+    val shuffled = mix.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
+    val votes = in.state match {
+      case s: Mixing[_0] => in.state.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
+      case _ => in.state.mixes.toList.last.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
+    }
+    println(s"*** conversion: ${System.currentTimeMillis - now}")
+    
+    /*val (shuffled, votes) = MPBridgeS.ex({
       val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
       val votes = in.state match {
         case s: Mixing[_0] => in.state.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
         case _ => in.state.mixes.toList.last.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
       }
       (shuffled, votes)
-    }, "1")
+    }, "1")*/
 
     println(s"Verifying shuffle..")
     val ok = Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),
@@ -174,12 +181,12 @@ object Election {
     println("Adding decryption...")
 
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
-    val votes = in.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v).asInstanceOf[Pair]).seq
+    val votes = in.state.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v).asInstanceOf[Pair]).seq
 
     val sharesMap = in.state.allShares.toMap
     val share = elGamal.getMessageSpace.getElementFrom(sharesMap(proverId))
 
-    val ok = Verifier.verifyPartialDecryptions(decryption, votes, in.state.cSettings, proverId, share)
+    val ok = Verifier.verifyPartialDecryption(decryption, votes, in.state.cSettings, proverId, share)
     if(!ok) throw new Exception()
 
     new Election[W, Decryptions[Succ[T]]](Decryptions[Succ[T]](in.state.decryptions :+ decryption, in.state))
@@ -210,7 +217,7 @@ object Election {
     println("Combining decryptions...Ok")
 
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
-    val votes = in.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v).asInstanceOf[Pair] ).seq
+    val votes = in.state.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v).asInstanceOf[Pair] ).seq
     // a^-x * b = m
     val decrypted = (votes zip combined).par.map(c => c._1.getSecond().apply(c._2)).seq
     val encoder = ZModPrimeToGStarModSafePrime.getInstance(in.state.cSettings.group)
@@ -239,6 +246,8 @@ trait HasHistory {
  * Some utilities
  */
 object Util {
+  val unsafe = ConfigFactory.load().getBoolean("use-unsafe-deserialization")
+
   def tupleFromSeq(items: Seq[Element[_]]) = {
     // var tuple = Tuple.getInstance()
     // items.foreach(v => tuple = tuple.add(v))
@@ -277,6 +286,10 @@ object Util {
     val elGamal = ElGamalEncryptionScheme.getInstance(generator)
     val keyPairGen = elGamal.getKeyPairGenerator()
     keyPairGen.getPublicKeySpace().getElementFrom(publicKey)
+  }
+
+  def getE[A <: Element[B],B](set: AbstractSet[A, B], value: String): Element[B] = {
+    set.getElementFromString(value, unsafe)
   }
 }
 

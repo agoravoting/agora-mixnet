@@ -57,11 +57,11 @@ object CryptoTest extends App {
 
     // a^-x1
     val elementsOne = KM.partialDecrypt(ciphertexts, privates(0), "0", Csettings)
-    var ok = Verifier.verifyPartialDecryptions(elementsOne, ciphertexts, Csettings, "0", shares(0))
+    var ok = Verifier.verifyPartialDecryption(elementsOne, ciphertexts, Csettings, "0", shares(0))
     if(!ok) throw new Exception()
     // a^-x2
     val elementsTwo = KM.partialDecrypt(ciphertexts, privates(1), "1", Csettings)
-    ok = Verifier.verifyPartialDecryptions(elementsTwo, ciphertexts, Csettings, "1", shares(1))
+    ok = Verifier.verifyPartialDecryption(elementsTwo, ciphertexts, Csettings, "1", shares(1))
     if(!ok) throw new Exception()
 
     println(s"partial decrypts one ****\n$elementsOne")

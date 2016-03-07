@@ -394,6 +394,77 @@ public abstract class AbstractSet<E extends Element<V>, V>
 		return this.getElementFrom(value);
 	}
 
+	// drb
+	public final E getElementFromString(String value, boolean unsafe) throws UniCryptException {
+		return this.getElementFrom(value, unsafe);
+	}
+
+	// drb
+	public final E getElementFrom(String value, boolean unsafe) throws UniCryptException {
+		if (value == null) {
+			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, value);
+		}
+		if (this.isProduct()) {
+			return this.getElementFrom(value, ConvertMethod.getInstance(String.class), StringAggregator.getInstance(), unsafe);
+		} else {
+			return this.getElementFrom(value, this.getStringConverter(), unsafe);
+		}
+	}
+
+	// drb
+	public final <W> E getElementFrom(W value, ConvertMethod<W> convertMethod, Aggregator<W> aggregator, boolean unsafe) throws UniCryptException {
+		if (value == null || convertMethod == null || aggregator == null) {
+			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, value, convertMethod, aggregator);
+		}
+		try {
+			Tree<W> tree = aggregator.disaggregate(value);
+			return this.defaultGetElementFrom(tree, convertMethod);
+		} catch (Exception exception) {
+			throw new UniCryptException(ErrorCode.ELEMENT_CONVERSION_FAILURE, exception);
+		}
+	}
+
+	// drb
+	public final <W> E getElementFrom(W value, Converter<V, W> converter, boolean unsafe) throws UniCryptException {
+		if (value == null || converter == null) {
+			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, value, converter);
+		}
+		try {
+			V convertedValue = converter.reconvert(value);
+			return this.getElement(convertedValue, unsafe);
+		} catch (Exception exception) {
+			throw new UniCryptException(ErrorCode.ELEMENT_CONVERSION_FAILURE, exception);
+		}
+	}
+
+	// drb
+	public final E getElement(V value, boolean unsafe) {
+		if(!unsafe) {
+			if (!this.contains(value)) {
+				throw new UniCryptRuntimeException(ErrorCode.ELEMENT_CONSTRUCTION_FAILURE, this, value);
+			}
+		}
+		return this.abstractGetElement(value);
+	}
+
+	// drb
+	public final <W> E getElementFrom(Tree<W> tree, ConvertMethod<W> convertMethod, boolean unsafe) throws UniCryptException {
+		if (tree == null || convertMethod == null) {
+			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, tree, convertMethod);
+		}
+		return this.defaultGetElementFrom(tree, convertMethod, unsafe);
+	}
+
+	// drb
+	protected <W> E defaultGetElementFrom(Tree<W> tree, ConvertMethod<W> convertMethod, boolean unsafe) throws UniCryptException {
+		if (!tree.isLeaf()) {
+			throw new UniCryptException(ErrorCode.ELEMENT_CONVERSION_FAILURE);
+		}
+		W value = ((Leaf<W>) tree).getValue();
+		Converter<V, W> converter = this.getConverter(convertMethod);
+		return this.getElement(converter.reconvert(value), unsafe);
+	}
+
 	@Override
 	public final boolean isEquivalent(final Set<?> other) {
 		if (other == null) {

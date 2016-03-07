@@ -81,14 +81,12 @@ object Verifier extends ProofSettings {
     result
   }
 
-  def verifyPartialDecryptions(pd: PartialDecryptionDTO, votes: Seq[Tuple], Csettings: CryptoSettings, proverId: String, publicKey: Element[_]) = {
+  def verifyPartialDecryption(pd: PartialDecryptionDTO, votes: Seq[Tuple], Csettings: CryptoSettings, proverId: String, publicKey: Element[_]) = {
 
-    
     val encryptionGenerator = Csettings.generator
     val generatorFunctions = votes.map { x: Tuple =>
       GeneratorFunction.getInstance(x.getFirst)
     }
-
 
     // Create proof functions
     val f1: Function = GeneratorFunction.getInstance(encryptionGenerator)

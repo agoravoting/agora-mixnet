@@ -68,6 +68,8 @@ object ElectionTest extends App {
   val useGmp = config.getBoolean("mpservice.use-gmp")
   val useExtractor = config.getBoolean("mpservice.use-extractor")
   MPBridgeS.init(useGmp, useExtractor)
+  val unsafe = ConfigFactory.load().getBoolean("use-unsafe-deserialization")
+  println(s"* use-unsafe-deserialization: $unsafe")
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
 
@@ -336,7 +338,7 @@ object DecryptionTest extends App {
   MPBridge.y()
   val share = elGamal.getMessageSpace.getElementFrom(e1.keyShare)
 
-  val ok = Verifier.verifyPartialDecryptions(decryption, votes, cSettings, "d1", share)
+  val ok = Verifier.verifyPartialDecryption(decryption, votes, cSettings, "d1", share)
   MPBridge.z()
 
   MPBridgeS.shutdown
