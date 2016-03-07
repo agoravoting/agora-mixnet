@@ -116,7 +116,8 @@ object ElectionTest extends App {
   // add the votes to the election
   var electionGettingVotes = startVotes
   
-  Election.addVotes(electionGettingVotes, "fooooooooooobar")
+  // this should crash if checking is done in the bb (Election)
+  // Election.addVotes(electionGettingVotes, "fooooooooooobar")
 
   votes.foreach { v =>
     electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
