@@ -420,6 +420,7 @@ public abstract class AbstractSet<E extends Element<V>, V>
 			Tree<W> tree = aggregator.disaggregate(value);
 			return this.defaultGetElementFrom(tree, convertMethod, unsafe);
 		} catch (Exception exception) {
+			exception.printStackTrace();
 			throw new UniCryptException(ErrorCode.ELEMENT_CONVERSION_FAILURE, exception);
 		}
 	}
