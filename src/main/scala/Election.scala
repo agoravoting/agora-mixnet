@@ -144,7 +144,7 @@ object Election {
       case s: Mixing[_0] => in.state.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
       case _ => in.state.mixes.toList.last.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
     }
-    println(s"*** conversion: ${System.currentTimeMillis - now}")
+    println(s"****************** conversion: ${System.currentTimeMillis - now}")
     
     /*val (shuffled, votes) = MPBridgeS.ex({
       val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
