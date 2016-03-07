@@ -14,6 +14,7 @@ import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
 import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
 import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
 import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
+import ch.bfh.unicrypt.math.algebra.general.classes.ProductSet
 import mpservice.MPBridgeS
 import mpservice.MPBridge
 
@@ -289,6 +290,11 @@ object Util {
   }
 
   def getE[A <: Element[B],B](set: AbstractSet[A, B], value: String): Element[B] = {
+    set.getElementFromString(value, unsafe)
+  }
+
+  // we shouldnt have to have this in addition to the above method, but otherwise the compiler gets confused
+  def getE(set: ProductSet, value: String): Element[_] = {
     set.getElementFromString(value, unsafe)
   }
 }

@@ -141,12 +141,14 @@ object Verifier extends ProofSettings {
     val pcs: PermutationCommitmentScheme = PermutationCommitmentScheme.getInstance(Csettings.group, votes.getArity())
 
     // val permutationCommitment = pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment)
-    val permutationCommitment = MPBridgeS.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
+    // val permutationCommitment = MPBridgeS.ex(pcs.getCommitmentSpace().getElementFromString(shuffleProof.permutationCommitment), "1")
+    val permutationCommitment = Util.getE(pcs.getCommitmentSpace(), shuffleProof.permutationCommitment)
 
     println("Getting values..")
 
     // val commitment1 = pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment)
-    val commitment1 = MPBridgeS.ex(pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment), "1")
+    // val commitment1 = MPBridgeS.ex(pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment), "1")
+    val commitment1 = Util.getE(pcps.getCommitmentSpace(), shuffleProof.permutationProof.commitment)
     val challenge1 = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
     val response1 = pcps.getResponseSpace().getElementFromString(shuffleProof.permutationProof.response)
 
@@ -159,13 +161,14 @@ object Verifier extends ProofSettings {
 
     println("Converting bridging commitments..")
     // Assume bridging commitments: GStarmod
-    val bridgingCommitments = MPBridgeS.ex(permutationProofDTO.bridgingCommitments.map { x =>
+    /*val bridgingCommitments = MPBridgeS.ex(permutationProofDTO.bridgingCommitments.map { x =>
       Csettings.group.getElementFromString(x)
-    }, "1")
+    }, "1")*/
 
-    /* val bridgingCommitments = permutationProofDTO.bridgingCommitments.par.map { x =>
-      Csettings.group.getElementFrom(x)
-    }.seq */
+    val bridgingCommitments = permutationProofDTO.bridgingCommitments.par.map { x =>
+      // Csettings.group.getElementFrom(x)
+      Util.getE(Csettings.group, x)
+    }.seq
 
     println("Converting permutation e values..")
     // Assume evalues: ZMod
