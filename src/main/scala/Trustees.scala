@@ -54,7 +54,7 @@ class KeyMakerTrustee(val id: String, privateShares: MutableMap[String, String] 
 
   def partialDecryption(e: Election[_, Decryptions[_]]) = {
     val elGamal = ElGamalEncryptionScheme.getInstance(e.state.cSettings.generator)
-    val votes = e.state.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v).asInstanceOf[Pair]).seq
+    val votes = e.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v, true).asInstanceOf[Pair]).seq
     val secretKey = e.state.cSettings.group.getZModOrder().getElementFrom(privateShares(e.state.id))
 
     partialDecrypt(votes, secretKey, id, e.state.cSettings)
@@ -76,8 +76,8 @@ class MixerTrustee(val id: String) extends Mixer {
     
     MPBridge.a()
     val votes = e.state match {
-      case s: Mixing[_0] => e.state.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
-      case _ => e.state.mixes.toList.last.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
+      case s: Mixing[_0] => e.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+      case _ => e.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v, true) ).seq
     }
     MPBridge.b()
 
@@ -103,8 +103,8 @@ class MixerTrustee(val id: String) extends Mixer {
     
     MPBridge.a()
     val votes = e.state match {
-      case s: Mixing[_0] => e.state.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
-      case _ => e.state.mixes.toList.last.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
+      case s: Mixing[_0] => e.state.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
+      case _ => e.state.mixes.toList.last.votes.par.map( v => elGamal.getEncryptionSpace.getElementFromString(v, true) ).seq
     }
     MPBridge.b()
 
