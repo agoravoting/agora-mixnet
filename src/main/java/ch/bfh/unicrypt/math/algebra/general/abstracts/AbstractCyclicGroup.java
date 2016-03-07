@@ -100,6 +100,8 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 	}
 
 	public final DenseArray<Element<V>> getIndependentGeneratorsParallel(DeterministicRandomByteSequence randomByteSequence, int skip, int size) {
+		System.out.println("AbstractCyclicGroup: getIndependentGeneratorsParallel");
+
 		if (randomByteSequence == null) {
 			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, randomByteSequence);
 		}
@@ -136,6 +138,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 			}
 			return 0;	
 		}, "2");*/
+		MPBridge.a();
 		Element<V>[] array2 = new Element[size];
 		for(i = 0; i < array.length; i++) {
 			if(array[i].isGenerator()) {
@@ -146,6 +149,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 				throw new RuntimeException();
 			}
 		}
+		MPBridge.b();
 
 		return DenseArray.getInstance(array2);
 	}

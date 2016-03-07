@@ -11,7 +11,8 @@ import com.squareup.jnagmp.Gmp;
 public class MPBridge {
 	public static long total = 0;
 	public static long found = 0;
-	public static boolean gmpModPow = false;
+	public static boolean useGmp = false;
+	public static boolean useExtractor = false;
 	private static long extracted = 0;
 
 	public long before = 0;
@@ -32,6 +33,22 @@ public class MPBridge {
 			return new MPBridge();
         }
 	};
+
+	public static void init(boolean useGmp, boolean useExtractor) {
+		MPBridge.useGmp = useGmp;
+		MPBridge.useExtractor = useExtractor;
+		System.out.println("***************************************************");
+		System.out.println("* MPBridge INIT");
+		System.out.println("*");
+		System.out.println("* useGmp: " + useGmp);
+		System.out.println("* useExtractor: " + useExtractor);
+		System.out.println("* MPService: " + MPService.toString());
+		mpservice.MPService.init();
+		System.out.println("***************************************************");
+	}
+	public static void shutdown() {
+		mpservice.MPService.shutdown();
+	}
 
 	public static MPBridge i() {
 		return instance.get();
@@ -83,7 +100,7 @@ public class MPBridge {
 		i().dummy = new BigInteger(value);
 		if(i().requests.size() != 0)	throw new IllegalStateException();
 		// commenting the following line disables modpow extraction
-		i().recording = true;
+		i().recording = useExtractor;
 		i().modulus = null;
 	}
 
@@ -107,6 +124,7 @@ public class MPBridge {
 		if(i.modulus == null) {
 			i.modulus = mod;
 		}
+		// FIXME remove this test
 		else if(!i.modulus.equals(mod)) {
 			throw new RuntimeException(i.modulus + "!=" + mod);
 		}
@@ -180,18 +198,20 @@ public class MPBridge {
 	}
 
 	public static BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
-        if(i().debug) new Exception().printStackTrace();
-        if(isRecording()) {
+        MPBridge i = i();
+        // FIXME remove this test
+        if(i.debug) new Exception().printStackTrace();
+        if(i.recording) {
             total++;
             addModPow(base, pow, mod);
-            return i().dummy;
+            return i.dummy;
         }
-        else if(isReplaying()) {
+        else if(i.replaying) {
             return getModPow();
         }
         else {
             total++;
-            if(gmpModPow) {
+            if(useGmp) {
                 return Gmp.modPowInsecure(base, pow, mod);
             }
             else {

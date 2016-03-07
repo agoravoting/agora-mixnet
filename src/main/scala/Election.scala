@@ -191,7 +191,9 @@ object Election {
     
     // first convert partial decryptions (a^xi) to elements
     // this yields n lists of decryptions, where n = number of trustees, and there's one decryption per vote
-    val decryptionElements = in.state.decryptions.map(ds => ds.partialDecryptions.par.map(in.state.cSettings.group.getElementFrom(_)).seq)
+    val decryptionElements = in.state.decryptions.map(
+      ds => ds.partialDecryptions.par.map(in.state.cSettings.group.getElementFromString(_)).seq
+    )
     // combine the list of decryptions:
     // obtain a^-x from individual a^-xi's (example below for n = 2)
     //

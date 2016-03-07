@@ -35,6 +35,7 @@ object MPService extends ModPowService {
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = service.compute(work, mod)
   def shutdown = service.shutdown
   def init = {}
+  override def toString = service.getClass.toString
 }
 
 object SequentialModPowService extends ModPowService {
@@ -83,7 +84,7 @@ object AkkaModPowService extends ModPowService {
   val maxChunkSize = config.getInt("master.max-chunk-size")
   val sendDelay = config.getInt("master.send-delay-ms")
   val minChunks = config.getInt("master.min-chunk")
-  val useGmp = config.getBoolean("use-gmp")
+  val useGmp = config.getBoolean("mpservice.use-gmp")
 
   val serviceActor = system.actorOf(ModPowServiceActor.props(minChunks, maxChunkSize, sendDelay, useGmp), name = "ModPowService")
   val service = new AkkaModPowService(system, serviceActor)
@@ -199,7 +200,7 @@ object TestApp {
     val maxChunkSize = config.getInt("master.max-chunk-size")
     val sendDelay = config.getInt("master.send-delay-ms")
     val minChunks = config.getInt("master.min-chunk")
-    val useGmp = config.getBoolean("use-gmp")
+    val useGmp = config.getBoolean("mpservice.use-gmp")
     // val metricsIntervalSeconds = config.getInt("producer.metrics-interval-seconds")
     // system.actorOf(ClusterListener.props(metricsIntervalSeconds))
     val serviceActor = system.actorOf(ModPowServiceActor.props(minChunks, maxChunkSize, sendDelay, useGmp), name = "ModPowService")
@@ -263,5 +264,6 @@ object MPBridgeS {
     ret
   }
 
-  def init = MPService.init
+  def init(useGmp: Boolean, useExtractor: Boolean) = MPBridge.init(useGmp, useExtractor)
+  def shutdown = MPBridge.shutdown
 }

@@ -65,9 +65,9 @@ import mpservice.MPBridge
 object ElectionTest extends App {
 
   val config = ConfigFactory.load()
-  val useGmp = config.getBoolean("use-gmp")
-  MPBridge.gmpModPow = useGmp
-  MPBridgeS.init
+  val useGmp = config.getBoolean("mpservice.use-gmp")
+  val useExtractor = config.getBoolean("mpservice.use-extractor")
+  MPBridgeS.init(useGmp, useExtractor)
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
 
@@ -202,7 +202,7 @@ object ElectionTest extends App {
       println(s"modExps / vote: ${MPBridge.total.toFloat / totalVotes}")
       println("*************************************************************")
 
-      mpservice.MPService.shutdown
+      MPBridgeS.shutdown
     }
   }
 }
@@ -339,13 +339,16 @@ object DecryptionTest extends App {
   val ok = Verifier.verifyPartialDecryptions(decryption, votes, cSettings, "d1", share)
   MPBridge.z()
 
-  mpservice.MPService.shutdown
+  MPBridgeS.shutdown
 }
 
 object ElectionTestSerial extends App {
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
-  MPBridgeS.init
+  val config = ConfigFactory.load()
+  val useGmp = config.getBoolean("mpservice.use-gmp")
+  val useExtractor = config.getBoolean("mpservice.use-extractor")
+  MPBridgeS.init(useGmp, useExtractor)
 
   // create the keymakers
   // these are responsible for distributed key generation and joint decryption
