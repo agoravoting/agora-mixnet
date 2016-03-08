@@ -100,7 +100,7 @@ object Election {
   }
 
   // votes are cast here
-  def addVotes[W <: Nat](in: Election[W, Votes], vote: String) = {
+  def addVote[W <: Nat](in: Election[W, Votes], vote: String) = {
     print("+")
     
     // removed for testing faster
@@ -111,6 +111,20 @@ object Election {
     */
 
     new Election[W, Votes](Votes(vote :: in.state.votes, in.state))
+  }
+
+  // votes are cast here
+  def addVotes[W <: Nat](in: Election[W, Votes], votes: List[String]) = {
+    print("+")
+    
+    // removed for testing faster
+    /*
+    val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
+    // this will throw exception if the vote is invalid
+    elGamal.getEncryptionSpace.getElementFromString(vote)
+    */
+
+    new Election[W, Votes](Votes(votes ::: in.state.votes, in.state))
   }
 
   // stop election period

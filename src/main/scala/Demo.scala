@@ -113,15 +113,20 @@ object ElectionTest extends App {
   val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
   println(votes.length)
 
+  // doing this in one step to avoid memory explosion
+  val electionGettingVotes = Election.addVotes(startVotes, votes.map(_.convertToString).toList)
+
+  /*
   // add the votes to the election
   var electionGettingVotes = startVotes
-  
+
   // this should crash if checking is done in the bb (Election)
-  // Election.addVotes(electionGettingVotes, "fooooooooooobar")
+  Election.addVotes(electionGettingVotes, "fooooooooooobar")
 
   votes.foreach { v =>
-    electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
-  }
+    electionGettingVotes = Election.addVote(electionGettingVotes, v.convertToString)
+  }*/
+
 
   // we are only timing the mixing phase
   val mixingStart = System.currentTimeMillis()
@@ -252,7 +257,7 @@ object ElectionTest3 extends App {
 
   var electionGettingVotes = startVotes
   votes.foreach { v =>
-    electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
+    electionGettingVotes = Election.addVote(electionGettingVotes, v.convertToString)
   }
 
   val stopVotes = Election.stopVotes(electionGettingVotes)
@@ -399,7 +404,7 @@ object ElectionTestSerial extends App {
   // add the votes to the election
   var electionGettingVotes = startVotes
   votes.foreach { v =>
-    electionGettingVotes = Election.addVotes(electionGettingVotes, v.convertToString)
+    electionGettingVotes = Election.addVote(electionGettingVotes, v.convertToString)
   }
 
   // we are only timing the mixing phase
