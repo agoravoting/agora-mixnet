@@ -245,6 +245,8 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
 object MPBridgeS {
+  val generatorParallelism = 10
+
   def ex[T](f: => T, v: String) = {
     MPBridge.a()
     MPBridge.startRecord(v)
@@ -280,7 +282,7 @@ object MPBridgeS {
     import scala.collection.JavaConversions._
     import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
 
-    val split = 10
+    val split = generatorParallelism
 
     val a = Array.fill(total % split)((total / split) + 1)
     val b = Array.fill(split - (total % split))(total / split)
@@ -295,8 +297,7 @@ object MPBridgeS {
       converter.reconvert(java.math.BigInteger.valueOf(x * 1000000)))
       (r, i)
     }
-    rds.foreach(println)
-  
+    // rds.foreach(println)
     
     val items = rds.par.flatMap { case (d, i) =>
       val sequence = group.getIndependentGenerators(d).limit(i)
