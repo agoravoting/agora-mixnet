@@ -56,7 +56,6 @@ import ch.bfh.unicrypt.math.algebra.multiplicative.abstracts.AbstractMultiplicat
 import java.math.BigInteger;
 
 // drb
-import com.squareup.jnagmp.Gmp;
 import mpservice.MPBridge;
 
 /**

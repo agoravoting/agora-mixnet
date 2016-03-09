@@ -163,23 +163,12 @@ trait KeyMaker extends ProofSettings {
     val decryptionKey = secretKey.invert()
     val publicKey = encryptionGenerator.selfApply(secretKey)
 
-    
-    /*val lists = votes.par.map { v =>
-
-      val element = v.getFirst()
-      // FIXME
-      // if(element.convertToString == "1") {
-      //  
-      //  println("********** Crash incoming!")
-      //}
-      
-      val function: GeneratorFunction = GeneratorFunction.getInstance(element)
-      val partialDecryption = function.apply(decryptionKey).asInstanceOf[GStarModElement]
-
-      (partialDecryption, function)
-    }.seq.unzip*/
     val generators = votes.par.map { v =>
       val element = v.getFirst()
+      if(element.convertToString == "1") { 
+        println("********** Crash incoming!")
+      }
+
       GeneratorFunction.getInstance(element)
     }.seq
     val lists = MPBridgeS.ex(generators.map{ generator =>
@@ -219,9 +208,7 @@ trait KeyMaker extends ProofSettings {
     MPBridge.b()
 
     // Generate and verify proof
-    val now = System.currentTimeMillis
     val proof: Triple = proofSystem.generate(privateInput, publicInput)
-    System.out.println(">> " + (System.currentTimeMillis - now))
 
     // 
     // Not doing self verification, enough to do it at the BB

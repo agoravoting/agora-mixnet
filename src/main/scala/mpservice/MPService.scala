@@ -242,7 +242,6 @@ object TestApp {
 import ch.bfh.unicrypt.helper.sequence.Sequence
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
 import scala.collection.JavaConversions._
-import scala.collection.mutable.ListBuffer
 import scala.collection.JavaConverters._
 
 object MPBridgeS {
@@ -273,12 +272,38 @@ object MPBridgeS {
   def init(useGmp: Boolean, useExtractor: Boolean) = MPBridge.init(useGmp, useExtractor)
   def shutdown = MPBridge.shutdown
 
-  def getIndependentGenerators[E <: Element[V], V](sequence: Sequence[E]): java.util.List[E] = {
-    sequence.par.map{ x =>
-      if(!x.isGenerator()) {
-        throw new RuntimeException();
-      }
-      x
-    }.toList.asJava
+  import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractCyclicGroup
+
+  def getIndependentGenerators[E <: Element[_]](group: AbstractCyclicGroup[E, _], total: Int): java.util.List[E] = {
+    import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence
+    import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG
+    import scala.collection.JavaConversions._
+    import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
+
+    val split = 10
+
+    val a = Array.fill(total % split)((total / split) + 1)
+    val b = Array.fill(split - (total % split))(total / split)
+    val c = a ++ b
+  
+    val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
+    
+    val converter = ByteArrayToBigInteger.getInstance(seedLength)
+  
+    val rds = c.zipWithIndex.map{ case (i, x) => 
+      val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
+      converter.reconvert(java.math.BigInteger.valueOf(x * 1000000)))
+      (r, i)
+    }
+    rds.foreach(println)
+  
+    
+    val items = rds.par.flatMap { case (d, i) =>
+      val sequence = group.getIndependentGenerators(d).limit(i)
+      sequence.toList
+    }
+    println(total + " " + items.size)
+    
+    items.toList
   }
 }

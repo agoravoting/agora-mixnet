@@ -99,15 +99,14 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		return this.defaultGetRandomGenerators(randomByteSequence);
 	}
 
-	public final DenseArray<Element<V>> getIndependentGeneratorsP(DeterministicRandomByteSequence randomByteSequence, int skip, int size) {
+	public final DenseArray<Element<V>> getIndependentGeneratorsP(DeterministicRandomByteSequence randomByteSequence, int size) {
 		System.out.println("AbstractCyclicGroup: getIndependentGeneratorsP");
 
 		if (randomByteSequence == null) {
 			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, randomByteSequence);
 		}
 		
-		Sequence<E> sequence = this.abstractGetRandomElements(randomByteSequence).skip(skip).limit(size);
-		java.util.List<E> list = mpservice.MPBridgeS.getIndependentGenerators(sequence);
+		java.util.List<E> list = mpservice.MPBridgeS.getIndependentGenerators(this, size);
 		Element<V>[] array = list.toArray(new Element[0]);
  
 		return DenseArray.getInstance(array);

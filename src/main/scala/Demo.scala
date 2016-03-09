@@ -474,3 +474,50 @@ MPBridge.total = 0;
 
   mpservice.MPService.shutdown
 }
+
+object GeneratorTest extends App {
+  import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence
+  import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG
+  import ch.bfh.unicrypt.helper.sequence.Sequence
+  import scala.collection.JavaConversions._
+  import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
+
+  val total = 1006
+  val split = 10
+
+  val size = total / split
+  val remainder = total % split
+
+  val a = Array.fill(total % split)((total / split) + 1)
+  val b = Array.fill(split - (total % split))(total / split)
+  val c = a ++ b
+  
+  val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
+  val group = GStarModSafePrime.getFirstInstance(2048)
+  val converter = ByteArrayToBigInteger.getInstance(seedLength)
+  
+  val rds = c.zipWithIndex.map{ case (i, x) => 
+    val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
+    converter.reconvert(java.math.BigInteger.valueOf(x * 1000000)))
+    (r, i)
+  }
+  rds.foreach(println)
+  
+  val now1 = System.currentTimeMillis
+  val items = rds.par.flatMap { case (d, i) =>
+    val sequence = group.getIndependentGenerators(d).limit(i)
+    sequence.toList
+  }
+  println(items.size)
+  println(s"${System.currentTimeMillis - now1}")
+
+  // val sequence = group.abstractGetRandomElements(randomByteSequence).skip(0).limit(10000)
+  val sequence: Sequence[_ <: Element[_]] = group.getIndependentGenerators().limit(total)
+  // val list = mpservice.MPBridgeS.getIndependentGenerators(sequence)
+  val now = System.currentTimeMillis
+  val items2 = sequence.toList.par.map { x:Element[_] =>
+    x
+  }
+  println(items2.size)
+  println(s"${System.currentTimeMillis - now}")
+}
