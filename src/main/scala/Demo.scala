@@ -163,7 +163,7 @@ object ElectionTest extends App {
     }
   }
 
-  mixing.flatMap { mixTwo =>
+  val all = mixing.flatMap { mixTwo =>
 
     // we are done mixing
     val stopMix = Election.stopMixing(mixTwo)
@@ -215,6 +215,11 @@ object ElectionTest extends App {
 
       MPBridgeS.shutdown
     }
+  }
+
+  all.onFailure { case e =>
+    e.printStackTrace
+    MPBridgeS.shutdown
   }
 }
 

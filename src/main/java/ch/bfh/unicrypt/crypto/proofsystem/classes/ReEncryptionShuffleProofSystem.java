@@ -364,7 +364,9 @@ public class ReEncryptionShuffleProofSystem
 		System.out.println(System.currentTimeMillis() - now);
 		// MPBridge.b();
 		///
-
+		System.out.println(independentGenerators);
+		System.out.println(independentGenerators2);
+		
 		return getInstance(sigmaChallengeGenerator, eValuesGenerator, independentGenerators,
 						   elgamal, encryptionPK, kr);
 	}
