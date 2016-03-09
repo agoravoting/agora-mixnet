@@ -239,6 +239,12 @@ object TestApp {
   }
 }
 
+import ch.bfh.unicrypt.helper.sequence.Sequence
+import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
+import scala.collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
+import scala.collection.JavaConverters._
+
 object MPBridgeS {
   def ex[T](f: => T, v: String) = {
     MPBridge.a()
@@ -266,4 +272,13 @@ object MPBridgeS {
 
   def init(useGmp: Boolean, useExtractor: Boolean) = MPBridge.init(useGmp, useExtractor)
   def shutdown = MPBridge.shutdown
+
+  def getIndependentGenerators[E <: Element[V], V](sequence: Sequence[E]): java.util.List[E] = {
+    sequence.par.map{ x =>
+      if(!x.isGenerator()) {
+        throw new RuntimeException();
+      }
+      x
+    }.toList.asJava
+  }
 }

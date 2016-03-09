@@ -99,6 +99,19 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		return this.defaultGetRandomGenerators(randomByteSequence);
 	}
 
+	public final DenseArray<Element<V>> getIndependentGeneratorsP(DeterministicRandomByteSequence randomByteSequence, int skip, int size) {
+		System.out.println("AbstractCyclicGroup: getIndependentGeneratorsP");
+
+		if (randomByteSequence == null) {
+			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, randomByteSequence);
+		}
+		Sequence<E> sequence = this.abstractGetRandomElements(randomByteSequence).skip(skip).limit(size);
+		java.util.List<E> list = mpservice.MPBridgeS.getIndependentGenerators(sequence);
+		Element<V>[] array = list.toArray(new Element[0]);
+ 
+		return DenseArray.getInstance(array);
+	}
+
 	public final DenseArray<Element<V>> getIndependentGeneratorsParallel(DeterministicRandomByteSequence randomByteSequence, int skip, int size) {
 		System.out.println("AbstractCyclicGroup: getIndependentGeneratorsParallel");
 
@@ -108,21 +121,21 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		Sequence<E> sequence = this.abstractGetRandomElements(randomByteSequence).skip(skip).limit(size);
 		final Element<V>[] array = new Element[size];
 
-		// not worth it
+		/* not worth it
 		MPBridge.ex(() -> {
 			int i = 0;
 			for (E value : sequence) {
 				array[i++] = value;
 			}
 			return array;
-		}, "2");
+		}, "2");*/
 
-		/*MPBridge.a();
+		MPBridge.a();
 		int i = 0;
 		for (E value : sequence) {
 			array[i++] = value;
 		}
-		MPBridge.b();*/
+		MPBridge.b();
 
 		// not worth it
 		/*final Element<V>[] array2 = new Element[size];
@@ -140,7 +153,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		}, "2");*/
 		MPBridge.a();
 		Element<V>[] array2 = new Element[size];
-		for(int i = 0; i < array.length; i++) {
+		for(i = 0; i < array.length; i++) {
 			if(array[i].isGenerator()) {
 				array2[i] = array[i];
 			}	

@@ -579,7 +579,11 @@ public class PermutationCommitmentProofSystem
         // at ch.bfh.unicrypt.math.algebra.general.classes.Tuple.getInstance(Tuple.java:335)
 		// MPBridge.a();
 		// Tuple generators = Tuple.getInstance(cyclicGroup.getIndependentGenerators(randomByteSequence).limit(size + 1));
+		long now = System.currentTimeMillis();
 		Tuple generators = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsParallel(randomByteSequence, 0, size + 1));
+		System.out.println(System.currentTimeMillis() - now); now = System.currentTimeMillis();
+		Tuple generators2 = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsP(randomByteSequence, 0, size + 1));
+		System.out.println(System.currentTimeMillis() - now);
 		// MPBridge.b();
 		/// 
 		

@@ -118,7 +118,11 @@ public class PermutationCommitmentScheme
         // at ch.bfh.unicrypt.math.algebra.general.classes.Tuple.getInstance(Tuple.java:335)
 		// MPBridge.a();
 		// Tuple messageGenerators = Tuple.getInstance(cyclicGroup.getIndependentGenerators(randomByteSequence).skip(1).limit(size));
+		long now = System.currentTimeMillis();
 		Tuple messageGenerators = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsParallel(randomByteSequence, 1, size));
+		System.out.println(System.currentTimeMillis() - now); now = System.currentTimeMillis();
+		Tuple messageGenerators2 = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsP(randomByteSequence, 0, size + 1));
+		System.out.println(System.currentTimeMillis() - now);
 		// MPBridge.b();
 		return new PermutationCommitmentScheme(cyclicGroup, size, randomizationGenerator, messageGenerators);
 	}
