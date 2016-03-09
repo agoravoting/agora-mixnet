@@ -268,7 +268,7 @@ trait HasHistory {
  * Some utilities
  */
 object Util {
-  val unsafe = ConfigFactory.load().getBoolean("use-unsafe-deserialization")
+  val unsafe = ConfigFactory.load().getBoolean("bypass-membership-check")
 
   def tupleFromSeq(items: Seq[Element[_]]) = {
     // var tuple = Tuple.getInstance()

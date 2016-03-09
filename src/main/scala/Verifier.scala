@@ -171,6 +171,7 @@ object Verifier extends ProofSettings {
     }.seq
 
     println("Converting permutation e values..")
+    
     // Assume evalues: ZMod
     val eValues = permutationProofDTO.eValues.par.map { x =>
       Csettings.group.getZModOrder.getElementFromString(x)

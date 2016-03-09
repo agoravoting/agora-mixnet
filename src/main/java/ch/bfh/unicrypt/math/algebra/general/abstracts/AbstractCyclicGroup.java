@@ -109,20 +109,20 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		final Element<V>[] array = new Element[size];
 
 		// not worth it
-		/*MPBridge.ex(() -> {
+		MPBridge.ex(() -> {
 			int i = 0;
 			for (E value : sequence) {
 				array[i++] = value;
 			}
 			return array;
-		}, "2");*/
+		}, "2");
 
-		MPBridge.a();
+		/*MPBridge.a();
 		int i = 0;
 		for (E value : sequence) {
 			array[i++] = value;
 		}
-		MPBridge.b();
+		MPBridge.b();*/
 
 		// not worth it
 		/*final Element<V>[] array2 = new Element[size];
@@ -140,7 +140,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		}, "2");*/
 		MPBridge.a();
 		Element<V>[] array2 = new Element[size];
-		for(i = 0; i < array.length; i++) {
+		for(int i = 0; i < array.length; i++) {
 			if(array[i].isGenerator()) {
 				array2[i] = array[i];
 			}	

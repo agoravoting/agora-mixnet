@@ -68,8 +68,8 @@ object ElectionTest extends App {
   val useGmp = config.getBoolean("mpservice.use-gmp")
   val useExtractor = config.getBoolean("mpservice.use-extractor")
   MPBridgeS.init(useGmp, useExtractor)
-  val unsafe = ConfigFactory.load().getBoolean("use-unsafe-deserialization")
-  println(s"* use-unsafe-deserialization: $unsafe")
+  val bypass = ConfigFactory.load().getBoolean("bypass-membership-check")
+  println(s"* bypass-membership-check: $bypass")
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
 
