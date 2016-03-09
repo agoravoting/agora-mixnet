@@ -105,13 +105,10 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		if (randomByteSequence == null) {
 			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, randomByteSequence);
 		}
-		long now = System.currentTimeMillis();
+		
 		Sequence<E> sequence = this.abstractGetRandomElements(randomByteSequence).skip(skip).limit(size);
-		System.out.println(System.currentTimeMillis() - now); now = System.currentTimeMillis();
 		java.util.List<E> list = mpservice.MPBridgeS.getIndependentGenerators(sequence);
-		System.out.println("get " + (System.currentTimeMillis() - now)); now = System.currentTimeMillis();
 		Element<V>[] array = list.toArray(new Element[0]);
-		System.out.println("toArray " + (System.currentTimeMillis() - now)); now = System.currentTimeMillis();
  
 		return DenseArray.getInstance(array);
 	}
