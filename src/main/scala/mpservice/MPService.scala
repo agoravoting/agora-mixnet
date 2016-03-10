@@ -102,12 +102,19 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
   var requestId = 0
   val requests = mutable.Map[Int, RequestData]()
 
+  // FIXME move to util
+  def cut[A](xs: Array[A], n: Int) = {
+    val (quot, rem) = (xs.size / n, xs.size % n)
+    val (smaller, bigger) = xs.splitAt(xs.size - rem * (quot + 1))
+    smaller.grouped(quot) ++ bigger.grouped(quot + 1)
+  }
+
   def receive: Receive = {
     
     case ModPowArray(modpows) => {
       requestId = requestId + 1
       val size = math.min(math.max(modpows.length / minChunks, 1), maxChunkSize)
-      val chunks = modpows.sliding(size, size).toArray
+      val chunks: Array[Array[ModPow]] = cut(modpows, modpows.length / size).toArray
       requests.put(requestId, RequestData(sender, chunks.length, mutable.ArrayBuffer()))
       println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
       chunks.indices.foreach { i =>
@@ -121,7 +128,7 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
     case ModPowArray2(modpows, mod) => {
       requestId = requestId + 1
       val size = math.min(math.max(modpows.length / minChunks, 1), maxChunkSize)
-      val chunks = modpows.sliding(size, size).toArray
+      val chunks: Array[Array[ModPow2]] = cut(modpows, modpows.length / size).toArray
       requests.put(requestId, RequestData(sender, chunks.length, mutable.ArrayBuffer()))
       println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
       chunks.indices.foreach { i =>
