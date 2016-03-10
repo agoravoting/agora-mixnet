@@ -1,3 +1,4 @@
+// drb MPBridge.ex
 /*
  * UniCrypt
  *
@@ -92,23 +93,6 @@ public final class ProductFunction
 				}
 				return elements;
 			}, "2");
-
-			/*MPBridge.a();
-			MPBridge.startRecord();
-			for (int i : this.getAllIndices()) {
-				elements[i] = this.getAt(i).apply(element.getAt(i), randomByteSequence);
-			}
-			mpservice.ModPow[] requests = MPBridge.stopRecord();
-			MPBridge.b();
-			if(requests.length > 0) {
-				java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-				MPBridge.startReplay(answers);
-				for (int i : this.getAllIndices()) {
-					elements[i] = this.getAt(i).apply(element.getAt(i), randomByteSequence);
-				}	
-				MPBridge.stopReplay();
-			}
-			MPBridge.reset();*/
 
 		}
 		else {
