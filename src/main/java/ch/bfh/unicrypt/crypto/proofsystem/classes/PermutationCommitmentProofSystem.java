@@ -246,7 +246,7 @@ public class PermutationCommitmentProofSystem
 			cs[i] = temp[i].apply(c_i_1.selfApply(ePrimeV.getAt(i)));  //   [2n]
 		}
 		MPBridge.b();
-		System.out.println("Bad loop: " + ((System.currentTimeMillis() - now) / 1000.0));
+		System.out.println("Bad loop: [" + ((System.currentTimeMillis() - now) / 1000.0) + " ms]");
 		
 		
 		final Tuple cV = Tuple.getInstance(cs);
@@ -581,7 +581,7 @@ public class PermutationCommitmentProofSystem
 		// Tuple generators2 = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsMPS(randomByteSequence, 0, size + 1));
 		// System.out.println("S: " + (System.currentTimeMillis() - now)); now = System.currentTimeMillis();
 		Tuple generators = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsP(0, size + 1));
-		System.out.println("P: " + (System.currentTimeMillis() - now));
+		System.out.println("P: [" + (System.currentTimeMillis() - now)  + " ms]");
 		// MPBridge.b();
 		
 		return getInstance(sigmaChallengeGenerator, eValuesGenerator, generators, kr);

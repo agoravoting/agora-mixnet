@@ -253,7 +253,7 @@ object MPBridgeS {
     val now = System.currentTimeMillis
     var ret = f
     val r = System.currentTimeMillis - now
-    println(s"R: $r")
+    println(s"R: [$r ms]")
     val requests = MPBridge.stopRecord()
     MPBridge.b(3)
     if(requests.length > 0) {
@@ -263,7 +263,7 @@ object MPBridgeS {
         MPBridge.startReplay(answers)
         ret = f
         val t = System.currentTimeMillis - now
-        println(s"\nC: $c T: $t R+C: ${r+c}")
+        println(s"\nC: [$c ms] T: [$t ms] R+C: [${r+c} ms]")
         MPBridge.stopReplay()
     }
     MPBridge.reset()

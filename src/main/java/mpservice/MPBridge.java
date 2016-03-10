@@ -175,7 +175,7 @@ public class MPBridge {
 	 	long now = System.currentTimeMillis();
 	 	T ret = f.get();
 	 	long r = System.currentTimeMillis() - now;
-	 	System.out.println("R: " + r);
+	 	System.out.println("R: [" + r + " ms]");
 	 	mpservice.ModPow2[] reqs = stopRecord();
 		b(3);
 		if(reqs.length > 0) {
@@ -185,7 +185,7 @@ public class MPBridge {
 			startReplay(answers);
 			ret = f.get();
 			long t = System.currentTimeMillis() - now;
-			System.out.println("\nC: " + c + " T: " + t + " R+C: " + (r+c));
+			System.out.println("\nC: [" + c + " ms] T: [[" + t + " ms] R+C: [" + (r+c) + " ms]");
 			stopReplay();
 		}
 		reset();
