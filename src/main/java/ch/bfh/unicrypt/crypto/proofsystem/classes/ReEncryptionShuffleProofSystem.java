@@ -180,11 +180,10 @@ public class ReEncryptionShuffleProofSystem
 		randEV = Tuple.getInstance(randEVs);
 		randomElement = randomElement.append(Tuple.getInstance(randEV));
 
-		/// 
-		long before = MPBridge.total;
+long before = MPBridge.total;
 		final Element commitment = f.apply(randomElement);                        // [3N+3]
-		System.out.println("renc gen f.apply " + (MPBridge.total - before));
-		///
+System.out.println("renc gen f.apply " + (MPBridge.total - before));
+		
 
 		final Element challenge = this.getSigmaChallengeGenerator().generate(publicInput, commitment);
 		final Element response = randomElement.apply(Tuple.getInstance(r, w, ePrimeV).selfApply(challenge));
@@ -205,16 +204,14 @@ public class ReEncryptionShuffleProofSystem
 		final Tuple eV = (Tuple) this.getEValuesGenerator().generate(publicInput);
 
 		// Compute image of preimage proof
-		final Element[] ps = new Element[2];
+		final Element[] ps = new Element[2];		
 		
-		/// 
-		long before = MPBridge.total;
+long before = MPBridge.total;
 		// - p_1 == c_pi^e                                                              [N]
 		ps[0] = computeInnerProduct(cPiV, eV);
 		// - p_2 = u                                                                   [2N]
 		ps[1] = computeInnerProduct(uV, eV);
-		System.out.println("renc ver computeInnerProduct, loop in AbstractShuffleProofSystem " + (MPBridge.total - before));
-		///
+System.out.println("renc ver computeInnerProduct, loop in AbstractShuffleProofSystem " + (MPBridge.total - before));		
 		
 		final Tuple pV = Tuple.getInstance(ps);
 
@@ -224,11 +221,9 @@ public class ReEncryptionShuffleProofSystem
 															this.encryptionScheme, this.encryptionPK);
 		final Element challenge = this.getSigmaChallengeGenerator().generate(publicInput, commitment);
 		
-		///
-		before = MPBridge.total;
+before = MPBridge.total;
 		final Element left = f.apply(response);                                   // [3N+3]
-		System.out.println("renc ver f.apply " + (MPBridge.total - before));
-		///
+System.out.println("renc ver f.apply " + (MPBridge.total - before));
 
 		final Element right = commitment.apply(pV.selfApply(challenge));          //    [3]
 		//                                                                          --------

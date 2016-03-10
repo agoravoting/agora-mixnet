@@ -100,23 +100,7 @@ public class GeneralizedPedersenCommitmentScheme
 			}
 			return generatorFunctions;
 		}, "2");
-		/*MPBridge.a();
-		MPBridge.startRecord();
-		for (int i = 0; i < this.size; i++) {
-			generatorFunctions[i] = GeneratorFunction.getInstance(this.messageGenerators.getAt(i));
-		}
-		mpservice.ModPow[] requests = MPBridge.stopRecord();
-		MPBridge.b();
-		if(requests.length > 0) {
-			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			MPBridge.startReplay(answers);
-			for (int i = 0; i < this.size; i++) {
-				generatorFunctions[i] = GeneratorFunction.getInstance(this.messageGenerators.getAt(i));
-			}
-			MPBridge.stopReplay();
-		}
-		MPBridge.reset();*/
-
+		
 		return CompositeFunction.getInstance(
 			   ProductFunction.getInstance(
 					  CompositeFunction.getInstance(ProductFunction.getInstance(generatorFunctions),

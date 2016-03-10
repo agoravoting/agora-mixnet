@@ -154,24 +154,6 @@ public class PermutationCommitmentScheme
 			final Tuple randomizations = (Tuple) element.getSecond();
 			final Element[] ret = new Element[size];
 			
-			/*MPBridge.a();
-			MPBridge.startRecord();
-			for (int i = 0; i < size; i++) {
-				ret[i] = randomizationGenerator.selfApply(randomizations.getAt(i)).apply(
-					   messageGenerators.getAt(permutation.permute(i)));
-			}
-			mpservice.ModPow[] requests = MPBridge.stopRecord();
-			MPBridge.b();
-			if(requests.length > 0) {
-				java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-				MPBridge.startReplay(answers);
-				for (int i = 0; i < size; i++) {
-					ret[i] = randomizationGenerator.selfApply(randomizations.getAt(i)).apply(
-					   messageGenerators.getAt(permutation.permute(i)));
-				}
-				MPBridge.stopReplay();
-			}
-			MPBridge.reset();*/
 			MPBridge.ex(() -> {
 				for (int i = 0; i < size; i++) {
 					ret[i] = randomizationGenerator.selfApply(randomizations.getAt(i)).apply(

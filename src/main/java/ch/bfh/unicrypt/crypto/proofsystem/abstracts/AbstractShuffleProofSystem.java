@@ -234,25 +234,7 @@ public abstract class AbstractShuffleProofSystem
 			return ip;
 			}, "2"
 		);
-		/*MPBridge.a();
-		MPBridge.startRecord();
-		for (int i = 0; i < t1.getArity(); i++) {
-			innerProduct = innerProduct.apply(t1.getAt(i).selfApply(t2.getAt(i)));
-		}
-		mpservice.ModPow[] requests = MPBridge.stopRecord();
-		MPBridge.b();
-		if(requests.length > 0) {
-			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			MPBridge.startReplay(answers);
-			innerProduct = ((Group) t1.getSet().getAt(0)).getIdentityElement();
-			for (int i = 0; i < t1.getArity(); i++) {
-				innerProduct = innerProduct.apply(t1.getAt(i).selfApply(t2.getAt(i)));
-			}	
-			MPBridge.stopReplay();
-		}
-		MPBridge.reset();*/
-
-		// return innerProduct;
+		
 		return ret;
 	}
 

@@ -133,23 +133,6 @@ public abstract class AbstractMixer<C extends Set, R extends Set>
 			return elementsPrime;
 		}, "2");
 
-		/*MPBridge.a();
-		MPBridge.startRecord();
-		for (int i = 0; i < this.getSize(); i++) {
-			elementsPrime[i] = this.getShuffleFunction().apply(elements.getAt(i), randomizations.getAt(i));
-		}
-		mpservice.ModPow[] requests = MPBridge.stopRecord();
-		MPBridge.b();
-		if(requests.length > 0) {
-			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			MPBridge.startReplay(answers);
-			for (int i = 0; i < this.getSize(); i++) {
-				elementsPrime[i] = this.getShuffleFunction().apply(elements.getAt(i), randomizations.getAt(i));
-			}
-			MPBridge.stopReplay();
-		}
-		MPBridge.reset();*/
-
 		return this.getPermutationFunction().apply(Tuple.getInstance(elementsPrime), permutation);
 	}
 

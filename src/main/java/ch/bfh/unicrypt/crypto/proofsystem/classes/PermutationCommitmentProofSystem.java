@@ -212,18 +212,7 @@ public class PermutationCommitmentProofSystem
 
 		final Element[] cs = new Element[this.size];
 		final Element[] ds = new Element[this.size];
-		ds[0] = rV.getAt(0);		
-		
-		/*MPBridge.a();
-		for (int i = 0; i < this.size; i++) {
-			Element c_i_1 = i == 0 ? h : cs[i - 1];
-			cs[i] = g.selfApply(rV.getAt(i)).apply(c_i_1.selfApply(ePrimeV.getAt(i)));  //   [2n]
-			if (i > 0) {
-				ds[i] = rV.getAt(i).apply(ds[i - 1].selfApply(ePrimeV.getAt(i)));
-			}
-		}
-		MPBridge.b();
-		*/
+		ds[0] = rV.getAt(0);
 		
 		final Element[] temp = new Element[this.size];
 		final Tuple ePrimeVFinal = ePrimeV;
@@ -237,8 +226,8 @@ public class PermutationCommitmentProofSystem
 			return 0;
 		}, "2");
 
-		System.out.println("Cannot parallelize..");
-		long now = System.currentTimeMillis();
+System.out.println("Cannot parallelize..");
+long now = System.currentTimeMillis();
 		// CANT BE PARALLELIZED
 		MPBridge.a();
 		for (int i = 0; i < this.size; i++) {
@@ -246,9 +235,8 @@ public class PermutationCommitmentProofSystem
 			cs[i] = temp[i].apply(c_i_1.selfApply(ePrimeV.getAt(i)));  //   [2n]
 		}
 		MPBridge.b();
-		System.out.println("Bad loop: [" + ((System.currentTimeMillis() - now) / 1000.0) + " ms]");
-		
-		
+System.out.println("Bad loop: [" + ((System.currentTimeMillis() - now) / 1000.0) + " ms]");
+				
 		final Tuple cV = Tuple.getInstance(cs);
 		final Element d = ds[ds.length - 1];
 
@@ -273,11 +261,9 @@ public class PermutationCommitmentProofSystem
 		randEV = Tuple.getInstance(randEVs);
 		randomElement = randomElement.append(Tuple.getInstance(randEV));
 
-		///
-		long before = MPBridge.total;
+long before = MPBridge.total;
 		final Element commitment = f.apply(randomElement);                              // [3n+3]
-		System.out.println("perm gen f.apply " + (MPBridge.total - before));
-		///
+System.out.println("perm gen f.apply " + (MPBridge.total - before));
 		
 		final Element challenge = this.sigmaChallengeGenerator.generate(Pair.getInstance(publicInput, cV), commitment);
 		final Element w = computeInnerProduct(sV, eV);

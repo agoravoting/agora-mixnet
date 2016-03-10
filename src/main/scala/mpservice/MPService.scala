@@ -290,7 +290,7 @@ object MPBridgeS {
   import ch.bfh.unicrypt.helper.math.MathUtil
   import ch.bfh.unicrypt.helper.array.classes.DenseArray
 
-  // move to Util
+  // FIXME move to Util
   def getIndependentGenerators[E <: Element[_]](group: AbstractCyclicGroup[E, _], skip: Int, size: Int): java.util.List[E] = {
     
     val split = generatorParallelism
