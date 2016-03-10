@@ -579,9 +579,9 @@ public class PermutationCommitmentProofSystem
 		// Tuple generators = Tuple.getInstance(cyclicGroup.getIndependentGenerators(randomByteSequence).limit(size + 1));
 		long now = System.currentTimeMillis();
 		Tuple generators2 = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsMPS(randomByteSequence, 0, size + 1));
-		System.out.println(System.currentTimeMillis() - now); now = System.currentTimeMillis();
+		System.out.println("S: " + (System.currentTimeMillis() - now)); now = System.currentTimeMillis();
 		Tuple generators = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsP(0, size + 1));
-		System.out.println(System.currentTimeMillis() - now);
+		System.out.println("P: " + (System.currentTimeMillis() - now));
 		// MPBridge.b();
 		
 		return getInstance(sigmaChallengeGenerator, eValuesGenerator, generators, kr);

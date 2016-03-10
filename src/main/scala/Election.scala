@@ -270,6 +270,7 @@ trait HasHistory {
  */
 object Util {
   val unsafe = ConfigFactory.load().getBoolean("bypass-membership-check")
+  val generatorsParallel = ConfigFactory.load().getBoolean("use-generators-parallel")
 
   def tupleFromSeq(items: Seq[Element[_]]) = {
     // var tuple = Tuple.getInstance()

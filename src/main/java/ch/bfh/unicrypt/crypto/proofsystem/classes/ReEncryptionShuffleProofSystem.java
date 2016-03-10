@@ -358,9 +358,9 @@ public class ReEncryptionShuffleProofSystem
 		// Tuple independentGenerators = Tuple.getInstance(elgamal.getCyclicGroup().getIndependentGenerators(randomByteSequence).limit(size + 1));
 		long now = System.currentTimeMillis();
 		Tuple independentGenerators2 = Tuple.getInstance(((AbstractCyclicGroup) elgamal.getCyclicGroup()).getIndependentGeneratorsMPS(randomByteSequence, 0, size + 1));
-		System.out.println(System.currentTimeMillis() - now); now = System.currentTimeMillis();
+		System.out.println("S: " + (System.currentTimeMillis() - now)); now = System.currentTimeMillis();
 		Tuple independentGenerators = Tuple.getInstance(((AbstractCyclicGroup) elgamal.getCyclicGroup()).getIndependentGeneratorsP(0, size + 1));
-		System.out.println(System.currentTimeMillis() - now);
+		System.out.println("P: " + (System.currentTimeMillis() - now));
 		// MPBridge.b();
 		
 		return getInstance(sigmaChallengeGenerator, eValuesGenerator, independentGenerators,

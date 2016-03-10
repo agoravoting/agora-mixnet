@@ -302,7 +302,7 @@ object MPBridgeS {
     }
     // rds.foreach(println)
     
-    val items = rds.flatMap { case (d, i) =>
+    val items = rds.par.flatMap { case (d, i) =>
       val sequence = group.getIndependentGenerators(d).limit(i)
       sequence.toList
     }
