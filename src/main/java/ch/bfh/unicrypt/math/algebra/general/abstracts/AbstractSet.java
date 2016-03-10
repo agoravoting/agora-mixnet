@@ -1,3 +1,4 @@
+// drb support for bypass-membership-check
 /*
  * UniCrypt
  *
