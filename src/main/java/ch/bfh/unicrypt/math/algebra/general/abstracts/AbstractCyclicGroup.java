@@ -54,12 +54,7 @@ import ch.bfh.unicrypt.math.algebra.general.interfaces.Element;
 import ch.bfh.unicrypt.helper.array.classes.DenseArray;
 
 import mpservice.MPBridge;
-  import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence;
-  import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG;
-  import ch.bfh.unicrypt.helper.sequence.Sequence;
-  
-  import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger;
-  import ch.bfh.unicrypt.helper.math.MathUtil;
+import com.typesafe.config.ConfigFactory;
 
 /**
  * This abstract class provides a base implementation for the interface {@link CyclicGroup}.
@@ -79,6 +74,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 	private static final long serialVersionUID = 1L;
 
 	private E defaultGenerator;
+	private boolean generatorsParallel = ConfigFactory.load().getBoolean("use-generators-parallel");
 
 	protected AbstractCyclicGroup(Class<?> valueClass) {
 		super(valueClass);
@@ -109,10 +105,17 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 	public final DenseArray<Element<V>> getIndependentGeneratorsP(int skip, int size) {
 		System.out.println("AbstractCyclicGroup: getIndependentGeneratorsP");
 		
-		java.util.List<E> list = mpservice.MPBridgeS.getIndependentGenerators(this, skip, size);
-		Element<V>[] array = list.toArray(new Element[0]);
+		DenseArray<Element<V>> ret = null;
+		if(generatorsParallel) {
+			java.util.List<E> list = mpservice.MPBridgeS.getIndependentGenerators(this, skip, size);
+			Element<V>[] array = list.toArray(new Element[0]);
+			ret = DenseArray.getInstance(array);
+		}
+		else {
+			ret = DenseArray.getInstance(getIndependentGenerators().skip(skip).limit(size));
+		}
  
-		return DenseArray.getInstance(array);
+		return ret;
 	}
 
 	// drb

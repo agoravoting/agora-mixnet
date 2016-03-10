@@ -282,6 +282,7 @@ object MPBridgeS {
     import scala.collection.JavaConversions._
     import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
     import ch.bfh.unicrypt.helper.math.MathUtil
+    import ch.bfh.unicrypt.helper.array.classes.DenseArray
 
     val split = generatorParallelism
     val total = size + skip
@@ -308,6 +309,7 @@ object MPBridgeS {
     }
     println("getIndependentGenerators " + total + " " + items.size)
     
+    // DenseArray.getInstance(items.drop(skip).toList.toArray)
     items.drop(skip).toList
   }
 }
