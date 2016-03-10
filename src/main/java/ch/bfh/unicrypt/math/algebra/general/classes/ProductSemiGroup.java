@@ -1,3 +1,4 @@
+// MPBridge.ex
 /*
  * UniCrypt
  *
@@ -268,7 +269,6 @@ public class ProductSemiGroup
 				results[i] = tuple.getAt(i).selfApply(amount);
 			}
 		}
-		
 
 		return this.abstractGetElement(DenseArray.getInstance(results));
 	}

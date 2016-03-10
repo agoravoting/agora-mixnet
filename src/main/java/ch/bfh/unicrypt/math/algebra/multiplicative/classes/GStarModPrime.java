@@ -1,3 +1,4 @@
+// drb workaround for isprime issue: public ZModPrime getZModOrder()
 /*
  * UniCrypt
  *
