@@ -276,7 +276,7 @@ object MPBridgeS {
 
   import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractCyclicGroup
 
-  def getIndependentGenerators[E <: Element[_]](group: AbstractCyclicGroup[E, _], total: Int): java.util.List[E] = {
+  def getIndependentGenerators[E <: Element[_]](group: AbstractCyclicGroup[E, _], skip: Int, size: Int): java.util.List[E] = {
     import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence
     import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG
     import scala.collection.JavaConversions._
@@ -284,6 +284,7 @@ object MPBridgeS {
     import ch.bfh.unicrypt.helper.math.MathUtil
 
     val split = generatorParallelism
+    val total = size + skip
 
     val a = Array.fill(total % split)((total / split) + 1)
     val b = Array.fill(split - (total % split))(total / split)
@@ -293,21 +294,21 @@ object MPBridgeS {
     
     val converter = ByteArrayToBigInteger.getInstance(seedLength)
   
-    val rds = c.zipWithIndex.map{ case (i, x) => 
-      val seed = java.math.BigInteger.valueOf(x).mod(MathUtil.powerOfTwo(32))
-      println("seed " + seed)
+    val rds = c.zipWithIndex.map{ case (value, index) => 
+      val seed = java.math.BigInteger.valueOf(index * 8000).mod(MathUtil.powerOfTwo(32))
+      // println("*** index " + index + " seed " + seed + " value " + value)
       val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
         converter.reconvert(seed))
-      (r, i)
+      (r, value)
     }
-    rds.foreach(println)
+    // rds.foreach(println)
     
-    val items = rds.par.flatMap { case (d, i) =>
+    val items = rds.flatMap { case (d, i) =>
       val sequence = group.getIndependentGenerators(d).limit(i)
       sequence.toList
     }
-    println(total + " " + items.size)
+    println("getIndependentGenerators " + total + " " + items.size)
     
-    items.toList
+    items.drop(skip).toList
   }
 }

@@ -101,6 +101,10 @@ public class PermutationCommitmentProofSystem
 		this.kr = kr;
 		this.independentGenerators = independentGenerators;
 
+		System.out.println("+++++++++++++++++++++++++++++++++++++");
+		System.out.println(this.independentGenerators);
+		System.out.println("+++++++++++++++++++++++++++++++++++++");
+
 		this.ke = ((ZMod) ((ProductSet) this.eValuesGenerator.getChallengeSpace()).getFirst()).getModulus()
 			   .subtract(MathUtil.ONE).bitLength();
 		this.kc = this.sigmaChallengeGenerator.getChallengeSpace().getModulus().subtract(MathUtil.ONE).bitLength();
@@ -582,10 +586,10 @@ public class PermutationCommitmentProofSystem
 		long now = System.currentTimeMillis();
 		Tuple generators = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsParallel(randomByteSequence, 0, size + 1));
 		System.out.println(System.currentTimeMillis() - now); now = System.currentTimeMillis();
-		Tuple generators2 = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsP(randomByteSequence, size + 1));
+		Tuple generators2 = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsP(0, size + 1));
 		System.out.println(System.currentTimeMillis() - now);
 		// MPBridge.b();
-		/// 
+		///
 		
 		return getInstance(sigmaChallengeGenerator, eValuesGenerator, generators, kr);
 	}

@@ -54,6 +54,12 @@ import ch.bfh.unicrypt.math.algebra.general.interfaces.Element;
 import ch.bfh.unicrypt.helper.array.classes.DenseArray;
 
 import mpservice.MPBridge;
+  import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence;
+  import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG;
+  import ch.bfh.unicrypt.helper.sequence.Sequence;
+  
+  import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger;
+  import ch.bfh.unicrypt.helper.math.MathUtil;
 
 /**
  * This abstract class provides a base implementation for the interface {@link CyclicGroup}.
@@ -99,14 +105,10 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		return this.defaultGetRandomGenerators(randomByteSequence);
 	}
 
-	public final DenseArray<Element<V>> getIndependentGeneratorsP(DeterministicRandomByteSequence randomByteSequence, int size) {
+	public final DenseArray<Element<V>> getIndependentGeneratorsP(int skip, int size) {
 		System.out.println("AbstractCyclicGroup: getIndependentGeneratorsP");
-
-		if (randomByteSequence == null) {
-			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, randomByteSequence);
-		}
 		
-		java.util.List<E> list = mpservice.MPBridgeS.getIndependentGenerators(this, size);
+		java.util.List<E> list = mpservice.MPBridgeS.getIndependentGenerators(this, skip, size);
 		Element<V>[] array = list.toArray(new Element[0]);
  
 		return DenseArray.getInstance(array);
@@ -119,6 +121,10 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, randomByteSequence);
 		}
 		Sequence<E> sequence = this.abstractGetRandomElements(randomByteSequence).skip(skip).limit(size);
+ 		/*ByteArrayToBigInteger converter = ByteArrayToBigInteger.getInstance(32);
+  		DeterministicRandomByteSequence d = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
+    		converter.reconvert(java.math.BigInteger.valueOf(24)));
+		Sequence<E> sequence = this.abstractGetRandomElements(d).skip(skip).limit(size);*/
 		final Element<V>[] array = new Element[size];
 
 		/* not worth it
@@ -208,6 +214,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 				// boolean ret = isGenerator(value);
 				// MPBridge.b();
 				// return ret;
+				// System.out.println("isGenerator " + isGenerator(value));
 				return isGenerator(value);
 			}
 

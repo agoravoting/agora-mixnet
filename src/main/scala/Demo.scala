@@ -486,6 +486,7 @@ object GeneratorTest extends App {
   import ch.bfh.unicrypt.helper.sequence.Sequence
   import scala.collection.JavaConversions._
   import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
+  import ch.bfh.unicrypt.helper.math.MathUtil
 
   val total = 1006
   val split = 10
@@ -493,7 +494,21 @@ object GeneratorTest extends App {
   val size = total / split
   val remainder = total % split
 
-  val a = Array.fill(total % split)((total / split) + 1)
+  val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
+  val group = GStarModSafePrime.getFirstInstance(2048)
+  val converter = ByteArrayToBigInteger.getInstance(seedLength)
+  val d = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
+    converter.reconvert(java.math.BigInteger.valueOf(24)))
+  val sequence = group.getIndependentGenerators(d).limit(1)
+  //val d2 = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
+  //  converter.reconvert(java.math.BigInteger.valueOf()))
+  // val sequence2 = group.getIndependentGenerators(d2).limit(3)
+
+  println(sequence)
+  // println(sequence2)
+
+  
+  /* val a = Array.fill(total % split)((total / split) + 1)
   val b = Array.fill(split - (total % split))(total / split)
   val c = a ++ b
   
@@ -524,5 +539,5 @@ object GeneratorTest extends App {
     x
   }
   println(items2.size)
-  println(s"${System.currentTimeMillis - now}")
+  println(s"${System.currentTimeMillis - now}")*/
 }

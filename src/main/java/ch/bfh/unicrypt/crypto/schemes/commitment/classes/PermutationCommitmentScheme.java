@@ -121,7 +121,7 @@ public class PermutationCommitmentScheme
 		long now = System.currentTimeMillis();
 		Tuple messageGenerators = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsParallel(randomByteSequence, 1, size));
 		System.out.println(System.currentTimeMillis() - now); now = System.currentTimeMillis();
-		Tuple messageGenerators2 = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsP(randomByteSequence, size));
+		Tuple messageGenerators2 = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsP(1, size));
 		System.out.println(System.currentTimeMillis() - now);
 		// MPBridge.b();
 		return new PermutationCommitmentScheme(cyclicGroup, size, randomizationGenerator, messageGenerators);

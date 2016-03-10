@@ -196,6 +196,7 @@ object Verifier extends ProofSettings {
     val v2 = spg.verify(mixProof, publicInputShuffle)
     // Verify equality of permutation commitments
     val v3 = publicInputPermutation.isEquivalent(publicInputShuffle.getFirst())
+    println(s"$v1 $v2 $v3")
 
     val result = v1 && v2 && v3
     println(s"Verifier: verifyShuffle: $result")
