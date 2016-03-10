@@ -291,14 +291,13 @@ object MPBridgeS {
     val c = a ++ b
   
     val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
-    
     val converter = ByteArrayToBigInteger.getInstance(seedLength)
   
     val rds = c.zipWithIndex.map{ case (value, index) => 
-      val seed = java.math.BigInteger.valueOf(index * 8000).mod(MathUtil.powerOfTwo(32))
+      // 10000: we want to leave ample room for generators not to overlap
+      val seed = java.math.BigInteger.valueOf(index * (total / split) * 10000).mod(MathUtil.powerOfTwo(CTR_DRBG.getFactory().getSeedByteLength()))
       // println("*** index " + index + " seed " + seed + " value " + value)
-      val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
-        converter.reconvert(seed))
+      val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), converter.reconvert(seed))
       (r, value)
     }
     // rds.foreach(println)

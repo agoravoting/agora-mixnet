@@ -105,6 +105,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		return this.defaultGetRandomGenerators(randomByteSequence);
 	}
 
+	// drb
 	public final DenseArray<Element<V>> getIndependentGeneratorsP(int skip, int size) {
 		System.out.println("AbstractCyclicGroup: getIndependentGeneratorsP");
 		
@@ -114,17 +115,14 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		return DenseArray.getInstance(array);
 	}
 
-	public final DenseArray<Element<V>> getIndependentGeneratorsParallel(DeterministicRandomByteSequence randomByteSequence, int skip, int size) {
-		System.out.println("AbstractCyclicGroup: getIndependentGeneratorsParallel");
+	// drb
+	public final DenseArray<Element<V>> getIndependentGeneratorsMPS(DeterministicRandomByteSequence randomByteSequence, int skip, int size) {
+		System.out.println("AbstractCyclicGroup: getIndependentGeneratorsMPS");
 
 		if (randomByteSequence == null) {
 			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, randomByteSequence);
 		}
 		Sequence<E> sequence = this.abstractGetRandomElements(randomByteSequence).skip(skip).limit(size);
- 		/*ByteArrayToBigInteger converter = ByteArrayToBigInteger.getInstance(32);
-  		DeterministicRandomByteSequence d = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
-    		converter.reconvert(java.math.BigInteger.valueOf(24)));
-		Sequence<E> sequence = this.abstractGetRandomElements(d).skip(skip).limit(size);*/
 		final Element<V>[] array = new Element[size];
 
 		/* not worth it
@@ -210,11 +208,6 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 
 			@Override
 			public boolean test(E value) {
-				// MPBridge.a();
-				// boolean ret = isGenerator(value);
-				// MPBridge.b();
-				// return ret;
-				// System.out.println("isGenerator " + isGenerator(value));
 				return isGenerator(value);
 			}
 

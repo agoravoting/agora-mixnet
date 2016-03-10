@@ -113,17 +113,18 @@ public class PermutationCommitmentScheme
 		}
 		Element randomizationGenerator = cyclicGroup.getIndependentGenerators(randomByteSequence).get(0);
 		
-		// the generators are calculated lazily only when tuple.get instance is called|
+		// the generators are calculated lazily only when tuple.get instance is called
 		// at ch.bfh.unicrypt.helper.array.classes.DenseArray.getInstance(DenseArray.java:122)
         // at ch.bfh.unicrypt.math.algebra.general.classes.Tuple.getInstance(Tuple.java:335)
 		// MPBridge.a();
 		// Tuple messageGenerators = Tuple.getInstance(cyclicGroup.getIndependentGenerators(randomByteSequence).skip(1).limit(size));
 		long now = System.currentTimeMillis();
-		Tuple messageGenerators2 = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsParallel(randomByteSequence, 1, size));
+		Tuple messageGenerators2 = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsMPS(randomByteSequence, 1, size));
 		System.out.println(System.currentTimeMillis() - now); now = System.currentTimeMillis();
 		Tuple messageGenerators = Tuple.getInstance(((AbstractCyclicGroup) cyclicGroup).getIndependentGeneratorsP(1, size));
 		System.out.println(System.currentTimeMillis() - now);
 		// MPBridge.b();
+		
 		return new PermutationCommitmentScheme(cyclicGroup, size, randomizationGenerator, messageGenerators);
 	}
 
