@@ -1,3 +1,4 @@
+// drb can be removed
 /*
  * UniCrypt
  *
@@ -159,6 +160,8 @@ public final class MathUtil {
     }*/
 
     // BigInteger.isProbablePrime considers "negative primes" as primes
+    // System.out.println("value " + value + " " + value.isProbablePrime(MathUtil.NUMBER_OF_PRIME_TESTS));
+
     return value.signum() > 0 && value.isProbablePrime(MathUtil.NUMBER_OF_PRIME_TESTS);
   }
 

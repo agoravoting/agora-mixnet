@@ -74,6 +74,9 @@ object ElectionTest extends App {
   // actually used in AbstractCyclicGroup constructor
   val generatorsParallel = ConfigFactory.load().getBoolean("use-generators-parallel")
   println(s"* use-generators-parallel: $generatorsParallel")
+  // actually used in Util.getIndependentGenerators constructor
+  val generatorsParallelLevel = ConfigFactory.load().getInt("generators-parallelism-level")
+  println(s"* generators-parallelism-level: $generatorsParallelLevel")
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
 
@@ -208,7 +211,8 @@ object ElectionTest extends App {
       println(s"finished run with votes = $totalVotes")
       println(s"mixTime: $mixTime")
       println(s"totalTime: $totalTime")
-      println(s"sec / vote: ${mixTime / totalVotes}")
+      println(s"sec / vote (mix): ${mixTime / totalVotes}")
+      println(s"sec / vote: ${totalTime / totalVotes}")
       println(s"total modExps: ${MPBridge.total}")
       println(s"found modExps: ${MPBridge.found}")
       println(s"found modExps %: ${MPBridge.found/MPBridge.total.toDouble}")

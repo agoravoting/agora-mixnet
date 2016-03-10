@@ -185,7 +185,7 @@ public class MPBridge {
 			startReplay(answers);
 			ret = f.get();
 			long t = System.currentTimeMillis() - now;
-			System.out.println("\nC: [" + c + " ms] T: [[" + t + " ms] R+C: [" + (r+c) + " ms]");
+			System.out.println("\nC: [" + c + " ms] T: [" + t + " ms] R+C: [" + (r+c) + " ms]");
 			stopReplay();
 		}
 		reset();

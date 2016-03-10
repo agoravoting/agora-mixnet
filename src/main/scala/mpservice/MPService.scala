@@ -245,7 +245,8 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
 object MPBridgeS {
-  val generatorParallelism = 9
+  // move to Util
+  val generatorParallelism = ConfigFactory.load().getInt("generators-parallelism-level")
 
   def ex[T](f: => T, v: String) = {
     MPBridge.a()
@@ -275,15 +276,16 @@ object MPBridgeS {
   def shutdown = MPBridge.shutdown
 
   import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractCyclicGroup
+  import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence
+  import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG
+  import scala.collection.JavaConversions._
+  import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
+  import ch.bfh.unicrypt.helper.math.MathUtil
+  import ch.bfh.unicrypt.helper.array.classes.DenseArray
 
+  // move to Util
   def getIndependentGenerators[E <: Element[_]](group: AbstractCyclicGroup[E, _], skip: Int, size: Int): java.util.List[E] = {
-    import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence
-    import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG
-    import scala.collection.JavaConversions._
-    import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
-    import ch.bfh.unicrypt.helper.math.MathUtil
-    import ch.bfh.unicrypt.helper.array.classes.DenseArray
-
+    
     val split = generatorParallelism
     val total = size + skip
 
