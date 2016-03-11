@@ -1,3 +1,4 @@
+// drb logging and generators
 /*
  * UniCrypt
  *
@@ -219,6 +220,7 @@ System.out.println("renc ver computeInnerProduct, loop in AbstractShuffleProofSy
 		PreimageProofFunction f = new PreimageProofFunction(this.getCyclicGroup(), this.getSize(),
 															this.getResponseSpace(), this.getCommitmentSpace(), this.getIndependentGenerators(), uPrimeV,
 															this.encryptionScheme, this.encryptionPK);
+		
 		final Element challenge = this.getSigmaChallengeGenerator().generate(publicInput, commitment);
 		
 before = MPBridge.total;
@@ -271,9 +273,10 @@ System.out.println("renc ver f.apply " + (MPBridge.total - before));
 			for (int i = 0; i < ePrimeV.getArity(); i++) {
 				ePrimeVs[i] = zMod.getElement(((ZModElement) ePrimeV.getAt(i)).getValue().mod(zMod.getOrder()));
 			}
-			long before = MPBridge.total;
+			
+long before = MPBridge.total;
 			cV[0] = gpcs.commit(Tuple.getInstance(ePrimeVs), w);
-			System.out.println("renc ver gpcs.commit " + (MPBridge.total - before));
+System.out.println("renc ver gpcs.commit " + (MPBridge.total - before));
 
 			// - Prod(u'_i^(e'_i)) * Enc(1, -r)         [2n+2]
 			before = MPBridge.total;

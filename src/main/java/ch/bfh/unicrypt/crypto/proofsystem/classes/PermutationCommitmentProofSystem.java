@@ -1,3 +1,4 @@
+// drb logging and MPBridge.ex and generators
 /*
  * UniCrypt
  *
@@ -279,8 +280,6 @@ System.out.println("perm gen f.apply " + (MPBridge.total - before));
 	@Override
 	protected boolean abstractVerify(Tuple proof, Tuple publicInput) {
 
-		
-
 		// Unfold proof
 		final Tuple cV = (Tuple) proof.getAt(1);
 		final Tuple commitment = (Tuple) proof.getAt(2);
@@ -295,21 +294,16 @@ System.out.println("perm gen f.apply " + (MPBridge.total - before));
 		final Element[] ps = new Element[this.size + 3];
 		// - p_0 = c_pi^1/prod(g_i) = prod(c_pi_i)/prod(g_i)
 		ps[0] = this.cyclicGroup.apply(publicInput).applyInverse(this.cyclicGroup.apply(gV));
-		
-
-		///
-		long before = MPBridge.total;
+				
+long before = MPBridge.total;
 		// - p_1 = c_pi^e                                                                     [N]
 		ps[1] = computeInnerProduct(publicInput, eV);
-		System.out.println("perm ver computeInnerProduct " + (MPBridge.total - before));
-		///
+System.out.println("perm ver computeInnerProduct " + (MPBridge.total - before));
 		
 		// - p_2...p_(N+2) = c_1 ... c_N
 		for (int i = 0; i < this.size; i++) {
 			ps[i + 2] = cV.getAt(i);
 		}
-		
-		
 		
 		// - p_(N+3) = c_N/h^(prod(e))                                                        [1]
 		// Make sure prod(e) is computet in Z_q
@@ -322,26 +316,20 @@ System.out.println("perm gen f.apply " + (MPBridge.total - before));
 		ps[this.size + 2] = cV.getAt(this.size - 1).applyInverse(gV.getAt(0).selfApply(eProd));
 		final Tuple pV = Tuple.getInstance(ps);
 
-
 		// Verify preimage proof
 		PreimageProofFunction f = new PreimageProofFunction(this.cyclicGroup,
 															this.size, this.getResponseSpace(), this.getCommitmentSpace(), this.independentGenerators, cV);
 		
 		final Element challenge = this.sigmaChallengeGenerator.generate(Pair.getInstance(publicInput, cV), commitment);
 		
-
-		///
-		before = MPBridge.total;
+before = MPBridge.total;
 		final Element left = f.apply(response);                                         // [3N+3]
-		System.out.println("perm ver f.apply " + (MPBridge.total - before));
-		///
+System.out.println("perm ver f.apply " + (MPBridge.total - before));
 		
-		///
-		before = MPBridge.total;
-		// MPBridge.debug = true;
+
+before = MPBridge.total;
 		final Element right = commitment.apply(pV.selfApply(challenge));                //  [N+3]
-		System.out.println("perm ver pv.selfApply " + (MPBridge.total - before));
-		///
+System.out.println("perm ver pv.selfApply " + (MPBridge.total - before));
 
 		//                                                                                -------
 		return left.isEquivalent(right);                                                // [5N+7]
@@ -358,23 +346,7 @@ System.out.println("perm gen f.apply " + (MPBridge.total - before));
 			throw new IllegalArgumentException();
 		}
 		Element innerProduct = ((Group) t1.getSet().getAt(0)).getIdentityElement();
-		/*MPBridge.a();
-		MPBridge.startRecord();
-		for (int i = 0; i < t1.getArity(); i++) {
-			innerProduct = innerProduct.apply(t1.getAt(i).selfApply(t2.getAt(i)));
-		}
-		mpservice.ModPow[] requests = MPBridge.stopRecord();
-		MPBridge.b();
-		if(requests.length > 0) {
-			java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-			MPBridge.startReplay(answers);
-			innerProduct = ((Group) t1.getSet().getAt(0)).getIdentityElement();
-			for (int i = 0; i < t1.getArity(); i++) {
-				innerProduct = innerProduct.apply(t1.getAt(i).selfApply(t2.getAt(i)));
-			}
-			MPBridge.stopReplay();
-		}
-		MPBridge.reset();*/
+		
 		Element ret = MPBridge.ex(() -> {
 			Element ip = innerProduct;
 			for (int i = 0; i < t1.getArity(); i++) {
@@ -384,7 +356,6 @@ System.out.println("perm gen f.apply " + (MPBridge.total - before));
 		}, "2");
 
 		return ret;
-		// return innerProduct;
 	}
 
 	//===================================================================================
@@ -424,13 +395,10 @@ System.out.println("perm gen f.apply " + (MPBridge.total - before));
 
 			// Result array
 			final Element[] pV = new Element[this.size + 3];
-
 			
 			// COMPUTE...
 			// - Com(0, v)                          [1]
 			pV[0] = this.gpcs.getRandomizationGenerator().selfApply(v);
-
-			
 			
 			// - Com(e', w)                       [n+1]
 			Element ePrimeVs[] = new Element[ePrimeV.getArity()];
@@ -438,12 +406,10 @@ System.out.println("perm gen f.apply " + (MPBridge.total - before));
 			for (int i = 0; i < ePrimeV.getArity(); i++) {
 				ePrimeVs[i] = zMod.getElement(((ZModElement) ePrimeV.getAt(i)).getValue().mod(zMod.getOrder()));
 			}
-			
-			
-			long before = MPBridge.total;
+						
+long before = MPBridge.total;
 			pV[1] = this.gpcs.commit(Tuple.getInstance(ePrimeVs), w);
-			System.out.println("perm preimageproof gpcs.commit " + (MPBridge.total - before));
-
+System.out.println("perm preimageproof gpcs.commit " + (MPBridge.total - before));
 
 			// MPBridge.a();
 			// - g^r_i * c_i-1^e'_i                [2n]
@@ -453,27 +419,8 @@ System.out.println("perm gen f.apply " + (MPBridge.total - before));
 			//}
 			//MPBridge.b();
 
-			/*MPBridge.a();
-			MPBridge.startRecord();
+			// loop split into two
 			// - g^r_i * c_i-1^e'_i                [2n]
-			Element[] temp = new Element[this.size];
-			for (int i = 0; i < this.size; i++) {
-				Element c_i_1 = i == 0 ? this.h : this.cV.getAt(i - 1);
-				temp[i] = c_i_1.selfApply(ePrimeV.getAt(i));
-			}
-			mpservice.ModPow[] requests = MPBridge.stopRecord();
-			MPBridge.b();
-			if(requests.length > 0) {
-				java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-				MPBridge.startReplay(answers);
-				for (int i = 0; i < this.size; i++) {
-					Element c_i_1 = i == 0 ? this.h : this.cV.getAt(i - 1);
-					temp[i] = c_i_1.selfApply(ePrimeV.getAt(i));
-				}	
-				MPBridge.stopReplay();
-			}
-			MPBridge.reset();*/
-
 			final Element[] temp = new Element[this.size];
 			MPBridge.ex(() -> {
 				for (int i = 0; i < this.size; i++) {
@@ -482,25 +429,6 @@ System.out.println("perm gen f.apply " + (MPBridge.total - before));
 				}
 				return temp;
 			}, "2");
-			
-
-			/*MPBridge.a();
-			MPBridge.startRecord();
-			for (int i = 0; i < this.size; i++) {
-				pV[i + 2] = g.selfApply(rV.getAt(i)).apply(temp[i]);
-			}
-			requests = MPBridge.stopRecord();
-			MPBridge.b();
-			if(requests.length > 0) {
-				java.math.BigInteger[] answers = mpservice.MPService.compute(requests);
-				MPBridge.startReplay(answers);
-				for (int i = 0; i < this.size; i++) {
-					pV[i + 2] = g.selfApply(rV.getAt(i)).apply(temp[i]);
-				}	
-				MPBridge.stopReplay();
-			}
-			MPBridge.reset();
-			*/
 
 			MPBridge.ex(() -> {
 				for (int i = 0; i < this.size; i++) {
@@ -508,7 +436,6 @@ System.out.println("perm gen f.apply " + (MPBridge.total - before));
 				}
 				return pV;
 			}, "2");
-
 
 			// - Com(0, d)                          [1]
 			pV[this.size + 2] = this.gpcs.getRandomizationGenerator().selfApply(d);
