@@ -452,7 +452,7 @@ MPBridge.total = 0;
   val mixingEnd = System.currentTimeMillis()
 
   // leaving this part out as we want to benchmark only mixing
-  /*
+
   // start the partial decryptions
   // if we tried to do this before the mixing was completed, the compiler would protest
   val startDecryptions = Election.startDecryptions(stopMix)
@@ -469,7 +469,6 @@ MPBridge.total = 0;
   println(s"Plaintexts $plaintexts")
   println(s"Decrypted ${electionDone.state.decrypted}")
   println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
-  */
 
   val mixTime = (mixingEnd - mixingStart) / 1000.0
   val totalTime = (System.currentTimeMillis() - mixingStart) / 1000.0
