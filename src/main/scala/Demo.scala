@@ -137,7 +137,7 @@ object ElectionTest extends App {
 
   // we are only timing the mixing phase
   val mixingStart = System.currentTimeMillis()
-  MPBridge.total = 0;  
+  MPBridge.total = 0;
   // wait for keystroke, this allows us to attach a profiler at the right time
   // println("Hit return to start")
   // Console.in.read()
@@ -156,15 +156,15 @@ object ElectionTest extends App {
   // each mixing trustee extracts the needed information from the election
   // and performs the shuffle and proofs
   val shuffle1 = m2.shuffleVotes(startMix, predata1, proof1)
-  
-  val mixing = shuffle1.map { shuffle =>  
+
+  val mixing = shuffle1.map { shuffle =>
     // the proof is verified and the shuffle is then added to the election, advancing its state
     Election.addMix(startMix, shuffle, m1.id)
   }.flatMap { mixOne =>
-    
+
     // each mixing trustee extracts the needed information from the election
     // and performs the shuffle and proofs
-    m2.shuffleVotes(mixOne, predata2, proof2).map { shuffle => 
+    m2.shuffleVotes(mixOne, predata2, proof2).map { shuffle =>
       // the proof is verified and the shuffle is then added to the election, advancing its state
       Election.addMix(mixOne, shuffle, m2.id)
     }
@@ -176,7 +176,7 @@ object ElectionTest extends App {
     val stopMix = Election.stopMixing(mixTwo)
 
     val mixingEnd = System.currentTimeMillis()
-    
+
     // start the partial decryptions
     // if we tried to do this before the mixing was completed, the compiler would protest
     val startDecryptions = Election.startDecryptions(stopMix)
@@ -191,8 +191,8 @@ object ElectionTest extends App {
       pd1 <- pd1Future
       pd2 <- pd2Future
     } yield(pd1, pd2)
-    
-    decryptions.map { case (pd1, pd2) => 
+
+    decryptions.map { case (pd1, pd2) =>
       val partialOne = Election.addDecryption(startDecryptions, pd1, k1.id)
       val partialTwo = Election.addDecryption(partialOne, pd2, k2.id)
 
@@ -314,10 +314,10 @@ object Issue3 extends App {
   val keyPair = elGamal.getKeyPairGenerator().generateKeyPair()
   val privateKey = keyPair.getFirst()
   val publicKey = keyPair.getSecond()
- 
+
   // eventually 0 will be used in Z_q
   val votes = Util.encryptVotes(List(0, 1, 2), Csettings, publicKey)
-  votes.foreach { v => 
+  votes.foreach { v =>
     val first = v.getFirst
     println(first)
     println(v.getFirst.isGenerator)
@@ -327,7 +327,7 @@ object Issue3 extends App {
 }
 
 object DecryptionTest extends App {
-  
+
   val group = GStarModSafePrime.getFirstInstance(2048)
   val generator = group.getDefaultGenerator()
   val cSettings = CryptoSettings(group, generator)
@@ -422,7 +422,7 @@ object ElectionTestSerial extends App {
 
   // we are only timing the mixing phase
   val mixingStart = System.currentTimeMillis()
-MPBridge.total = 0;  
+MPBridge.total = 0;
   // wait for keystroke, this allows us to attach a profiler at the right time
   // println("Hit return to start")
   // Console.in.read()
@@ -437,11 +437,11 @@ MPBridge.total = 0;
   // and performs the shuffle and proofs
   val shuffle1 = m1.shuffleVotes(startMix)
 
-  
+
   // the proof is verified and the shuffle is then added to the election, advancing its state
   val mixOne = Election.addMix(startMix, shuffle1, m1.id)
 
-  
+
   // again for the second trustee..
   val shuffle2 = m2.shuffleVotes(mixOne)
   val mixTwo = Election.addMix(mixOne, shuffle2, m2.id)
@@ -472,11 +472,13 @@ MPBridge.total = 0;
   */
 
   val mixTime = (mixingEnd - mixingStart) / 1000.0
+  val totalTime = (System.currentTimeMillis() - mixingStart) / 1000.0
 
   println("*************************************************************")
   println(s"finished run with votes = $totalVotes")
   println(s"mixTime: $mixTime")
-  println(s"sec / vote: ${mixTime / totalVotes}")
+  println(s"sec / vote (mix): ${mixTime / totalVotes}")
+  println(s"sec / vote: ${totalTime / totalVotes}")
   println(s"total modExps: ${MPBridge.total}")
   println(s"found modExps: ${MPBridge.found}")
   println(s"found modExps %: ${MPBridge.found/MPBridge.total.toDouble}")
@@ -505,32 +507,32 @@ object GeneratorTest extends App {
   val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
   val group = GStarModSafePrime.getFirstInstance(2048)
   val converter = ByteArrayToBigInteger.getInstance(seedLength)
-  val d = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
+  val d = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(),
     converter.reconvert(java.math.BigInteger.valueOf(24)))
   val sequence = group.getIndependentGenerators(d).limit(1)
-  //val d2 = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
+  //val d2 = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(),
   //  converter.reconvert(java.math.BigInteger.valueOf()))
   // val sequence2 = group.getIndependentGenerators(d2).limit(3)
 
   println(sequence)
   // println(sequence2)
 
-  
+
   /* val a = Array.fill(total % split)((total / split) + 1)
   val b = Array.fill(split - (total % split))(total / split)
   val c = a ++ b
-  
+
   val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
   val group = GStarModSafePrime.getFirstInstance(2048)
   val converter = ByteArrayToBigInteger.getInstance(seedLength)
-  
-  val rds = c.zipWithIndex.map{ case (i, x) => 
-    val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), 
+
+  val rds = c.zipWithIndex.map{ case (i, x) =>
+    val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(),
     converter.reconvert(java.math.BigInteger.valueOf(x * 1000000)))
     (r, i)
   }
   rds.foreach(println)
-  
+
   val now1 = System.currentTimeMillis
   val items = rds.par.flatMap { case (d, i) =>
     val sequence = group.getIndependentGenerators(d).limit(i)
