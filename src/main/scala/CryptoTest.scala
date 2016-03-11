@@ -67,7 +67,7 @@ object CryptoTest extends App {
     println(s"partial decrypts one ****\n$elementsOne")
     println(s"partial decrypts two ****\n $elementsTwo")
     // a^-x = a^-x1 * a^-x2 ...
-    val combined = (elementsOne.partialDecryptions.map(Csettings.group.getElementFrom(_)) 
+    val combined = (elementsOne.partialDecryptions.map(Csettings.group.getElementFrom(_))
       zip elementsTwo.partialDecryptions.map(Csettings.group.getElementFrom(_))).map(c => c._1.apply(c._2))
     println(s"a^-x ****\n$combined")
     // a^-x * b = m

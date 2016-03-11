@@ -18,7 +18,6 @@ import ch.bfh.unicrypt.math.algebra.general.classes.ProductSet
 import mpservice.MPBridgeS
 import mpservice.MPBridge
 
-
 import scala.collection.JavaConversions._
 
 
@@ -56,6 +55,7 @@ object Election {
   // create an election
   def create[W <: Nat](id: String, bits: Int) = {
     println("Going to start a new Election!")
+
     val group = GStarModSafePrime.getFirstInstance(bits)
     val generator = group.getDefaultGenerator()
     val cSettings = CryptoSettings(group, generator)
@@ -103,7 +103,7 @@ object Election {
   // votes are cast here
   def addVote[W <: Nat](in: Election[W, Votes], vote: String) = {
     print("+")
-    
+
     // removed for testing faster
     /*
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
@@ -117,7 +117,7 @@ object Election {
   // votes are cast here
   def addVotes[W <: Nat](in: Election[W, Votes], votes: List[String]) = {
     print("+")
-    
+
     // removed for testing faster
     /*
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
@@ -146,11 +146,11 @@ object Election {
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
     val keyPairGen = elGamal.getKeyPairGenerator()
     val publicKey = keyPairGen.getPublicKeySpace().getElementFrom(in.state.publicKey)
-    
+
     println("Convert votes...")
-    
+
     val now = System.currentTimeMillis
-    
+
     // will be slightly faster but will not scale over the cluster
     /*
     MPBridge.a()
@@ -168,7 +168,7 @@ object Election {
       case _ => in.state.mixes.toList.last.votes.par.map( v => Util.getE(elGamal.getEncryptionSpace, v) ).seq
     }
     println(s"* vote conversion: [${System.currentTimeMillis - now} ms]")
-    
+
     /*val (shuffled, votes) = MPBridgeS.ex({
       val shuffled = mix.votes.map( v => elGamal.getEncryptionSpace.getElementFromString(v) ).seq
       val votes = in.state match {
@@ -179,9 +179,11 @@ object Election {
     }, "1")*/
 
     println(s"Verifying shuffle..")
+
     val ok = Verifier.verifyShuffle(Util.tupleFromSeq(votes), Util.tupleFromSeq(shuffled),
       mix.shuffleProof, proverId, publicKey, in.state.cSettings)
     if(!ok) throw new Exception()
+
     println(s"Verifying shuffle..Ok")
 
     new Election[W, Mixing[Succ[T]]](Mixing[Succ[T]](in.state.mixes :+ mix, in.state))
@@ -218,10 +220,11 @@ object Election {
   // combine partial decryptions, can only happen if we have all of them
   def combineDecryptions[W <: Nat](in: Election[W, Decryptions[W]]) = {
     println("Combining decryptions...")
-    
+
     // first convert partial decryptions (a^xi) to elements
     // this yields n lists of decryptions, where n = number of trustees, and there's one decryption per vote
     val decryptionElements = in.state.decryptions.map(
+      // FIXME use Util.getE
       ds => ds.partialDecryptions.par.map(in.state.cSettings.group.getElementFromString(_)).seq
     )
     // combine the list of decryptions:

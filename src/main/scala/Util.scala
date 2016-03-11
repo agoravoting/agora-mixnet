@@ -17,15 +17,10 @@ object Util {
   val generatorsParallel = ConfigFactory.load().getBoolean("use-generators-parallel")
 
   def tupleFromSeq(items: Seq[Element[_]]) = {
-    // var tuple = Tuple.getInstance()
-    // items.foreach(v => tuple = tuple.add(v))
-
-    // tuple
     Tuple.getInstance(items:_*)
   }
 
   def seqFromTuple(tuple: Tuple): Seq[Element[_]] = {
-
     tuple.par.map{ x => x }.seq.toSeq
   }
 
