@@ -57,7 +57,7 @@ public class MPBridge {
 	public static void l() {
 		StackTraceElement[] traces = Thread.currentThread().getStackTrace();
 		StackTraceElement caller = traces[2];
-		System.err.println("* " + caller.getFileName() + ":" + caller.getLineNumber() + "..");	
+		System.err.println("* " + caller.getFileName() + ":" + caller.getLineNumber() + "..");
 	}
 
 	public static void a() {
@@ -72,7 +72,7 @@ public class MPBridge {
 		StackTraceElement caller = traces[trace];
 		found += diff;
 		long diffTime = System.currentTimeMillis() - i.beforeTime;
-		System.err.println(">>> " + caller.getFileName() + ":" + caller.getLineNumber() + " [" + diffTime + " ms] [" + diff + "]" + " (" + found + ", " + total + ") (" + extracted + ")");	
+		System.err.println(">>> " + caller.getFileName() + ":" + caller.getLineNumber() + " [" + diffTime + " ms] [" + diff + "]" + " (" + found + ", " + total + ") (" + extracted + ")");
 	}
 
 	public static void b() {
@@ -89,7 +89,7 @@ public class MPBridge {
 		long diffFound = found - i().foundZ;
 		StackTraceElement[] traces = Thread.currentThread().getStackTrace();
 		StackTraceElement caller = traces[2];
-		System.err.println("> " + caller.getFileName() + ":" + caller.getLineNumber() + " [" + diff + "]" + " (" + found + ", " + diffFound + ", " + total + ") (" + extracted + ")");		
+		System.err.println("> " + caller.getFileName() + ":" + caller.getLineNumber() + " [" + diff + "]" + " (" + found + ", " + diffFound + ", " + total + ") (" + extracted + ")");
 	}
 
 	public static void startRecord() {
@@ -149,7 +149,7 @@ public class MPBridge {
 	}
 
 	public static void startReplay(BigInteger[] answers_) {
-		if(answers_.length != i().requests.size()) throw new IllegalArgumentException();	
+		if(answers_.length != i().requests.size()) throw new IllegalArgumentException(answers_.length + "!=" + i().requests.size());
 		i().answers = new LinkedList<BigInteger>(Arrays.asList(answers_));
 
 		i().replaying = true;
@@ -215,7 +215,7 @@ public class MPBridge {
                 return Gmp.modPowInsecure(base, pow, mod);
             }
             else {
-                return base.modPow(pow, mod);    
+                return base.modPow(pow, mod);
             }
         }
     }

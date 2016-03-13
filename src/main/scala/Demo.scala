@@ -476,6 +476,7 @@ MPBridge.total = 0;
   println("*************************************************************")
   println(s"finished run with votes = $totalVotes")
   println(s"mixTime: $mixTime")
+  println(s"totalTime: $totalTime")
   println(s"sec / vote (mix): ${mixTime / totalVotes}")
   println(s"sec / vote: ${totalTime / totalVotes}")
   println(s"total modExps: ${MPBridge.total}")

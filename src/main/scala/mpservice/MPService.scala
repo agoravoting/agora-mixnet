@@ -47,7 +47,7 @@ object GmpParallelModPowService extends ModPowService {
     work.par.map(x => Gmp.modPowInsecure(x.base, x.pow, x.mod)).seq.toArray
   }
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = {
-    work.par.map(x => Gmp.modPowInsecure(x.base, x.pow, mod)).seq.toArray 
+    work.par.map(x => Gmp.modPowInsecure(x.base, x.pow, mod)).seq.toArray
   }
 }
 object ParallelModPowService extends ModPowService {
@@ -95,7 +95,7 @@ object AkkaModPowService extends ModPowService {
 }
 
 class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDelay: Int, val useGmp: Boolean) extends Actor with ActorLogging {
-  
+
   val workerRouter = context.actorOf(WorkerActor.props(useGmp).withRouter(FromConfig()), name = "workerRouter")
 
   // actor state
@@ -110,7 +110,7 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
   }
 
   def receive: Receive = {
-    
+
     case ModPowArray(modpows) => {
       requestId = requestId + 1
       val size = math.min(math.max(modpows.length / minChunks, 1), maxChunkSize)
@@ -119,7 +119,7 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
       println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
       chunks.indices.foreach { i =>
         val work = Work(requestId, i, chunks(i))
-        
+
         Thread sleep sendDelay
         workerRouter ! work
       }
@@ -133,12 +133,12 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
       println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
       chunks.indices.foreach { i =>
         val work = Work2(requestId, i, chunks(i), mod)
-        
+
         Thread sleep sendDelay
         workerRouter ! work
       }
     }
-    
+
     case w: WorkReply => {
       val requestData = requests.get(w.requestId).get
       requestData.results += w
@@ -229,7 +229,7 @@ object TestApp {
       now = System.currentTimeMillis
       val answerTwo = input.map(m => m.base.modPow(m.pow, m.mod))
       elapsed = (System.currentTimeMillis - now) / 1000.0
-      println(s"elapsed ${total / elapsed}")      
+      println(s"elapsed ${total / elapsed}")
 
 
       println(answerOne.deep == answerTwo.deep)
@@ -242,7 +242,7 @@ object TestApp {
   }
 
   def rndBigInt = {
-    BigInt(1024, new scala.util.Random)  
+    BigInt(1024, new scala.util.Random)
   }
 }
 
@@ -292,18 +292,18 @@ object MPBridgeS {
 
   // FIXME move to Util
   def getIndependentGenerators[E <: Element[_]](group: AbstractCyclicGroup[E, _], skip: Int, size: Int): java.util.List[E] = {
-    
+
     val split = generatorParallelism
     val total = size + skip
 
     val a = Array.fill(total % split)((total / split) + 1)
     val b = Array.fill(split - (total % split))(total / split)
     val c = a ++ b
-  
+
     val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
     val converter = ByteArrayToBigInteger.getInstance(seedLength)
-  
-    val rds = c.zipWithIndex.map{ case (value, index) => 
+
+    val rds = c.zipWithIndex.map{ case (value, index) =>
       // 10000: we want to leave ample room for generators not to overlap
       val seed = java.math.BigInteger.valueOf(index * (total / split) * 10000).mod(MathUtil.powerOfTwo(CTR_DRBG.getFactory().getSeedByteLength()))
       // println("*** index " + index + " seed " + seed + " value " + value)
@@ -311,13 +311,13 @@ object MPBridgeS {
       (r, value)
     }
     // rds.foreach(println)
-    
+
     val items = rds.par.flatMap { case (d, i) =>
       val sequence = group.getIndependentGenerators(d).limit(i)
       sequence.toList
     }
     println("getIndependentGenerators " + total + " " + items.size)
-    
+
     // DenseArray.getInstance(items.drop(skip).toList.toArray)
     items.drop(skip).toList
   }
