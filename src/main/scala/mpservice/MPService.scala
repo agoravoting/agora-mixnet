@@ -56,9 +56,10 @@ object ParallelModPowService extends ModPowService {
 }
 
 class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends ModPowService {
-  val inbox = Inbox.create(system)
 
   def compute(work: Array[ModPow]): Array[BigInteger] = {
+    val inbox = Inbox.create(system)
+
     val before = System.currentTimeMillis
     inbox.send(modPowService, ModPowArray(work))
     Try(inbox.receive(1000.seconds)) match {
@@ -68,6 +69,8 @@ class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends Mo
     }
   }
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = {
+    val inbox = Inbox.create(system)
+
     val before = System.currentTimeMillis
     inbox.send(modPowService, ModPowArray2(work, mod))
     Try(inbox.receive(1000.seconds)) match {
