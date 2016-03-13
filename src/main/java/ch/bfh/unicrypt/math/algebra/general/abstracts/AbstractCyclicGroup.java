@@ -105,7 +105,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 	// drb
 	public final DenseArray<Element<V>> getIndependentGeneratorsP(int skip, int size) {
 		System.out.println("AbstractCyclicGroup: getIndependentGeneratorsP");
-		
+
 		DenseArray<Element<V>> ret = null;
 		if(generatorsParallel) {
 			java.util.List<E> list = mpservice.MPBridgeS.getIndependentGenerators(this, skip, size);
@@ -115,7 +115,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 		else {
 			ret = DenseArray.getInstance(getIndependentGenerators().skip(skip).limit(size));
 		}
- 
+
 		return ret;
 	}
 
@@ -151,20 +151,20 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 			for(int j = 0; j < array.length; j++) {
 				if(array[j].isGenerator()) {
 					array2[j] = array[j];
-				}	
+				}
 				// FIXME
 				else {
 					throw new RuntimeException();
 				}
 			}
-			return 0;	
+			return 0;
 		}, "2");*/
 		MPBridge.a();
 		Element<V>[] array2 = new Element[size];
 		for(i = 0; i < array.length; i++) {
 			if(array[i].isGenerator()) {
 				array2[i] = array[i];
-			}	
+			}
 			// FIXME
 			else {
 				throw new RuntimeException();
@@ -212,7 +212,10 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 
 			@Override
 			public boolean test(E value) {
-				return isGenerator(value);
+				boolean ret = isGenerator(value);
+if(!ret) System.out.println("++++++++++++++++++++++ Not a generator " + value);
+
+				return ret;
 			}
 
 		});
