@@ -6,3 +6,4 @@ pdfs/
 .cache-main
 .classpath
 .settings/
+/bin/

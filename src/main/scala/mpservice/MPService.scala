@@ -11,24 +11,32 @@ import scala.util.Try
 import scala.util.Success
 import com.squareup.jnagmp.Gmp
 
-// public api
+/******************** PUBLIC API ********************/
+
+/**
+ * Represents a modular exponentiation operation
+ */
 case class ModPow(base: BigInteger, pow: BigInteger, mod: BigInteger)
+
+/**
+ * Represents a modular exponentiation operation with common modulus (see below)
+ */
 case class ModPow2(base: BigInteger, pow: BigInteger)
+
+/**
+ * The mpservice public api
+ */
 trait ModPowService {
+  // compute modular exponentiation for a list of inputs
   def compute(work: Array[ModPow]): Array[BigInteger]
+  // compute modular exponentiation for a list of inputs with common modulus
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger]
 }
 
-// implementation
-case class Work(requestId: Int, workId: Int, work: Array[ModPow])
-case class Work2(requestId: Int, workId: Int, work: Array[ModPow2], mod: BigInteger)
-case class WorkReply(requestId: Int, workId: Int, result: Array[BigInteger])
-case class ModPowArray(modpows: Array[ModPow])
-case class ModPowArray2(modpows: Array[ModPow2], mod: BigInteger)
-case class ModPowArrayResult(result: Array[BigInteger])
-case class RequestData(client: ActorRef, length: Int, results: mutable.ArrayBuffer[WorkReply], sent: Long = System.currentTimeMillis)
+/******************** IMPLEMENTATION ********************/
 
 object MPService extends ModPowService {
+  // FIXME should be configurable
   val service = AkkaModPowService
 
   def compute(work: Array[ModPow]): Array[BigInteger] = service.compute(work)
@@ -36,6 +44,81 @@ object MPService extends ModPowService {
   def shutdown = service.shutdown
   def init = {}
   override def toString = service.getClass.toString
+}
+
+object MPBridgeS {
+  // FIXME move to Util
+  val generatorParallelism = ConfigFactory.load().getInt("generators-parallelism-level")
+
+  def ex[T](f: => T, v: String) = {
+    MPBridge.a()
+    MPBridge.startRecord(v)
+    val now = System.currentTimeMillis
+    var ret = f
+    val r = System.currentTimeMillis - now
+    println(s"R: [$r ms]")
+    val requests = MPBridge.stopRecord()
+    MPBridge.b(3)
+    if(requests.length > 0) {
+        val now2 = System.currentTimeMillis
+        val answers = MPService.compute(requests, MPBridge.getModulus);
+        val c = System.currentTimeMillis - now2
+        MPBridge.startReplay(answers)
+        ret = f
+        val t = System.currentTimeMillis - now
+        println(s"\nC: [$c ms] T: [$t ms] R+C: [${r+c} ms]")
+        MPBridge.stopReplay()
+    }
+    MPBridge.reset()
+
+    ret
+  }
+
+  def init(useGmp: Boolean, useExtractor: Boolean) = MPBridge.init(useGmp, useExtractor)
+  def shutdown = MPBridge.shutdown
+
+  import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractCyclicGroup
+  import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence
+  import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG
+  import scala.collection.JavaConversions._
+  import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
+  import ch.bfh.unicrypt.helper.math.MathUtil
+  import ch.bfh.unicrypt.helper.array.classes.DenseArray
+  import ch.bfh.unicrypt.helper.sequence.Sequence
+  import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
+  import scala.collection.JavaConversions._
+
+  // FIXME move to Util
+  def getIndependentGenerators[E <: Element[_]](group: AbstractCyclicGroup[E, _], skip: Int, size: Int): java.util.List[E] = {
+
+    val split = generatorParallelism
+    val total = size + skip
+
+    val a = Array.fill(total % split)((total / split) + 1)
+    val b = Array.fill(split - (total % split))(total / split)
+    val c = a ++ b
+
+    val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
+    val converter = ByteArrayToBigInteger.getInstance(seedLength)
+
+    val rds = c.zipWithIndex.map{ case (value, index) =>
+      // 10000: we want to leave ample room for generators not to overlap
+      val seed = java.math.BigInteger.valueOf(index * (total / split) * 10000).mod(MathUtil.powerOfTwo(CTR_DRBG.getFactory().getSeedByteLength()))
+      // println("*** index " + index + " seed " + seed + " value " + value)
+      val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), converter.reconvert(seed))
+      (r, value)
+    }
+    // rds.foreach(println)
+
+    val items = rds.par.flatMap { case (d, i) =>
+      val sequence = group.getIndependentGenerators(d).limit(i)
+      sequence.toList
+    }
+    println("getIndependentGenerators " + total + " " + items.size)
+
+    // DenseArray.getInstance(items.drop(skip).toList.toArray)
+    items.drop(skip).toList
+  }
 }
 
 object SequentialModPowService extends ModPowService {
@@ -54,6 +137,16 @@ object ParallelModPowService extends ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger] = work.par.map(x => x.base.modPow(x.pow, x.mod)).seq.toArray
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = work.par.map(x => x.base.modPow(x.pow, mod)).seq.toArray
 }
+
+/******************** AKKA ********************/
+
+// messaging classes
+case class Work(requestId: Int, workId: Int, work: Array[ModPow])
+case class Work2(requestId: Int, workId: Int, work: Array[ModPow2], mod: BigInteger)
+case class WorkReply(requestId: Int, workId: Int, result: Array[BigInteger])
+case class ModPowArray(modpows: Array[ModPow])
+case class ModPowArray2(modpows: Array[ModPow2], mod: BigInteger)
+case class ModPowArrayResult(result: Array[BigInteger])
 
 class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends ModPowService {
 
@@ -98,6 +191,7 @@ object AkkaModPowService extends ModPowService {
 }
 
 class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDelay: Int, val useGmp: Boolean) extends Actor with ActorLogging {
+  case class RequestData(client: ActorRef, length: Int, results: mutable.ArrayBuffer[WorkReply], sent: Long = System.currentTimeMillis)
 
   val workerRouter = context.actorOf(WorkerActor.props(useGmp).withRouter(FromConfig()), name = "workerRouter")
 
@@ -193,6 +287,8 @@ object ModPowServiceActor {
   def props(minChunks: Int, maxChunkSize: Int, sendDelay: Int, useGmp: Boolean): Props = Props(new ModPowServiceActor(minChunks, maxChunkSize, sendDelay, useGmp))
 }
 
+/******************** LAUNCHER ********************/
+
 object WorkerApp {
 
   def main(args: Array[String]): Unit = {
@@ -246,82 +342,5 @@ object TestApp {
 
   def rndBigInt = {
     BigInt(1024, new scala.util.Random)
-  }
-}
-
-import ch.bfh.unicrypt.helper.sequence.Sequence
-import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
-import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
-
-object MPBridgeS {
-  // move to Util
-  val generatorParallelism = ConfigFactory.load().getInt("generators-parallelism-level")
-
-  def ex[T](f: => T, v: String) = {
-    MPBridge.a()
-    MPBridge.startRecord(v)
-    val now = System.currentTimeMillis
-    var ret = f
-    val r = System.currentTimeMillis - now
-    println(s"R: [$r ms]")
-    val requests = MPBridge.stopRecord()
-    MPBridge.b(3)
-    if(requests.length > 0) {
-        val now2 = System.currentTimeMillis
-        val answers = MPService.compute(requests, MPBridge.getModulus);
-        val c = System.currentTimeMillis - now2
-        MPBridge.startReplay(answers)
-        ret = f
-        val t = System.currentTimeMillis - now
-        println(s"\nC: [$c ms] T: [$t ms] R+C: [${r+c} ms]")
-        MPBridge.stopReplay()
-    }
-    MPBridge.reset()
-
-    ret
-  }
-
-  def init(useGmp: Boolean, useExtractor: Boolean) = MPBridge.init(useGmp, useExtractor)
-  def shutdown = MPBridge.shutdown
-
-  import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractCyclicGroup
-  import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence
-  import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG
-  import scala.collection.JavaConversions._
-  import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
-  import ch.bfh.unicrypt.helper.math.MathUtil
-  import ch.bfh.unicrypt.helper.array.classes.DenseArray
-
-  // FIXME move to Util
-  def getIndependentGenerators[E <: Element[_]](group: AbstractCyclicGroup[E, _], skip: Int, size: Int): java.util.List[E] = {
-
-    val split = generatorParallelism
-    val total = size + skip
-
-    val a = Array.fill(total % split)((total / split) + 1)
-    val b = Array.fill(split - (total % split))(total / split)
-    val c = a ++ b
-
-    val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
-    val converter = ByteArrayToBigInteger.getInstance(seedLength)
-
-    val rds = c.zipWithIndex.map{ case (value, index) =>
-      // 10000: we want to leave ample room for generators not to overlap
-      val seed = java.math.BigInteger.valueOf(index * (total / split) * 10000).mod(MathUtil.powerOfTwo(CTR_DRBG.getFactory().getSeedByteLength()))
-      // println("*** index " + index + " seed " + seed + " value " + value)
-      val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), converter.reconvert(seed))
-      (r, value)
-    }
-    // rds.foreach(println)
-
-    val items = rds.par.flatMap { case (d, i) =>
-      val sequence = group.getIndependentGenerators(d).limit(i)
-      sequence.toList
-    }
-    println("getIndependentGenerators " + total + " " + items.size)
-
-    // DenseArray.getInstance(items.drop(skip).toList.toArray)
-    items.drop(skip).toList
   }
 }

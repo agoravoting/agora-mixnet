@@ -321,7 +321,7 @@ object ElectionTestSerial extends App {
   val m1 = new MixerTrustee("mixer one")
   val m2 = new MixerTrustee("mixer two")
 
-  // create the election,
+  // create the election
   // we are using privacy level 2, two trustees of each kind
   // we are 2048 bits for the size of the group modulus
   val start = Election.create[_2]("my election", 2048)
@@ -359,7 +359,7 @@ object ElectionTestSerial extends App {
 
   // we are only timing the mixing phase
   val mixingStart = System.currentTimeMillis()
-MPBridge.total = 0;
+  MPBridge.total = 0;
   // wait for keystroke, this allows us to attach a profiler at the right time
   // println("Hit return to start")
   // Console.in.read()
@@ -531,38 +531,36 @@ object GeneratorTest extends App {
 
 object Issue4 extends App with ProofSettings {
   import ch.bfh.unicrypt.crypto.keygenerator.interfaces.KeyPairGenerator
-import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.classes.FiatShamirSigmaChallengeGenerator
-import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.interfaces.ChallengeGenerator
-import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.interfaces.SigmaChallengeGenerator
-import ch.bfh.unicrypt.crypto.proofsystem.classes.EqualityPreimageProofSystem
-import ch.bfh.unicrypt.crypto.proofsystem.classes.PermutationCommitmentProofSystem
-import ch.bfh.unicrypt.crypto.proofsystem.classes.PlainPreimageProofSystem
-import ch.bfh.unicrypt.crypto.proofsystem.classes.ReEncryptionShuffleProofSystem
-import ch.bfh.unicrypt.crypto.schemes.commitment.classes.PermutationCommitmentScheme
-import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
-import ch.bfh.unicrypt.helper.converter.classes.ConvertMethod
-import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
-import ch.bfh.unicrypt.helper.converter.classes.bytearray.BigIntegerToByteArray
-import ch.bfh.unicrypt.helper.converter.classes.bytearray.StringToByteArray
-import ch.bfh.unicrypt.helper.hash.HashAlgorithm
-import ch.bfh.unicrypt.helper.hash.HashMethod
-import ch.bfh.unicrypt.helper.math.Alphabet
-import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringElement
-import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringMonoid
-import ch.bfh.unicrypt.math.algebra.general.classes.Pair
-import ch.bfh.unicrypt.math.algebra.general.classes.Triple
-import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
-import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
-import ch.bfh.unicrypt.math.function.classes.CompositeFunction
-import ch.bfh.unicrypt.math.function.classes.GeneratorFunction
-import ch.bfh.unicrypt.math.function.classes.InvertFunction
-import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
-import ch.bfh.unicrypt.math.function.classes.ProductFunction
-import ch.bfh.unicrypt.math.function.interfaces.Function
-import mpservice.MPBridgeS
-import mpservice.MPBridge
-
-
+  import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.classes.FiatShamirSigmaChallengeGenerator
+  import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.interfaces.ChallengeGenerator
+  import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.interfaces.SigmaChallengeGenerator
+  import ch.bfh.unicrypt.crypto.proofsystem.classes.EqualityPreimageProofSystem
+  import ch.bfh.unicrypt.crypto.proofsystem.classes.PermutationCommitmentProofSystem
+  import ch.bfh.unicrypt.crypto.proofsystem.classes.PlainPreimageProofSystem
+  import ch.bfh.unicrypt.crypto.proofsystem.classes.ReEncryptionShuffleProofSystem
+  import ch.bfh.unicrypt.crypto.schemes.commitment.classes.PermutationCommitmentScheme
+  import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
+  import ch.bfh.unicrypt.helper.converter.classes.ConvertMethod
+  import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
+  import ch.bfh.unicrypt.helper.converter.classes.bytearray.BigIntegerToByteArray
+  import ch.bfh.unicrypt.helper.converter.classes.bytearray.StringToByteArray
+  import ch.bfh.unicrypt.helper.hash.HashAlgorithm
+  import ch.bfh.unicrypt.helper.hash.HashMethod
+  import ch.bfh.unicrypt.helper.math.Alphabet
+  import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringElement
+  import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringMonoid
+  import ch.bfh.unicrypt.math.algebra.general.classes.Pair
+  import ch.bfh.unicrypt.math.algebra.general.classes.Triple
+  import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
+  import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
+  import ch.bfh.unicrypt.math.function.classes.CompositeFunction
+  import ch.bfh.unicrypt.math.function.classes.GeneratorFunction
+  import ch.bfh.unicrypt.math.function.classes.InvertFunction
+  import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
+  import ch.bfh.unicrypt.math.function.classes.ProductFunction
+  import ch.bfh.unicrypt.math.function.interfaces.Function
+  import mpservice.MPBridgeS
+  import mpservice.MPBridge
 
   val group = GStarModSafePrime.getFirstInstance(2048)
   val generator = group.getDefaultGenerator()
