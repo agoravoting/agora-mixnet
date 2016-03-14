@@ -148,6 +148,10 @@ object Verifier extends ProofSettings {
     val challenge1 = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
     val response1 = pcps.getResponseSpace().getElementFromString(shuffleProof.permutationProof.response)
 
+    // FIXME remove this, used to investigate serialization bug
+    val writer = new java.io.PrintWriter(new java.io.File("commitment.dat"))
+    writer.write(shuffleProof.mixProof.commitment); writer.close()
+
     val commitment2 = spg.getCommitmentSpace().getElementFromString(shuffleProof.mixProof.commitment)
     val challenge2 = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
     val response2 = spg.getResponseSpace().getElementFromString(shuffleProof.mixProof.response)

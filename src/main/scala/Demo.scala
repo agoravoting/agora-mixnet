@@ -303,69 +303,6 @@ object ElectionTest3 extends App {
   println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
 }
 
-object Issue3 extends App {
-  val grp = GStarModSafePrime.getInstance(167)
-  // val grp = GStarModSafePrime.getInstance(new BigInteger("170141183460469231731687303715884114527"))
-  // val grp = GStarModSafePrime.getFirstInstance(2048)
-  val gen = grp.getDefaultGenerator()
-  val Csettings = CryptoSettings(grp, gen)
-  val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
-
-  val keyPair = elGamal.getKeyPairGenerator().generateKeyPair()
-  val privateKey = keyPair.getFirst()
-  val publicKey = keyPair.getSecond()
-
-  // eventually 0 will be used in Z_q
-  val votes = Util.encryptVotes(List(0, 1, 2), Csettings, publicKey)
-  votes.foreach { v =>
-    val first = v.getFirst
-    println(first)
-    println(v.getFirst.isGenerator)
-    val decryption = elGamal.decrypt(privateKey, v)
-    println("decrypted " + decryption)
-  }
-}
-
-object DecryptionTest extends App {
-
-  val group = GStarModSafePrime.getFirstInstance(2048)
-  val generator = group.getDefaultGenerator()
-  val cSettings = CryptoSettings(group, generator)
-  val elGamal = ElGamalEncryptionScheme.getInstance(generator)
-
-  object d1 extends KeyMaker
-  object d2 extends KeyMaker
-
-  val (e1,pk1) = d1.createShare("d1", cSettings)
-  val (e2,pk2) = d2.createShare("d2", cSettings)
-
-  val e1k = Util.getPublicKeyFromString(e1.keyShare, cSettings.generator)
-  val e2k = Util.getPublicKeyFromString(e2.keyShare, cSettings.generator)
-
-  val publicKey = e1k.apply(e2k)
-
-  val pk1e = cSettings.group.getZModOrder().getElementFrom(pk1)
-
-  val plaintexts = Seq.fill(300)(scala.util.Random.nextInt(10))
-  // encrypt the votes with the public key of the election
-  val votes = Util.encryptVotes(plaintexts, cSettings, publicKey)
-  println("decrypting..")
-
-  MPBridge.total = 0;
-
-  MPBridge.y()
-  val decryption = d1.partialDecrypt(votes, pk1e, "d1", cSettings)
-  MPBridge.z()
-
-  MPBridge.y()
-  val share = elGamal.getMessageSpace.getElementFrom(e1.keyShare)
-
-  val ok = Verifier.verifyPartialDecryption(decryption, votes, cSettings, "d1", share)
-  MPBridge.z()
-
-  MPBridgeS.shutdown
-}
-
 object ElectionTestSerial extends App {
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
@@ -490,6 +427,46 @@ MPBridge.total = 0;
   mpservice.MPService.shutdown
 }
 
+object DecryptionTest extends App {
+
+  val group = GStarModSafePrime.getFirstInstance(2048)
+  val generator = group.getDefaultGenerator()
+  val cSettings = CryptoSettings(group, generator)
+  val elGamal = ElGamalEncryptionScheme.getInstance(generator)
+
+  object d1 extends KeyMaker
+  object d2 extends KeyMaker
+
+  val (e1,pk1) = d1.createShare("d1", cSettings)
+  val (e2,pk2) = d2.createShare("d2", cSettings)
+
+  val e1k = Util.getPublicKeyFromString(e1.keyShare, cSettings.generator)
+  val e2k = Util.getPublicKeyFromString(e2.keyShare, cSettings.generator)
+
+  val publicKey = e1k.apply(e2k)
+
+  val pk1e = cSettings.group.getZModOrder().getElementFrom(pk1)
+
+  val plaintexts = Seq.fill(300)(scala.util.Random.nextInt(10))
+  // encrypt the votes with the public key of the election
+  val votes = Util.encryptVotes(plaintexts, cSettings, publicKey)
+  println("decrypting..")
+
+  MPBridge.total = 0;
+
+  MPBridge.y()
+  val decryption = d1.partialDecrypt(votes, pk1e, "d1", cSettings)
+  MPBridge.z()
+
+  MPBridge.y()
+  val share = elGamal.getMessageSpace.getElementFrom(e1.keyShare)
+
+  val ok = Verifier.verifyPartialDecryption(decryption, votes, cSettings, "d1", share)
+  MPBridge.z()
+
+  MPBridgeS.shutdown
+}
+
 object GeneratorTest extends App {
   import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence
   import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG
@@ -550,4 +527,84 @@ object GeneratorTest extends App {
   }
   println(items2.size)
   println(s"${System.currentTimeMillis - now}")*/
+}
+
+object Issue4 extends App with ProofSettings {
+  import ch.bfh.unicrypt.crypto.keygenerator.interfaces.KeyPairGenerator
+import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.classes.FiatShamirSigmaChallengeGenerator
+import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.interfaces.ChallengeGenerator
+import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.interfaces.SigmaChallengeGenerator
+import ch.bfh.unicrypt.crypto.proofsystem.classes.EqualityPreimageProofSystem
+import ch.bfh.unicrypt.crypto.proofsystem.classes.PermutationCommitmentProofSystem
+import ch.bfh.unicrypt.crypto.proofsystem.classes.PlainPreimageProofSystem
+import ch.bfh.unicrypt.crypto.proofsystem.classes.ReEncryptionShuffleProofSystem
+import ch.bfh.unicrypt.crypto.schemes.commitment.classes.PermutationCommitmentScheme
+import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
+import ch.bfh.unicrypt.helper.converter.classes.ConvertMethod
+import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
+import ch.bfh.unicrypt.helper.converter.classes.bytearray.BigIntegerToByteArray
+import ch.bfh.unicrypt.helper.converter.classes.bytearray.StringToByteArray
+import ch.bfh.unicrypt.helper.hash.HashAlgorithm
+import ch.bfh.unicrypt.helper.hash.HashMethod
+import ch.bfh.unicrypt.helper.math.Alphabet
+import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringElement
+import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringMonoid
+import ch.bfh.unicrypt.math.algebra.general.classes.Pair
+import ch.bfh.unicrypt.math.algebra.general.classes.Triple
+import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
+import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
+import ch.bfh.unicrypt.math.function.classes.CompositeFunction
+import ch.bfh.unicrypt.math.function.classes.GeneratorFunction
+import ch.bfh.unicrypt.math.function.classes.InvertFunction
+import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
+import ch.bfh.unicrypt.math.function.classes.ProductFunction
+import ch.bfh.unicrypt.math.function.interfaces.Function
+import mpservice.MPBridgeS
+import mpservice.MPBridge
+
+
+
+  val group = GStarModSafePrime.getFirstInstance(2048)
+  val generator = group.getDefaultGenerator()
+  val cSettings = CryptoSettings(group, generator)
+  val elGamal = ElGamalEncryptionScheme.getInstance(generator)
+
+  val keyPair = elGamal.getKeyPairGenerator().generateKeyPair()
+  val privateKey = keyPair.getFirst()
+  val publicKey = keyPair.getSecond()
+
+  val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement("asdasd")
+  val challengeGenerator: SigmaChallengeGenerator = FiatShamirSigmaChallengeGenerator.getInstance(
+        cSettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
+
+  val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
+        cSettings.group.getZModOrder(), 350000)
+
+  val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, 300000, elGamal, publicKey)
+
+  val commitment = scala.io.Source.fromFile("commitment.dat").mkString
+  val commitment2 = spg.getCommitmentSpace().getElementFromString(commitment)
+}
+
+object Issue3 extends App {
+  val grp = GStarModSafePrime.getInstance(167)
+  // val grp = GStarModSafePrime.getInstance(new BigInteger("170141183460469231731687303715884114527"))
+  // val grp = GStarModSafePrime.getFirstInstance(2048)
+  val gen = grp.getDefaultGenerator()
+  val Csettings = CryptoSettings(grp, gen)
+  val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
+
+  val keyPair = elGamal.getKeyPairGenerator().generateKeyPair()
+  val privateKey = keyPair.getFirst()
+  val publicKey = keyPair.getSecond()
+
+  // eventually 0 will be used in Z_q
+  val votes = Util.encryptVotes(List(0, 1, 2), Csettings, publicKey)
+  votes.foreach { v =>
+    val first = v.getFirst
+    println(first)
+    println(v.getFirst.isGenerator)
+    val decryption = elGamal.decrypt(privateKey, v)
+    println("decrypted " + decryption)
+  }
 }

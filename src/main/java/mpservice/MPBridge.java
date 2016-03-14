@@ -9,24 +9,24 @@ import java.util.function.Supplier;
 import com.squareup.jnagmp.Gmp;
 
 public class MPBridge {
-	public static long total = 0;
-	public static long found = 0;
 	public static boolean useGmp = false;
 	public static boolean useExtractor = false;
-	private static long extracted = 0;
-
-	public long before = 0;
-	public long beforeZ = 0;
-	public long foundZ = 0;
-	public boolean debug = false;
-	private long beforeTime = 0;
-
 	private BigInteger dummy = new BigInteger("2");
 	private BigInteger modulus = null;
 	private boolean recording = false;
 	private boolean replaying = false;
 	private LinkedList<ModPow2> requests = new LinkedList<ModPow2>();
 	private List<BigInteger> answers = null;
+
+	// debug vars
+	public static long total = 0;
+	public static long found = 0;
+	private static long extracted = 0;
+	public long before = 0;
+	public long beforeZ = 0;
+	public long foundZ = 0;
+	public boolean debug = false;
+	private long beforeTime = 0;
 
 	private static ThreadLocal<MPBridge> instance = new ThreadLocal<MPBridge>() {
 		@Override protected MPBridge initialValue() {
@@ -46,50 +46,13 @@ public class MPBridge {
 		mpservice.MPService.init();
 		System.out.println("***************************************************");
 	}
+
 	public static void shutdown() {
 		mpservice.MPService.shutdown();
 	}
 
 	public static MPBridge i() {
 		return instance.get();
-	}
-
-	public static void l() {
-		StackTraceElement[] traces = Thread.currentThread().getStackTrace();
-		StackTraceElement caller = traces[2];
-		System.err.println("* " + caller.getFileName() + ":" + caller.getLineNumber() + "..");
-	}
-
-	public static void a() {
-		i().before = total;
-		i().beforeTime = System.currentTimeMillis();
-	}
-
-	public static void b(int trace) {
-		MPBridge i = i();
-		long diff = total - i.before;
-		StackTraceElement[] traces = Thread.currentThread().getStackTrace();
-		StackTraceElement caller = traces[trace];
-		found += diff;
-		long diffTime = System.currentTimeMillis() - i.beforeTime;
-		System.err.println(">>> " + caller.getFileName() + ":" + caller.getLineNumber() + " [" + diffTime + " ms] [" + diff + "]" + " (" + found + ", " + total + ") (" + extracted + ")");
-	}
-
-	public static void b() {
-		b(3);
-	}
-
-	public static void y() {
-		i().beforeZ = total;
-		i().foundZ = found;
-	}
-
-	public static void z() {
-		long diff = total - i().beforeZ;
-		long diffFound = found - i().foundZ;
-		StackTraceElement[] traces = Thread.currentThread().getStackTrace();
-		StackTraceElement caller = traces[2];
-		System.err.println("> " + caller.getFileName() + ":" + caller.getLineNumber() + " [" + diff + "]" + " (" + found + ", " + diffFound + ", " + total + ") (" + extracted + ")");
 	}
 
 	public static void startRecord() {
@@ -110,12 +73,21 @@ public class MPBridge {
 		return i().requests.toArray(new ModPow2[0]);
 	}
 
-	public static boolean isRecording() {
-		return i().recording;
+	public static void startReplay(BigInteger[] answers_) {
+		if(answers_.length != i().requests.size()) throw new IllegalArgumentException(answers_.length + "!=" + i().requests.size());
+		i().answers = new LinkedList<BigInteger>(Arrays.asList(answers_));
+
+		i().replaying = true;
 	}
 
-	public static void setDebug(boolean debug) {
-		i().debug = debug;
+	public static void stopReplay() {
+		if(i().answers.size() != 0) throw new IllegalStateException();
+
+		i().replaying = false;
+	}
+
+	public static void reset() {
+		i().requests.clear();
 	}
 
 	public static void addModPow(BigInteger base, BigInteger pow, BigInteger mod) {
@@ -142,31 +114,6 @@ public class MPBridge {
 		if(i().recording) throw new IllegalStateException();
 
 		return i().requests;
-	}
-
-	public static long getExtracted() {
-		return extracted;
-	}
-
-	public static void startReplay(BigInteger[] answers_) {
-		if(answers_.length != i().requests.size()) throw new IllegalArgumentException(answers_.length + "!=" + i().requests.size());
-		i().answers = new LinkedList<BigInteger>(Arrays.asList(answers_));
-
-		i().replaying = true;
-	}
-
-	public static void stopReplay() {
-		if(i().answers.size() != 0) throw new IllegalStateException();
-
-		i().replaying = false;
-	}
-
-	public static void reset() {
-		i().requests.clear();
-	}
-
-	public static boolean isReplaying() {
-		return i().replaying;
 	}
 
 	public static <T> T ex(Supplier<T> f, String v) {
@@ -223,4 +170,60 @@ public class MPBridge {
     public static BigInteger getModulus() {
     	return i().modulus;
     }
+
+    public static long getExtracted() {
+		return extracted;
+	}
+
+	public static boolean isRecording() {
+		return i().recording;
+	}
+
+	public static boolean isReplaying() {
+		return i().replaying;
+	}
+
+	/****************************** DEBUG STUFF ****************************/
+
+	public static void setDebug(boolean debug) {
+		i().debug = debug;
+	}
+
+    public static void l() {
+		StackTraceElement[] traces = Thread.currentThread().getStackTrace();
+		StackTraceElement caller = traces[2];
+		System.err.println("* " + caller.getFileName() + ":" + caller.getLineNumber() + "..");
+	}
+
+	public static void a() {
+		i().before = total;
+		i().beforeTime = System.currentTimeMillis();
+	}
+
+	public static void b(int trace) {
+		MPBridge i = i();
+		long diff = total - i.before;
+		StackTraceElement[] traces = Thread.currentThread().getStackTrace();
+		StackTraceElement caller = traces[trace];
+		found += diff;
+		long diffTime = System.currentTimeMillis() - i.beforeTime;
+		System.err.println(">>> " + caller.getFileName() + ":" + caller.getLineNumber() + " [" + diffTime + " ms] [" + diff + "]" + " (" + found + ", " + total + ") (" + extracted + ")");
+	}
+
+	public static void b() {
+		b(3);
+	}
+
+	public static void y() {
+		i().beforeZ = total;
+		i().foundZ = found;
+	}
+
+	public static void z() {
+		long diff = total - i().beforeZ;
+		long diffFound = found - i().foundZ;
+		StackTraceElement[] traces = Thread.currentThread().getStackTrace();
+		StackTraceElement caller = traces[2];
+		System.err.println("> " + caller.getFileName() + ":" + caller.getLineNumber() + " [" + diff + "]" + " (" + found + ", " + diffFound + ", " + total + ") (" + extracted + ")");
+	}
 }
