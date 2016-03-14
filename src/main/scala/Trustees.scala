@@ -312,10 +312,16 @@ trait Mixer extends ProofSettings {
     // Create shuffle proof
     val mixProof: Tuple = spg.generate(privateInputShuffle, publicInputShuffle)
     val eValues2 = spg.getEValues(mixProof).asInstanceOf[Tuple]
+
+    // FIXME conversion bug code
+    val commitment = spg.getCommitment(mixProof).convertToString
+    println(s"*** commitment $commitment")
+    spg.getCommitmentSpace.getElementFromString(commitment)
+
     // FIXME whether or not using parallel collection on eValues2.map here is good
-    val mixProofDTO = MixProofDTO(spg.getCommitment(mixProof).convertToString(),
-      spg.getChallenge(mixProof).convertToString(),
-      spg.getResponse(mixProof).convertToString(),
+    val mixProofDTO = MixProofDTO(spg.getCommitment(mixProof).convertToString,
+      spg.getChallenge(mixProof).convertToString,
+      spg.getResponse(mixProof).convertToString,
       eValues2.map(x => x.convertToString).toSeq)
 
     pdtoFuture.map { permutationProofDTO =>
