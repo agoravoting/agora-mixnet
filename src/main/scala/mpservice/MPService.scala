@@ -102,8 +102,8 @@ object MPBridgeS {
     val converter = ByteArrayToBigInteger.getInstance(seedLength)
 
     val rds = c.zipWithIndex.map{ case (value, index) =>
-      // 10000: we want to leave ample room for generators not to overlap
-      val seed = java.math.BigInteger.valueOf(index * (total / split) * 10000).mod(MathUtil.powerOfTwo(CTR_DRBG.getFactory().getSeedByteLength()))
+      // 1000: we want to leave room for generators not to overlap
+      val seed = java.math.BigInteger.valueOf(index * (total / split) * 1000).mod(MathUtil.powerOfTwo(CTR_DRBG.getFactory().getSeedByteLength()))
       // println("*** index " + index + " seed " + seed + " value " + value)
       val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(), converter.reconvert(seed))
       (r, value)
