@@ -580,7 +580,7 @@ import mpservice.MPBridge
   val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
         cSettings.group.getZModOrder(), 350000)
 
-  val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, 300000, elGamal, publicKey)
+  val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, 350000, elGamal, publicKey)
 
   val commitment = scala.io.Source.fromFile("commitment.dat").mkString
   val commitment2 = spg.getCommitmentSpace().getElementFromString(commitment)
