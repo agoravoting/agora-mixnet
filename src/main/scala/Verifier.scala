@@ -30,6 +30,7 @@ import ch.bfh.unicrypt.math.function.classes.InvertFunction
 import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
 import ch.bfh.unicrypt.math.function.classes.ProductFunction
 import ch.bfh.unicrypt.math.function.interfaces.Function
+import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
 import mpservice.MPBridgeS
 import mpservice.MPBridge
 
@@ -96,7 +97,7 @@ object Verifier extends ProofSettings {
         ProductFunction.getInstance(generatorFunctions :_*))
 
     // FIXME use Util.getE
-    val pdElements = MPBridgeS.ex(pd.partialDecryptions.map(Csettings.group.getElementFromString(_)), "1")
+    val pdElements = MPBridgeS.ex(pd.partialDecryptions.map(Csettings.group.asInstanceOf[AbstractSet[_,_]].getElementFrom(_)), "1")
 
     val publicInput: Pair = Pair.getInstance(publicKey, Tuple.getInstance(pdElements:_*))
     val otherInput = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
@@ -145,8 +146,8 @@ object Verifier extends ProofSettings {
 
     // val commitment1 = MPBridgeS.ex(pcps.getCommitmentSpace().getElementFromString(shuffleProof.permutationProof.commitment), "1")
     val commitment1 = Util.getE(pcps.getCommitmentSpace(), shuffleProof.permutationProof.commitment)
-    val challenge1 = pcps.getChallengeSpace().getElementFrom(shuffleProof.permutationProof.challenge)
-    val response1 = pcps.getResponseSpace().getElementFromString(shuffleProof.permutationProof.response)
+    val challenge1 = pcps.getChallengeSpace.getElementFrom(shuffleProof.permutationProof.challenge)
+    val response1 = pcps.getResponseSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(shuffleProof.permutationProof.response)
 
     // FIXME remove this, used to investigate serialization bug
     val writer = new java.io.PrintWriter(new java.io.File("commitment.dat"))
@@ -154,9 +155,9 @@ object Verifier extends ProofSettings {
     println(s"deserialize commitment ${shuffleProof.mixProof.commitment}")
     println(s"commitmentspace ${spg.getCommitmentSpace}")
 
-    val commitment2 = spg.getCommitmentSpace().getElementFromString(shuffleProof.mixProof.commitment)
-    val challenge2 = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
-    val response2 = spg.getResponseSpace().getElementFromString(shuffleProof.mixProof.response)
+    val commitment2 = spg.getCommitmentSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(shuffleProof.mixProof.commitment)
+    val challenge2 = spg.getChallengeSpace.getElementFrom(shuffleProof.mixProof.challenge)
+    val response2 = spg.getResponseSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(shuffleProof.mixProof.response)
 
     val permutationProofDTO = shuffleProof.permutationProof
     val mixProofDTO = shuffleProof.mixProof
@@ -176,11 +177,11 @@ object Verifier extends ProofSettings {
 
     // evalues: ZMod
     val eValues = permutationProofDTO.eValues.par.map { x =>
-      Csettings.group.getZModOrder.getElementFromString(x)
+      Csettings.group.getZModOrder.getElementFrom(x)
     }.seq
     println("Converting shuffle e values..")
     val eValues2 = mixProofDTO.eValues.par.map { x =>
-      Csettings.group.getZModOrder.getElementFromString(x)
+      Csettings.group.getZModOrder.getElementFrom(x)
     }.seq
 
     println("Getting proof instances..")

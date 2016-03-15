@@ -51,12 +51,34 @@ object Util {
     keyPairGen.getPublicKeySpace().getElementFrom(publicKey)
   }
 
-  def getE[A <: Element[B],B](set: AbstractSet[A, B], value: String): Element[B] = {
+  /* def getE[A <: Element[B],B](set: AbstractSet[A, B], value: String): Element[B] = {
     set.getElementFromString(value, unsafe)
+
   }
 
   // we shouldnt have to have this in addition to the above method, but otherwise the compiler gets confused
   def getE(set: ProductSet, value: String): Element[_] = {
     set.getElementFromString(value, unsafe)
+  }*/
+
+  // unicrypt compatible, must set -Dbypass-membership-check=false
+
+  def getE[A <: Element[B],B](set: AbstractSet[A, B], value: String): Element[B] = {
+    if(unsafe) {
+      set.getElementFromString(value, unsafe)
+    }
+    else {
+      set.getElementFrom(value)
+    }
+  }
+
+  // we shouldnt have to have this in addition to the above method, but otherwise the compiler gets confused
+  def getE(set: ProductSet, value: String): Element[_] = {
+    if(unsafe) {
+      set.getElementFromString(value, unsafe)
+    }
+    else {
+      set.asInstanceOf[AbstractSet[_, _]].getElementFrom(value)
+    }
   }
 }

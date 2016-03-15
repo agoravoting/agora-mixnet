@@ -559,6 +559,7 @@ object Issue4 extends App with ProofSettings {
   import ch.bfh.unicrypt.math.function.classes.MultiIdentityFunction
   import ch.bfh.unicrypt.math.function.classes.ProductFunction
   import ch.bfh.unicrypt.math.function.interfaces.Function
+  import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
   import mpservice.MPBridgeS
   import mpservice.MPBridge
 
@@ -576,12 +577,12 @@ object Issue4 extends App with ProofSettings {
         cSettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
 
   val ecg: ChallengeGenerator = PermutationCommitmentProofSystem.createNonInteractiveEValuesGenerator(
-        cSettings.group.getZModOrder(), 350000)
+        cSettings.group.getZModOrder(), 400000)
 
-  val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, 350000, elGamal, publicKey)
+  val spg: ReEncryptionShuffleProofSystem = ReEncryptionShuffleProofSystem.getInstance(challengeGenerator, ecg, 400000, elGamal, publicKey)
 
   val commitment = scala.io.Source.fromFile("commitment.dat").mkString
-  val commitment2 = spg.getCommitmentSpace().getElementFromString(commitment)
+  val commitment2 = spg.getCommitmentSpace().asInstanceOf[AbstractSet[_,_]].getElementFrom(commitment)
 }
 
 object Issue3 extends App {

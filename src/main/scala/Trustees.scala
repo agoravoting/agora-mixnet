@@ -9,6 +9,7 @@ import ch.bfh.unicrypt.crypto.proofsystem.classes.PermutationCommitmentProofSyst
 import ch.bfh.unicrypt.crypto.proofsystem.classes.PlainPreimageProofSystem
 import ch.bfh.unicrypt.crypto.proofsystem.classes.ReEncryptionShuffleProofSystem
 import ch.bfh.unicrypt.crypto.schemes.commitment.classes.PermutationCommitmentScheme
+import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.helper.math.Alphabet
 import ch.bfh.unicrypt.math.algebra.concatenative.classes.StringElement
@@ -316,7 +317,7 @@ trait Mixer extends ProofSettings {
     // FIXME conversion bug code
     val commitment = spg.getCommitment(mixProof).convertToString
     println(s"*** commitment $commitment")
-    spg.getCommitmentSpace.getElementFromString(commitment)
+    spg.getCommitmentSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(commitment)
 
     // FIXME whether or not using parallel collection on eValues2.map here is good
     val mixProofDTO = MixProofDTO(spg.getCommitment(mixProof).convertToString,
