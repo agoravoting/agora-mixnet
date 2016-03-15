@@ -7,10 +7,10 @@ CLASSPATH=../target/scala-2.11/sandbox-assembly-0.1-SNAPSHOT.jar
 CLUSTER_SEED=localhost:2555
 
 # the first options to test
-OPTIONS_ONE="-Dmpservice.use-gmp=true -Dmpservice.use-extractor=true -Dbypass-membership-check=true -Duse-generators-parallel=true -Dakka.cluster.seed-nodes.0=akka.tcp://ClusterSystem@$CLUSTER_SEED"
+OPTIONS_ONE="-Dmpservice.use-gmp=true -Dmpservice.use-extractor=false -Dbypass-membership-check=false -Duse-generators-parallel=false -Dakka.cluster.seed-nodes.0=akka.tcp://ClusterSystem@$CLUSTER_SEED"
 
 # the second  options to test
-OPTIONS_TWO="-Dmpservice.use-gmp=false -Dmpservice.use-extractor=true -Dbypass-membership-check=true -Duse-generators-parallel=true -Dakka.cluster.seed-nodes.0=akka.tcp://ClusterSystem@$CLUSTER_SEED"
+OPTIONS_TWO="-Dmpservice.use-gmp=false -Dmpservice.use-extractor=false -Dbypass-membership-check=false -Duse-generators-parallel=false -Dakka.cluster.seed-nodes.0=akka.tcp://ClusterSystem@$CLUSTER_SEED"
 
 # space sperated list of vote counts to run
 RUNS="100 200"
