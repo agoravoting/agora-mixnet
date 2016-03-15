@@ -1,8 +1,6 @@
-// scalaVersion := "2.12.0-M3"
 scalaVersion := "2.11.7"
 
 lazy val akkaVersion = "2.4.0"
-// fork in run := true
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("releases"),
