@@ -151,6 +151,7 @@ object Verifier extends ProofSettings {
     // FIXME remove this, used to investigate serialization bug
     val writer = new java.io.PrintWriter(new java.io.File("commitment.dat"))
     writer.write(shuffleProof.mixProof.commitment); writer.close()
+    println("deserialize commitment ${shuffleProof.mixProof.commitment}")
 
     val commitment2 = spg.getCommitmentSpace().getElementFromString(shuffleProof.mixProof.commitment)
     val challenge2 = spg.getChallengeSpace().getElementFrom(shuffleProof.mixProof.challenge)
