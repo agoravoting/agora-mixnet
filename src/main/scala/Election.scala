@@ -225,7 +225,8 @@ object Election {
     // this yields n lists of decryptions, where n = number of trustees, and there's one decryption per vote
     val decryptionElements = in.state.decryptions.map(
       // FIXME use Util.getE
-      ds => ds.partialDecryptions.par.map(in.state.cSettings.group.getElementFromString(_)).seq
+      // ds => ds.partialDecryptions.par.map(in.state.cSettings.group.getElementFromString(_)).seq
+      ds => ds.partialDecryptions.par.map(Util.getE(in.state.cSettings.group, _)).seq
     )
     // combine the list of decryptions:
     // obtain a^-x from individual a^-xi's (example below for n = 2)
