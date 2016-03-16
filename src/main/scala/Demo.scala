@@ -157,9 +157,11 @@ object ElectionTest extends App {
   // and performs the shuffle and proofs
   val shuffle1 = m1.shuffleVotes(startMix, predata1, proof1)
 
+  // we compose futures, first mix then second mix
   val mixing = shuffle1.map { shuffle =>
     // the proof is verified and the shuffle is then added to the election, advancing its state
     Election.addMix(startMix, shuffle, m1.id)
+
   }.flatMap { mixOne =>
 
     // each mixing trustee extracts the needed information from the election
@@ -170,6 +172,7 @@ object ElectionTest extends App {
     }
   }
 
+  // once all the mixes are finished we proceed to decryption
   val all = mixing.flatMap { mixTwo =>
 
     // we are done mixing

@@ -213,6 +213,7 @@ public abstract class AbstractCyclicGroup<E extends Element<V>, V>
 			@Override
 			public boolean test(E value) {
 				boolean ret = isGenerator(value);
+// FIXME remove
 if(!ret) System.out.println("++++++++++++++++++++++ Not a generator " + value);
 
 				return ret;
