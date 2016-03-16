@@ -287,6 +287,10 @@ public class ProductSet
 
 	@Override
 	protected <W> Tuple defaultGetElementFrom(Tree<W> tree, ConvertMethod<W> convertMethod) throws UniCryptException {
+		if(debug) {
+			new Exception("DEBUG TRACE").printStackTrace();
+		}
+
 		if (tree.isLeaf()) {
 			throw new UniCryptException(ErrorCode.ELEMENT_CONVERSION_FAILURE);
 		}
