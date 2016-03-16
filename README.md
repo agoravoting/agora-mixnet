@@ -1,52 +1,27 @@
-ElectionTest demo
-=================
+Agora mixnet
+============
 
-Minimal voting demo using [unicrypt](https://github.com/bfh-evg/univote2) plus code/design from [univote](https://github.com/bfh-evg/univote2). Below is the header to the ElectionTest App object found in [Election.scala](https://github.com/agoravoting/sandbox/blob/master/src/main/scala/Election.scala):
+This is a mixnet voting prototype based around [unicrypt](https://github.com/bfh-evg/univote2) and code/design from [univote](https://github.com/bfh-evg/univote2).
 
-    /**
-     * An election process DEMO
-     *
-     * Simulates the steps in the election from public key generation all the way to decryption
-     *
-     * Things that are included in this demo are:
-     *
-     * - A typed purely functional data structure modeling the election process and bulletin board (see below)
-     *
-     * - Cryptography for
-     *
-     *  a) encrypting votes
-     *  b) creating keyshares, proofs and verification
-     *  c) shuffling votes, proofs and verification
-     *  d) joint (partial) decryption, proofs and verification
-     *
-     * - Not included
-     *
-     * Remoting (everything simulated with method calls)
-     * Signatures and authentication
-     * Error handling
-     * Proofs of knowledge of plaintext and verification in vote casting
-     *
-     *
-     * An election is modeled as a typed, purely functional sequential state machine. We use shapeless
-     * encoding of natural numbers to provide length-typed lists (aka dependent types), that way we get:
-     *
-     * 1) The election process logic is captured by types, so illegal transitions
-     *    are caught by the compiler and inconsistent states are not possible, for example
-     *
-     *    It is a compile-time error to try to construct the public key without all the shares
-     *    It is a compile-time error to add more shares,shuffles or decryptions than expected
-     *    It is a compile-error to start an election with no public key
-     *    It is a compile-time error to decrypt without shuffling
-     *    etc.
-     *
-     * 2) Because the election is purely functional, the entire history of the election
-     *    can be reconstructed or replayed. A purely functional data structure is in this
-     *    sense a general case of an immutable log
-     *
-     *
-     * This demo uses two trustees, ElectionTest3 below shows how number of trustees generalizes
-     */
-  
+### Cryptography
+
+* encrypting votes
+* creating keyshares, proofs and verification
+* shuffling votes, proofs and verification
+* joint (partial) decryption, proofs and verification
+
+### Typed purely functional bulletin board
+
+An election is modeled as a typed, purely functional sequential state machine. We use shapeless
+encoding of natural numbers to provide length-typed lists (aka dependent types). The election process logic is captured by types, so illegal transitions are caught by the compiler and inconsistent states are not possible.
+
+### Not included
+
+* Remoting (everything simulated with method calls)
+* Signatures and authentication
+* Error handling
+* Proofs of knowledge of plaintext and verification in vote casting
+
 Setting it up
 -------------
 
@@ -63,27 +38,27 @@ Running it
 
 You need to have sbt in your path. Then from the root of the sandbox repo
 
-     sbt run
+     sbt assembly
 
 The first time sbt will have to download all the dependencies and compile the project, it
-may take a while.
+may take a while. The assembly command produces a jar with all the dependencies included. Once you have that jar copy the shell scripts from src/main/shell to the home of the project.
 
-You can also enter the sbt console and issue commands from there
+     cp src/main/shell/*.sh .
 
-     sbt
-     >
+To run an election demo with 100 votes
 
-From the prompt you can issue commands like
+     ./run.sh 100
 
-     > clean
-     > compile
-     > run
-     > assembly
+You can change optimization flags within the run.sh script:
 
-sbt commands auto-complete with the tab key, so you can explore more options. The assembly command produces a jar with all the dependencies included that you run like this, for example
+    USE_GMP=true
+    USE_EXTRACTOR=false
+    BYPASS_MEMBERSHIP_CHECK=false
+    USE_GENERATORS_PARALLEL=false
+    GENERATORS_PARALLELISM_LEVEL=16
 
-     java -classpath target/scala-2.11/sandbox-assembly-0.1-SNAPSHOT.jar ElectionTest 100
+If you wish to attach a profiler (like visualvm), you may need to add the switch -XX:+StartAttachListener to run.sh
 
-which runs the benchmark with 100 votes. If you wish to attach a profiler (like visualvm), you may need to run this
+#### Cluster mode
 
-     java -XX:+StartAttachListener -classpath target/scala-2.11/sandbox-assembly-0.1-SNAPSHOT.jar ElectionTest 3000
+TODO
