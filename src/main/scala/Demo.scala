@@ -155,7 +155,7 @@ object ElectionTest extends App {
 
   // each mixing trustee extracts the needed information from the election
   // and performs the shuffle and proofs
-  val shuffle1 = m2.shuffleVotes(startMix, predata1, proof1)
+  val shuffle1 = m1.shuffleVotes(startMix, predata1, proof1)
 
   val mixing = shuffle1.map { shuffle =>
     // the proof is verified and the shuffle is then added to the election, advancing its state
