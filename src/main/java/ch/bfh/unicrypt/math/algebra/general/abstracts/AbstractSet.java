@@ -323,7 +323,10 @@ public abstract class AbstractSet<E extends Element<V>, V>
 		try {
 // FIXME remove trace
 			Tree<W> tree = aggregator.disaggregate(value);
-if(debug) System.out.println("tree " + tree + " " + tree.isLeaf());
+if(debug) {
+	System.out.println("tree " + tree + " " + tree.isLeaf());
+	new Exception("DEBUG TRACE").printStackTrace();
+}
 			return this.defaultGetElementFrom(tree, convertMethod);
 		} catch (Exception exception) {
 
