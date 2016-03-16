@@ -150,14 +150,15 @@ object Verifier extends ProofSettings {
     val response1 = pcps.getResponseSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(shuffleProof.permutationProof.response)
 
     // FIXME remove this, used to investigate serialization bug
-    val writer = new java.io.PrintWriter(new java.io.File("commitment.dat"))
-    writer.write(shuffleProof.mixProof.commitment); writer.close()
-    println(s"deserialize commitment ${shuffleProof.mixProof.commitment}")
-    println(s"commitmentspace ${spg.getCommitmentSpace}")
+    // val writer = new java.io.PrintWriter(new java.io.File("commitment.dat"))
+    // writer.write(shuffleProof.mixProof.commitment); writer.close()
+    // println(s"deserialize commitment ${shuffleProof.mixProof.commitment}")
+    // println(s"commitmentspace ${spg.getCommitmentSpace}")
 
-    AbstractSet.debug = true;
+    // FIXME remove
+    // AbstractSet.debug = true;
     val commitment2 = spg.getCommitmentSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(shuffleProof.mixProof.commitment)
-    AbstractSet.debug = false;
+    // AbstractSet.debug = false;
 
     val challenge2 = spg.getChallengeSpace.getElementFrom(shuffleProof.mixProof.challenge)
     val response2 = spg.getResponseSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(shuffleProof.mixProof.response)

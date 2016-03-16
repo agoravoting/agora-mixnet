@@ -24,6 +24,11 @@ case class ModPow(base: BigInteger, pow: BigInteger, mod: BigInteger)
 case class ModPow2(base: BigInteger, pow: BigInteger)
 
 /**
+ * Represents a modular exponentiation operation with common modulus and result
+ */
+case class ModPowResult(base: BigInteger, pow: BigInteger, mod: BigInteger, result: BigInteger)
+
+/**
  * The mpservice public api
  */
 trait ModPowService {
@@ -41,6 +46,8 @@ object MPService extends ModPowService {
 
   def compute(work: Array[ModPow]): Array[BigInteger] = service.compute(work)
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = service.compute(work, mod)
+  def computeDebug(work: Array[ModPow2], mod: BigInteger): Array[ModPowResult] = service.computeDebug(work, mod)
+
   def shutdown = service.shutdown
   def init = {}
   override def toString = service.getClass.toString
@@ -142,18 +149,19 @@ object ParallelModPowService extends ModPowService {
 
 // messaging classes
 case class Work(requestId: Int, workId: Int, work: Array[ModPow])
-case class Work2(requestId: Int, workId: Int, work: Array[ModPow2], mod: BigInteger)
+case class WorkFixedMod(requestId: Int, workId: Int, work: Array[ModPow2], mod: BigInteger)
 case class WorkReply(requestId: Int, workId: Int, result: Array[BigInteger])
+case class WorkReplyDebug(requestId: Int, workId: Int, result: Array[ModPowResult])
 case class ModPowArray(modpows: Array[ModPow])
-case class ModPowArray2(modpows: Array[ModPow2], mod: BigInteger)
+case class ModPowArrayFixedMod(modpows: Array[ModPow2], mod: BigInteger)
 case class ModPowArrayResult(result: Array[BigInteger])
+case class ModPowArrayResultDebug(result: Array[ModPowResult])
 
 class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends ModPowService {
 
   def compute(work: Array[ModPow]): Array[BigInteger] = {
     val inbox = Inbox.create(system)
 
-    val before = System.currentTimeMillis
     inbox.send(modPowService, ModPowArray(work))
     Try(inbox.receive(1000.seconds)) match {
       case Success(ModPowArrayResult(answer)) => answer
@@ -164,10 +172,19 @@ class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends Mo
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = {
     val inbox = Inbox.create(system)
 
-    val before = System.currentTimeMillis
-    inbox.send(modPowService, ModPowArray2(work, mod))
+    inbox.send(modPowService, ModPowArrayFixedMod(work, mod))
     Try(inbox.receive(1000.seconds)) match {
       case Success(ModPowArrayResult(answer)) => answer
+      // FIXME
+      case _ => throw new Exception()
+    }
+  }
+  def computeDebug(work: Array[ModPow2], mod: BigInteger): Array[ModPowResult] = {
+    val inbox = Inbox.create(system)
+
+    inbox.send(modPowService, ModPowArrayFixedMod(work, mod))
+    Try(inbox.receive(1000.seconds)) match {
+      case Success(ModPowArrayResultDebug(answer)) => answer
       // FIXME
       case _ => throw new Exception()
     }
@@ -187,17 +204,21 @@ object AkkaModPowService extends ModPowService {
 
   def compute(work: Array[ModPow]): Array[BigInteger] = service.compute(work)
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = service.compute(work, mod)
+  def computeDebug(work: Array[ModPow2], mod: BigInteger): Array[ModPowResult] = service.computeDebug(work, mod)
   def shutdown = system.terminate
 }
 
 class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDelay: Int, val useGmp: Boolean) extends Actor with ActorLogging {
   case class RequestData(client: ActorRef, length: Int, results: mutable.ArrayBuffer[WorkReply], sent: Long = System.currentTimeMillis)
+  case class RequestDataDebug(client: ActorRef, length: Int, results: mutable.ArrayBuffer[WorkReplyDebug], sent: Long = System.currentTimeMillis)
 
   val workerRouter = context.actorOf(WorkerActor.props(useGmp).withRouter(FromConfig()), name = "workerRouter")
 
   // actor state
   var requestId = 0
   val requests = mutable.Map[Int, RequestData]()
+  val requestsDebug = mutable.Map[Int, RequestDataDebug]()
+
 
   // FIXME move to util
   def cut[A](xs: Array[A], n: Int) = {
@@ -222,14 +243,14 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
       }
     }
 
-    case ModPowArray2(modpows, mod) => {
+    case ModPowArrayFixedMod(modpows, mod) => {
       requestId = requestId + 1
       val size = math.min(math.max(modpows.length / minChunks, 1), maxChunkSize)
       val chunks: Array[Array[ModPow2]] = cut(modpows, modpows.length / size).toArray
       requests.put(requestId, RequestData(sender, chunks.length, mutable.ArrayBuffer()))
       println(s"request with ${modpows.length} units, splitting into ${chunks.length} chunks")
       chunks.indices.foreach { i =>
-        val work = Work2(requestId, i, chunks(i), mod)
+        val work = WorkFixedMod(requestId, i, chunks(i), mod)
 
         Thread sleep sendDelay
         workerRouter ! work
@@ -245,6 +266,18 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
         requests.remove(w.requestId)
         val sorted = requestData.results.sortWith(_.workId < _.workId)
         requestData.client ! ModPowArrayResult(sorted.flatMap(_.result).toArray)
+      }
+    }
+
+    case w: WorkReplyDebug => {
+      val requestData = requestsDebug.get(w.requestId).get
+      requestData.results += w
+      val diff = System.currentTimeMillis - requestData.sent
+      // println(s"${w.requestId} ${w.workId} $diff")
+      if(requestData.results.length == requestData.length) {
+        requestsDebug.remove(w.requestId)
+        val sorted = requestData.results.sortWith(_.workId < _.workId)
+        requestData.client ! ModPowArrayResultDebug(sorted.flatMap(_.result).toArray)
       }
     }
   }
@@ -267,7 +300,7 @@ class WorkerActor(val useGmp: Boolean) extends Actor with ActorLogging {
       // println(s"$requestId $workId $diff")
       sender ! WorkReply(requestId, workId, result)
     }
-    case Work2(requestId, workId, modpows, mod) => {
+    case WorkFixedMod(requestId, workId, modpows, mod) => {
       // println(s"received request length ${modpows.length} at actor $this")
       val before = System.currentTimeMillis
       val result = service.compute(modpows, mod).seq.toArray
