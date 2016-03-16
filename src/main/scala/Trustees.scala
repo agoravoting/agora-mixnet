@@ -315,9 +315,9 @@ trait Mixer extends ProofSettings {
     val eValues2 = spg.getEValues(mixProof).asInstanceOf[Tuple]
 
     // FIXME conversion bug code
-    val commitment = spg.getCommitment(mixProof).convertToString
-    println(s"*** commitment $commitment")
-    spg.getCommitmentSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(commitment)
+    // val commitment = spg.getCommitment(mixProof).convertToString
+    // println(s"*** commitment $commitment")
+    // spg.getCommitmentSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(commitment)
 
     // FIXME whether or not using parallel collection on eValues2.map here is good
     val mixProofDTO = MixProofDTO(spg.getCommitment(mixProof).convertToString,
