@@ -155,7 +155,10 @@ object Verifier extends ProofSettings {
     println(s"deserialize commitment ${shuffleProof.mixProof.commitment}")
     println(s"commitmentspace ${spg.getCommitmentSpace}")
 
+    AbstractSet.debug = true;
     val commitment2 = spg.getCommitmentSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(shuffleProof.mixProof.commitment)
+    AbstractSet.debug = false;
+
     val challenge2 = spg.getChallengeSpace.getElementFrom(shuffleProof.mixProof.challenge)
     val response2 = spg.getResponseSpace.asInstanceOf[AbstractSet[_,_]].getElementFrom(shuffleProof.mixProof.response)
 
