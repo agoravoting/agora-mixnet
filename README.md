@@ -10,6 +10,39 @@ This is a mixnet voting prototype based around [unicrypt](https://github.com/bfh
 * shuffling votes, proofs and verification
 * joint (partial) decryption, proofs and verification
 
+### Performance
+
+Effort has gone into making the prototype reasonably performant. The following are the main optimization areas.
+
+##### Native libgmp modpow implementation
+
+The [jna-gmp](https://github.com/square/jna-gmp) library is used to speed up modular exponentiation.
+
+##### Protocol level parallelism
+Protocol overlaps where computations occur simultaneously are simulated with Futures and Future composition.
+
+![protocol](https://github.com/agoravoting/sandbox/blob/master/doc/protocol.png "protocol")
+
+##### Bypassing redundant membership checks
+Some group membership checks during deserialization can be skipped as they are detected by the verifier. This saves some costly modular exponentiation operations found at:
+
+        value.modPow(this.getOrder(), this.modulus).equals(MathUtil.ONE);
+
+Switch:
+
+-Dbypass-membership-check=true
+
+##### Parallel generator computation
+
+The generation of randoom generators with a deterministic random byte sequence involves calculating hashes sequentially on a single thread. This can be done in parallel seeding the sequences with different numbers.
+
+Switch:
+
+    -Duse-generators-parallel=true
+
+
+-Dmpservice.use-gmp=$USE_GMP -Dmpservice.use-extractor=$USE_EXTRACTOR -Dbypass-membership-check=$BYPASS_MEMBERSHIP_CHECK
+
 ### Typed purely functional bulletin board
 
 An election is modeled as a typed, purely functional sequential state machine. We use shapeless
