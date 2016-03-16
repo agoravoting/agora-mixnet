@@ -289,7 +289,7 @@ public class ProductSet
 	protected <W> Tuple defaultGetElementFrom(Tree<W> tree, ConvertMethod<W> convertMethod) throws UniCryptException {
 		// FIXME remove
 		if(debug) {
-System.out.println("productset: tree " + tree);
+System.out.println("productset: tree " + tree + " " + tree.isLeaf());
 			new Exception("DEBUG TRACE").printStackTrace();
 		}
 
