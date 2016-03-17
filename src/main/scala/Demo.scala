@@ -118,29 +118,15 @@ object ElectionTest extends App {
 
   // encrypt the votes with the public key of the election
   val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
-  println(votes.length)
 
   // doing this in one step to avoid memory explosion
   val electionGettingVotes = Election.addVotes(startVotes, votes.map(_.convertToString).toList)
 
-  /*
-  // add the votes to the election
-  var electionGettingVotes = startVotes
-
-  // this should crash if checking is done in the bb (Election)
-  Election.addVotes(electionGettingVotes, "fooooooooooobar")
-
-  votes.foreach { v =>
-    electionGettingVotes = Election.addVote(electionGettingVotes, v.convertToString)
-  }*/
-
-
   // we are only timing the mixing phase
   val mixingStart = System.currentTimeMillis()
+
+  // FIXME remove this
   MPBridge.total = 0;
-  // wait for keystroke, this allows us to attach a profiler at the right time
-  // println("Hit return to start")
-  // Console.in.read()
 
   // stop the voting period
   val stopVotes = Election.stopVotes(electionGettingVotes)
@@ -352,7 +338,6 @@ object ElectionTestSerial extends App {
 
   // encrypt the votes with the public key of the election
   val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
-  println(votes.length)
 
   // add the votes to the election
   var electionGettingVotes = startVotes
@@ -362,10 +347,9 @@ object ElectionTestSerial extends App {
 
   // we are only timing the mixing phase
   val mixingStart = System.currentTimeMillis()
+
+  // FIXME remove
   MPBridge.total = 0;
-  // wait for keystroke, this allows us to attach a profiler at the right time
-  // println("Hit return to start")
-  // Console.in.read()
 
   // stop the voting period
   val stopVotes = Election.stopVotes(electionGettingVotes)
@@ -377,10 +361,8 @@ object ElectionTestSerial extends App {
   // and performs the shuffle and proofs
   val shuffle1 = m1.shuffleVotes(startMix)
 
-
   // the proof is verified and the shuffle is then added to the election, advancing its state
   val mixOne = Election.addMix(startMix, shuffle1, m1.id)
-
 
   // again for the second trustee..
   val shuffle2 = m2.shuffleVotes(mixOne)
@@ -391,20 +373,22 @@ object ElectionTestSerial extends App {
 
   val mixingEnd = System.currentTimeMillis()
 
-  // leaving this part out as we want to benchmark only mixing
 
   // start the partial decryptions
-  // if we tried to do this before the mixing was completed, the compiler would protest
   val startDecryptions = Election.startDecryptions(stopMix)
+
   // each keymaker trustee extracts the votes from the last shuffle from the election and
   // uses their private keys to do the partial decryption and create proofs
   val pd1 = k1.partialDecryption(startDecryptions)
   val pd2 = k2.partialDecryption(startDecryptions)
+
   // the proofs are verified and the partial decryptions are added to the election,
   val partialOne = Election.addDecryption(startDecryptions, pd1, k1.id)
   val partialTwo = Election.addDecryption(partialOne, pd2, k2.id)
+
   // the partial decryptions are combined, yielding the plaintexts
   val electionDone = Election.combineDecryptions(partialTwo)
+
   // lets check that everything went well
   println(s"Plaintexts $plaintexts")
   println(s"Decrypted ${electionDone.state.decrypted}")
@@ -429,6 +413,8 @@ object ElectionTestSerial extends App {
 
   mpservice.MPService.shutdown
 }
+
+/**************************** other tests ****************************/
 
 object DecryptionTest extends App {
 
@@ -470,69 +456,7 @@ object DecryptionTest extends App {
   MPBridgeS.shutdown
 }
 
-object GeneratorTest extends App {
-  import ch.bfh.unicrypt.helper.random.deterministic.DeterministicRandomByteSequence
-  import ch.bfh.unicrypt.helper.random.deterministic.CTR_DRBG
-  import ch.bfh.unicrypt.helper.sequence.Sequence
-  import scala.collection.JavaConversions._
-  import ch.bfh.unicrypt.helper.converter.classes.biginteger.ByteArrayToBigInteger
-  import ch.bfh.unicrypt.helper.math.MathUtil
-
-  val total = 1006
-  val split = 10
-
-  val size = total / split
-  val remainder = total % split
-
-  val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
-  val group = GStarModSafePrime.getFirstInstance(2048)
-  val converter = ByteArrayToBigInteger.getInstance(seedLength)
-  val d = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(),
-    converter.reconvert(java.math.BigInteger.valueOf(24)))
-  val sequence = group.getIndependentGenerators(d).limit(1)
-  //val d2 = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(),
-  //  converter.reconvert(java.math.BigInteger.valueOf()))
-  // val sequence2 = group.getIndependentGenerators(d2).limit(3)
-
-  println(sequence)
-  // println(sequence2)
-
-
-  /* val a = Array.fill(total % split)((total / split) + 1)
-  val b = Array.fill(split - (total % split))(total / split)
-  val c = a ++ b
-
-  val seedLength = CTR_DRBG.getFactory().getSeedByteLength()
-  val group = GStarModSafePrime.getFirstInstance(2048)
-  val converter = ByteArrayToBigInteger.getInstance(seedLength)
-
-  val rds = c.zipWithIndex.map{ case (i, x) =>
-    val r = DeterministicRandomByteSequence.getInstance(CTR_DRBG.getFactory(),
-    converter.reconvert(java.math.BigInteger.valueOf(x * 1000000)))
-    (r, i)
-  }
-  rds.foreach(println)
-
-  val now1 = System.currentTimeMillis
-  val items = rds.par.flatMap { case (d, i) =>
-    val sequence = group.getIndependentGenerators(d).limit(i)
-    sequence.toList
-  }
-  println(items.size)
-  println(s"${System.currentTimeMillis - now1}")
-
-  // val sequence = group.abstractGetRandomElements(randomByteSequence).skip(0).limit(10000)
-  val sequence: Sequence[_ <: Element[_]] = group.getIndependentGenerators().limit(total)
-  // val list = mpservice.MPBridgeS.getIndependentGenerators(sequence)
-  val now = System.currentTimeMillis
-  val items2 = sequence.toList.par.map { x:Element[_] =>
-    x
-  }
-  println(items2.size)
-  println(s"${System.currentTimeMillis - now}")*/
-}
-
-object Issue4 extends App with ProofSettings {
+object Issue1 extends App with ProofSettings {
   import ch.bfh.unicrypt.crypto.keygenerator.interfaces.KeyPairGenerator
   import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.classes.FiatShamirSigmaChallengeGenerator
   import ch.bfh.unicrypt.crypto.proofsystem.challengegenerator.interfaces.ChallengeGenerator
