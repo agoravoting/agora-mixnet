@@ -116,7 +116,7 @@ public abstract class AbstractSet<E extends Element<V>, V>
 	private Converter<V, String> stringConverter;
 	private Converter<V, ByteArray> byteArrayConverter;
 
-	// FIXME remove
+	// FIXME remove trace
 	public static boolean debug = false;
 
 	protected AbstractSet(Class<?> valueClass) {
@@ -321,16 +321,17 @@ public abstract class AbstractSet<E extends Element<V>, V>
 			throw new UniCryptRuntimeException(ErrorCode.NULL_POINTER, this, value, convertMethod, aggregator);
 		}
 		try {
-// FIXME remove trace
+
 			Tree<W> tree = aggregator.disaggregate(value);
-if(debug) {
-	System.out.println("tree " + tree + " " + tree.isLeaf());
-	new Exception("DEBUG TRACE").printStackTrace();
-}
+			// FIXME remove trace
+			if(debug) {
+				System.out.println("tree " + tree + " " + tree.isLeaf());
+				new Exception("DEBUG TRACE").printStackTrace();
+			}
 			return this.defaultGetElementFrom(tree, convertMethod);
 		} catch (Exception exception) {
-
-exception.printStackTrace();
+			// FIXME remove trace
+			exception.printStackTrace();
 			throw new UniCryptException(ErrorCode.ELEMENT_CONVERSION_FAILURE, exception);
 		}
 	}
