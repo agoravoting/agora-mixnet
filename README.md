@@ -61,7 +61,7 @@ The approach used instead was based on an automatic parallelism extraction mecha
 
 Switch:
 
-    -Dmpservice.use-extractor=$USE_EXTRACTOR
+    -Dmpservice.use-extractor=true
 ##### Clustered modular exponentiation
 Modular exponentiations extracted with the above method are computed across an akka cluster.
 
