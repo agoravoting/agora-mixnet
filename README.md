@@ -12,7 +12,7 @@ This is a mixnet voting prototype based around [unicrypt](https://github.com/bfh
 
 ### Performance
 
-Effort has gone into making the prototype reasonably performant. The following are the main optimization areas and corresponding environment variables to used in execution scripts.
+Effort has gone into making the prototype reasonably performant. The following are the main optimization areas and corresponding environment variables to use in execution scripts.
 
 ##### Native libgmp modpow implementation
 
