@@ -36,6 +36,8 @@ trait ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger]
   // compute modular exponentiation for a list of inputs with common modulus
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger]
+
+  def computeDebug(work: Array[ModPow2], mod: BigInteger): Array[ModPowResult]
 }
 
 /******************** IMPLEMENTATION ********************/
@@ -131,6 +133,9 @@ object MPBridgeS {
 object SequentialModPowService extends ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger] = work.map(x => x.base.modPow(x.pow, x.mod))
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = work.map(x => x.base.modPow(x.pow, mod))
+  def computeDebug(work: Array[ModPow2], mod: BigInteger): Array[ModPowResult] = {
+    work.map(x => ModPowResult(x.base, x.pow, mod, x.base.modPow(x.pow, mod))).seq.toArray
+  }
 }
 object GmpParallelModPowService extends ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger] = {
@@ -139,10 +144,16 @@ object GmpParallelModPowService extends ModPowService {
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = {
     work.par.map(x => Gmp.modPowInsecure(x.base, x.pow, mod)).seq.toArray
   }
+  def computeDebug(work: Array[ModPow2], mod: BigInteger): Array[ModPowResult] = {
+    work.par.map(x => ModPowResult(x.base, x.pow, mod, Gmp.modPowInsecure(x.base, x.pow, mod))).seq.toArray
+  }
 }
 object ParallelModPowService extends ModPowService {
   def compute(work: Array[ModPow]): Array[BigInteger] = work.par.map(x => x.base.modPow(x.pow, x.mod)).seq.toArray
   def compute(work: Array[ModPow2], mod: BigInteger): Array[BigInteger] = work.par.map(x => x.base.modPow(x.pow, mod)).seq.toArray
+  def computeDebug(work: Array[ModPow2], mod: BigInteger): Array[ModPowResult] = {
+    work.par.map(x => ModPowResult(x.base, x.pow, mod, x.base.modPow(x.pow, mod))).seq.toArray
+  }
 }
 
 /******************** AKKA ********************/
@@ -151,10 +162,14 @@ object ParallelModPowService extends ModPowService {
 case class Work(requestId: Int, workId: Int, work: Array[ModPow])
 case class WorkFixedMod(requestId: Int, workId: Int, work: Array[ModPow2], mod: BigInteger)
 case class WorkReply(requestId: Int, workId: Int, result: Array[BigInteger])
-case class WorkReplyDebug(requestId: Int, workId: Int, result: Array[ModPowResult])
 case class ModPowArray(modpows: Array[ModPow])
 case class ModPowArrayFixedMod(modpows: Array[ModPow2], mod: BigInteger)
 case class ModPowArrayResult(result: Array[BigInteger])
+
+// debugging
+case class WorkFixedModDebug(requestId: Int, workId: Int, work: Array[ModPow2], mod: BigInteger)
+case class WorkReplyDebug(requestId: Int, workId: Int, result: Array[ModPowResult])
+case class ModPowArrayFixedModDebug(modpows: Array[ModPow2], mod: BigInteger)
 case class ModPowArrayResultDebug(result: Array[ModPowResult])
 
 class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends ModPowService {
@@ -182,7 +197,7 @@ class AkkaModPowService(system: ActorSystem, modPowService: ActorRef) extends Mo
   def computeDebug(work: Array[ModPow2], mod: BigInteger): Array[ModPowResult] = {
     val inbox = Inbox.create(system)
 
-    inbox.send(modPowService, ModPowArrayFixedMod(work, mod))
+    inbox.send(modPowService, ModPowArrayFixedModDebug(work, mod))
     Try(inbox.receive(1000.seconds)) match {
       case Success(ModPowArrayResultDebug(answer)) => answer
       // FIXME
@@ -257,6 +272,20 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
       }
     }
 
+    case ModPowArrayFixedModDebug(modpows, mod) => {
+      requestId = requestId + 1
+      val size = math.min(math.max(modpows.length / minChunks, 1), maxChunkSize)
+      val chunks: Array[Array[ModPow2]] = cut(modpows, modpows.length / size).toArray
+      requestsDebug.put(requestId, RequestDataDebug(sender, chunks.length, mutable.ArrayBuffer()))
+      println(s"DBG request with ${modpows.length} units, splitting into ${chunks.length} chunks")
+      chunks.indices.foreach { i =>
+        val work = WorkFixedModDebug(requestId, i, chunks(i), mod)
+
+        Thread sleep sendDelay
+        workerRouter ! work
+      }
+    }
+
     case w: WorkReply => {
       val requestData = requests.get(w.requestId).get
       requestData.results += w
@@ -281,10 +310,6 @@ class ModPowServiceActor(val minChunks: Int, val maxChunkSize: Int, val sendDela
       }
     }
   }
-
-  def split[T](array: Array[T]) = {
-
-  }
 }
 
 class WorkerActor(val useGmp: Boolean) extends Actor with ActorLogging {
@@ -308,6 +333,15 @@ class WorkerActor(val useGmp: Boolean) extends Actor with ActorLogging {
       print("=")
       // println(s"$requestId $workId $diff")
       sender ! WorkReply(requestId, workId, result)
+    }
+    case WorkFixedModDebug(requestId, workId, modpows, mod) => {
+      // println(s"received request length ${modpows.length} at actor $this")
+      val before = System.currentTimeMillis
+      val result = service.computeDebug(modpows, mod).seq.toArray
+      val diff = (System.currentTimeMillis - before)
+      print("=")
+      // println(s"$requestId $workId $diff")
+      sender ! WorkReplyDebug(requestId, workId, result)
     }
   }
 }

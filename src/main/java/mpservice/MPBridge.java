@@ -15,8 +15,10 @@ public class MPBridge {
 	private BigInteger modulus = null;
 	private boolean recording = false;
 	private boolean replaying = false;
+	private boolean replayingDebug = false;
 	private LinkedList<ModPow2> requests = new LinkedList<ModPow2>();
 	private List<BigInteger> answers = null;
+	private List<ModPowResult> answersDebug = null;
 
 	// debug vars
 	public static long total = 0;
@@ -80,10 +82,23 @@ public class MPBridge {
 		i().replaying = true;
 	}
 
+	public static void startReplayDebug(ModPowResult[] answers_) {
+		if(answers_.length != i().requests.size()) throw new IllegalArgumentException(answers_.length + "!=" + i().requests.size());
+		i().answersDebug = new LinkedList<ModPowResult>(Arrays.asList(answers_));
+
+		i().replayingDebug = true;
+	}
+
 	public static void stopReplay() {
 		if(i().answers.size() != 0) throw new IllegalStateException();
 
 		i().replaying = false;
+	}
+
+	public static void stopReplayDebug() {
+		if(i().answersDebug.size() != 0) throw new IllegalStateException();
+
+		i().replayingDebug = false;
 	}
 
 	public static void reset() {
@@ -110,6 +125,12 @@ public class MPBridge {
 		return i().answers.remove(0);
 	}
 
+	public static ModPowResult getModPowDebug() {
+		if(i().recording) throw new IllegalStateException();
+
+		return i().answersDebug.remove(0);
+	}
+
 	public static LinkedList<ModPow2> getRequests() {
 		if(i().recording) throw new IllegalStateException();
 
@@ -127,13 +148,19 @@ public class MPBridge {
 		b(3);
 		if(reqs.length > 0) {
 			long now2 = System.currentTimeMillis();
-			java.math.BigInteger[] answers = mpservice.MPService.compute(reqs, i().modulus);
+			// FIXME
+			// BigInteger[] answers = mpservice.MPService.computeDebug(reqs, i().modulus);
+			ModPowResult[] answers = mpservice.MPService.computeDebug(reqs, i().modulus);
 			long c = System.currentTimeMillis() - now2;
-			startReplay(answers);
+			// FIXME
+			// startReplay(answers);
+			startReplayDebug(answers);
 			ret = f.get();
 			long t = System.currentTimeMillis() - now;
 			System.out.println("\nC: [" + c + " ms] T: [" + t + " ms] R+C: [" + (r+c) + " ms]");
-			stopReplay();
+			// FIXME
+			// stopReplay();
+			stopReplayDebug();
 		}
 		reset();
 
@@ -155,6 +182,13 @@ public class MPBridge {
         }
         else if(i.replaying) {
             return getModPow();
+        }
+        else if(i.replayingDebug) {
+            ModPowResult result = getModPowDebug();
+            boolean ok = base.equals(result.base()) && pow.equals(result.pow()) && mod.equals(result.mod());
+            if(!ok) throw new RuntimeException();
+
+            return result.result();
         }
         else {
             total++;
