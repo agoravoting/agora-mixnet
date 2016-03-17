@@ -27,6 +27,8 @@ Protocol overlaps where computations occur simultaneously are simulated with Fut
 
 ![protocol](https://github.com/agoravoting/sandbox/blob/master/doc/protocol.png "protocol")
 
+The implementation covers parallelism at the mixing and decryption phase.
+
 ##### Bypassing redundant membership checks
 Some group membership checks during deserialization can be skipped as they are detected by the verifier. This saves some costly modular exponentiation operations found at:
 
@@ -45,7 +47,7 @@ Switch:
     -Duse-generators-parallel=true
 
 ##### Parallel modular exponentiation
-Voting systems are inherently very parallelizable as much of the processing is done per-vote in an independent way. The bulk of computation in public key cryptography and related voting systems is modular exponentiation. The task is then to parallelize these costly operations. On the other hand, extracting parallelism from code that was not designed with that as a central concern from the beginning is usually very difficult or outright not practical. In this particular case the difficulty is manifested in these ways:
+Voting systems are inherently very parallelizable as much of the processing is done per-vote in an independent way. The bulk of computation in public key cryptography and related voting systems is modular exponentiation. The task is then to parallelize these costly operations. Unfortunately, extracting parallelism from code that was not designed with it as a central concern from the very beginning is usually very difficult or outright not practical. In this particular case the difficulty is manifested as:
 
 1) the are many different callstacks using modpow
 
@@ -53,7 +55,9 @@ Voting systems are inherently very parallelizable as much of the processing is d
 
 3) modpow calculations are typically used immediately after, which makes the vectorization harder as it has to create a boundary between the two
 
-On way to solve this would be to do a full rewrite with parallelization in mind. But this is not practical for this prototype. The approach used instead was based on an automatic parallelism extraction mechanism that works by monitoring threads of execution at specific code blocks and intercepting modular exponentiation calls. These calls are collected, computed in bulk, and then replayed back to the inspected thread along the specified code block. Because both java8 and scala support lambdas it is possible to represent these code blocks as higher order functions. For automatic extraction to work, these higher order functions must be purely functional. Parallelism and clustering is then achieved via scala collections and akka.
+On way to solve this would be to do a full rewrite with parallelization in mind. But this is not practical for this prototype.
+
+The approach used instead was based on an automatic parallelism extraction mechanism that works by monitoring threads of execution at specific code blocks and intercepting modular exponentiation calls. These calls are collected, computed in bulk, and then replayed back to the inspected thread along the specified code block. Because both java8 and scala support lambdas it is possible to represent these code blocks as higher order functions. For automatic extraction to work, these higher order functions must be purely functional. Parallelism and clustering is then achieved via scala collections and akka.
 
 Switch:
 
