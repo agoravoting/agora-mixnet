@@ -57,7 +57,7 @@ Voting systems are inherently very parallelizable as much of the processing is d
 
 On way to solve this would be to do a full rewrite with parallelization in mind. But this is not practical for this prototype.
 
-The approach used instead was based on an automatic parallelism extraction mechanism that works by monitoring threads of execution at specific code blocks and intercepting modular exponentiation calls. These calls are collected, computed in bulk, and then replayed back to the inspected thread along the specified code block. Because both java8 and scala support lambdas it is possible to represent these code blocks as higher order functions. For automatic extraction to work, these higher order functions must be purely functional. Parallelism and clustering is then achieved via scala collections and akka.
+The approach used instead was based on an automatic parallelism extraction mechanism that works by monitoring threads of execution at specific code blocks and intercepting modular exponentiation calls. These calls are collected, computed in bulk, and then replayed back to the inspected thread along the specified code block. Because both java8 and scala support lambdas it is possible to represent these code blocks as higher order functions. For automatic extraction to work, these higher order functions must be purely functional. Parallelism and clustering is then achieved via scala parallel collections and akka.
 
 Switch:
 
