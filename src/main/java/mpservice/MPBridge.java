@@ -9,8 +9,9 @@ import java.util.function.Supplier;
 import com.squareup.jnagmp.Gmp;
 
 public class MPBridge {
-	public static boolean useGmp = false;
-	public static boolean useExtractor = false;
+
+	private static boolean useGmp = false;
+	private static boolean useExtractor = false;
 	private BigInteger dummy = new BigInteger("2");
 	private BigInteger modulus = null;
 	private boolean recording = false;
@@ -50,7 +51,7 @@ public class MPBridge {
 	}
 
 	public static void shutdown() {
-		mpservice.MPService.shutdown();
+		MPService.shutdown();
 	}
 
 	public static MPBridge i() {
@@ -64,7 +65,6 @@ public class MPBridge {
 	public static void startRecord(String value) {
 		i().dummy = new BigInteger(value);
 		if(i().requests.size() != 0)	throw new IllegalStateException();
-		// commenting the following line disables modpow extraction
 		i().recording = useExtractor;
 		i().modulus = null;
 	}
