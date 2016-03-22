@@ -20,8 +20,8 @@ object Util {
     Tuple.getInstance(items:_*)
   }
 
-  def seqFromTuple(tuple: Tuple): Seq[Element[_]] = {
-    tuple.par.map{ x => x }.seq.toSeq
+  def stringsFromTuple(tuple: Tuple): Seq[String] = {
+    tuple.par.map{ x => x.convertToString }.seq.toSeq
   }
 
   def getRandomVotes(size: Int, generator: Element[_], publicKey: Element[_]) = {

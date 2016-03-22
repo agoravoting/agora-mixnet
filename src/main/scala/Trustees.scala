@@ -346,7 +346,8 @@ trait Mixer extends ProofSettings {
           if(!(v1 && v2 && v3)) throw new Exception();
       */
 
-      val votesString: Seq[String] = Util.seqFromTuple(shuffledVs).par.map( x => x.convertToString ).seq
+
+      val votesString: Seq[String] = Util.stringsFromTuple(shuffledVs)
 
       ShuffleResultDTO(shuffleProofDTO, votesString)
     }
