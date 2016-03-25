@@ -36,14 +36,14 @@ class Election[+W <: Nat, +S <: ElectionState] private (val state: S) {
  *
  */
 case class Created(override val id: String, override val cSettings: CryptoSettings) extends ElectionState(id, cSettings)
-case class Shares[T <: Nat](val shares: Sized[List[(String, String)], T], prev: ElectionState) extends ElectionStateShares(prev.id, prev.cSettings, shares.toList) with HasHistory
-case class Combined(override val publicKey: String, prev: ElectionStateShares) extends ElectionStatePk(prev.id, prev.cSettings, prev.allShares, publicKey) with HasHistory
-case class Votes(votes: List[String], prev: ElectionStatePk) extends ElectionStatePk(prev.id, prev.cSettings, prev.allShares, prev.publicKey) with HasHistory
-case class VotesStopped(prev: Votes, date: DateTime = DateTime.now) extends ElectionStateVotes(prev.id, prev.cSettings, prev.allShares, prev.publicKey, prev.votes) with HasHistory
-case class Mixing[T <: Nat](mixes: Sized[List[ShuffleResultDTO], T], prev: ElectionStateVotes) extends ElectionStateVotes(prev.id, prev.cSettings, prev.allShares, prev.publicKey, prev.votes) with HasHistory
-case class Mixed(prev: Mixing[_ <: Nat]) extends ElectionStateVotes(prev.id, prev.cSettings, prev.allShares, prev.publicKey, prev.votes) with HasHistory
-case class Decryptions[T <: Nat](decryptions: Sized[List[PartialDecryptionDTO], T], prev: ElectionStateVotes) extends ElectionStateVotes(prev.id, prev.cSettings, prev.allShares, prev.publicKey, prev.votes) with HasHistory
-case class Decrypted(decrypted: Seq[String], prev: Decryptions[_ <: Nat]) extends ElectionStateVotes(prev.id, prev.cSettings, prev.allShares, prev.publicKey, prev.votes) with HasHistory
+case class Shares[T <: Nat](val shares: Sized[List[(String, String)], T], prev: ElectionState) extends ElectionStateShares(prev, shares.toList) with HasHistory
+case class Combined(override val publicKey: String, prev: ElectionStateShares) extends ElectionStatePk(prev, publicKey) with HasHistory
+case class Votes(votes: List[String], prev: ElectionStatePk) extends ElectionStatePk(prev, prev.publicKey) with HasHistory
+case class VotesStopped(prev: Votes, date: DateTime = DateTime.now) extends ElectionStateVotes(prev, prev.votes) with HasHistory
+case class Mixing[T <: Nat](mixes: Sized[List[ShuffleResultDTO], T], prev: ElectionStateVotes) extends ElectionStateVotes(prev, prev.votes) with HasHistory
+case class Mixed(prev: Mixing[_ <: Nat]) extends ElectionStateVotes(prev, prev.votes) with HasHistory
+case class Decryptions[T <: Nat](decryptions: Sized[List[PartialDecryptionDTO], T], prev: ElectionStateVotes) extends ElectionStateVotes(prev, prev.votes) with HasHistory
+case class Decrypted(decrypted: Seq[String], prev: Decryptions[_ <: Nat]) extends ElectionStateVotes(prev, prev.votes) with HasHistory
 
 /**
  * The state machine transitions
@@ -272,7 +272,7 @@ trait HasHistory {
 /**
  * Convenience election states used to carry information in the election history forward
  */
-class ElectionState(val id: String, val cSettings: CryptoSettings)
-class ElectionStateShares(id: String, cSettings: CryptoSettings, val allShares: List[(String, String)]) extends ElectionState(id, cSettings)
-class ElectionStatePk(id: String, cSettings: CryptoSettings, allShares: List[(String, String)], val publicKey: String) extends ElectionStateShares(id, cSettings, allShares)
-class ElectionStateVotes(id: String, cSettings: CryptoSettings, allShares: List[(String, String)], publicKey: String, val votes:List[String]) extends ElectionStatePk(id, cSettings, allShares, publicKey)
+abstract class ElectionState(val id: String, val cSettings: CryptoSettings)
+abstract class ElectionStateShares(es: ElectionState, val allShares: List[(String, String)]) extends ElectionState(es.id, es.cSettings)
+abstract class ElectionStatePk(ess: ElectionStateShares, val publicKey: String) extends ElectionStateShares(ess, ess.allShares)
+abstract class ElectionStateVotes(espk: ElectionStatePk, val votes:List[String]) extends ElectionStatePk(espk, espk.publicKey)
