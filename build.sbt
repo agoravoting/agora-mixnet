@@ -15,8 +15,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster-metrics" % akkaVersion,
-  "org.fusesource" % "sigar" % "1.6.4",
-  "org.apache.commons" % "commons-collections4" % "4.0"
+  "org.fusesource" % "sigar" % "1.6.4"
 )
 
 assemblyMergeStrategy in assembly := {
