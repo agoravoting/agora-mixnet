@@ -1,4 +1,4 @@
-// drb modpow intercepts to MPBridge
+// drb modpow intercepts to MPBridge, legendre
 /*
  * UniCrypt
  *
@@ -85,6 +85,8 @@ public class GStarMod
     private final Factorization orderFactorization;
     private ZStarMod superGroup;
 
+    private BigInteger EIGHT = BigInteger.valueOf(8);
+
     protected GStarMod(SpecialFactorization modulusFactorization, Factorization orderFactorization) {
         super(BigInteger.class);
         this.modulus = modulusFactorization.getValue();
@@ -159,13 +161,59 @@ public class GStarMod
         return this.getModulus().toString() + "," + this.getOrder().toString();
     }
 
+    // FIXME these two should go in MathUtil, along with the EIGHT constant
+
+    /** calculate whether the given value is a quadratic residue in the given modulus */
+    private boolean isQuadraticResidue(BigInteger value, BigInteger modulus) {
+        return legendre(value, modulus) == 1;
+    }
+
+    /** calculate the jacobi symbol (and hence legendre, since modulus is odd prime) */
+    private long legendre(BigInteger value, BigInteger mod) {
+        BigInteger modulus = mod;
+        BigInteger a = value.mod(modulus);
+        BigInteger t = MathUtil.ONE;
+
+        while (! a.equals(MathUtil.ZERO)) {
+          while (a.mod(MathUtil.TWO).equals(MathUtil.ZERO)) {
+            a = a.divide(MathUtil.TWO);
+
+            if (modulus.mod(EIGHT).equals(MathUtil.THREE) || modulus.mod(EIGHT).equals(MathUtil.FIVE)) {
+              t = t.negate();
+            }
+          }
+
+          BigInteger tmp = a;
+          a = modulus;
+          modulus = tmp;
+
+          if (a.mod(MathUtil.FOUR).equals(MathUtil.THREE) && modulus.mod(MathUtil.FOUR).equals(MathUtil.THREE)) {
+            t = t.negate();
+          }
+          a = a.mod(modulus);
+        }
+
+        if (modulus.equals(MathUtil.ONE)) {
+          return t.longValue();
+        }
+        else {
+          return 0;
+        }
+    }
+
     @Override
     protected boolean abstractContains(final BigInteger value) {
-        return value.signum() > 0
-               && value.compareTo(this.modulus) < 0
-               && MathUtil.areRelativelyPrime(value, this.modulus)
-               && MPBridge.modPow(value, this.getOrder(), this.modulus).equals(MathUtil.ONE);
-               // && value.modPow(this.getOrder(), this.modulus).equals(MathUtil.ONE);
+        if(this.getCoFactor().equals(MathUtil.TWO)) {
+            return value.signum() > 0
+                && isQuadraticResidue(value, this.modulus);
+        }
+        else {
+            return value.signum() > 0
+                && value.compareTo(this.modulus) < 0
+                && MathUtil.areRelativelyPrime(value, this.modulus)
+                && MPBridge.modPow(value, this.getOrder(), this.modulus).equals(MathUtil.ONE);
+                // && value.modPow(this.getOrder(), this.modulus).equals(MathUtil.ONE);
+        }
     }
 
     @Override
@@ -265,26 +313,4 @@ public class GStarMod
         }
         return group;
     }
-
-    // drb
-    /*public static BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
-        if(MPBridge.debug) new Exception().printStackTrace();
-        if(MPBridge.isRecording()) {
-            MPBridge.total++;
-            MPBridge.addModPow(base, pow, mod);
-            return MPBridge.dummy;
-        }
-        else if(MPBridge.isReplaying()) {
-            return MPBridge.getModPow();
-        }
-        else {
-            MPBridge.total++;
-            if(gmpModPow) {
-                return Gmp.modPowInsecure(base, pow, mod);
-            }
-            else {
-                return base.modPow(pow, mod);    
-            }
-        }
-    }*/
 }

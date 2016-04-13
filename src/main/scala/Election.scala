@@ -56,7 +56,11 @@ object Election {
   def create[W <: Nat](id: String, bits: Int) = {
     println("Going to start a new Election!")
 
+
     val group = GStarModSafePrime.getFirstInstance(bits)
+// import ch.bfh.unicrypt.math.algebra.additive.parameters.ECZModPrimeParameters
+// import ch.bfh.unicrypt.math.algebra.additive.classes.ECZModPrime
+// val group = ECZModPrime.getInstance(ECZModPrimeParameters.SECP521r1)
     val generator = group.getDefaultGenerator()
     val cSettings = CryptoSettings(group, generator)
 
@@ -122,7 +126,7 @@ object Election {
     /*
     val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
     // this will throw exception if the vote is invalid
-    elGamal.getEncryptionSpace.getElementFromString(vote)
+    votes.map(elGamal.getEncryptionSpace.getElementFromString(_))
     */
 
     new Election[W, Votes](Votes(votes ::: in.state.votes, in.state))

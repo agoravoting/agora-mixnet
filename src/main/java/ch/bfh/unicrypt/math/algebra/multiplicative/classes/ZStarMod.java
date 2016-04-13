@@ -79,7 +79,7 @@ public class ZStarMod
 
 	private final BigInteger modulus;
 	private final Factorization modulusFactorization;
-    
+
 	protected ZStarMod(final BigInteger modulus) {
 		this(modulus, Factorization.getInstance());
 	}
@@ -267,26 +267,4 @@ public class ZStarMod
 		}
 		return ZStarMod.getInstance(randomByteSequence.getRandomBigIntegerSequence(bitLength).get());
 	}
-
-	// drb
-    /*public static BigInteger modPow(BigInteger base, BigInteger pow, BigInteger mod) {
-        if(MPBridge.debug) new Exception().printStackTrace();
-        if(MPBridge.isRecording()) {
-            MPBridge.total++;
-            MPBridge.addModPow(base, pow, mod);
-            return MPBridge.dummy;
-        }
-        else if(MPBridge.isReplaying()) {
-            return MPBridge.getModPow();
-        }
-        else {
-            MPBridge.total++;
-            if(gmpModPow) {
-                return Gmp.modPowInsecure(base, pow, mod);
-            }
-            else {
-                return base.modPow(pow, mod);    
-            }
-        }
-    }*/
 }
