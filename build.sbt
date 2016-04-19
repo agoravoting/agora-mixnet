@@ -8,6 +8,8 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
+  ws,
+  "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.0-RC1" % Test,
   "com.github.nscala-time" %% "nscala-time" % "2.6.0",
   "com.chuusai" %% "shapeless" % "2.2.5",
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
@@ -18,8 +20,14 @@ libraryDependencies ++= Seq(
   "org.fusesource" % "sigar" % "1.6.4"
 )
 
+resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
+
+resolvers += Resolver.jcenterRepo
+
 assemblyMergeStrategy in assembly := {
   case PathList("ch", "bfh", xs @ _*) => MergeStrategy.first
+  case x if x.contains("apache/commons/logging") => MergeStrategy.last
+  case x if x.contains("META-INF/io.netty.versions.properties") => MergeStrategy.last
   case x =>
     val oldStrategy = (assemblyMergeStrategy in assembly).value
     oldStrategy(x)
