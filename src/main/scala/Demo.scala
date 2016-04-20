@@ -63,7 +63,7 @@ import mpservice.MPBridge
  * This demo uses two trustees, ElectionTest3 below shows how number of trustees generalizes
  */
 object ElectionTest extends App {
-
+  
   val config = ConfigFactory.load()
   val useGmp = config.getBoolean("mpservice.use-gmp")
   val useExtractor = config.getBoolean("mpservice.use-extractor")
@@ -94,33 +94,46 @@ object ElectionTest extends App {
   // we are using privacy level 2, two trustees of each kind
   // we are 2048 bits for the size of the group modulus
   val start = Election.create[_2]("my election", 2048)
-
+  
   // the election is now ready to receive key shares
-  val readyForShares = Election.startShares(start)
+  val readyForShares = start flatMap {
+    _start => Election.startShares(_start)
+  }
 
   // each keymaker creates the shares and their proofs, these are added to the election
-  val oneShare = Election.addShare(readyForShares, k1.createKeyShare(readyForShares), k1.id)
-  val twoShares = Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
+  val twoShares =  readyForShares flatMap {
+    _readyForShares =>  
+      val oneShare = Election.addShare(_readyForShares, k1.createKeyShare(_readyForShares), k1.id)
+      oneShare flatMap {
+        _oneShare => Election.addShare(_oneShare, k2.createKeyShare(_readyForShares), k2.id)
+      }
+  }
 
   // combine the shares from the keymaker trustees, this produces the election public key
-  val combined = Election.combineShares(twoShares)
-
-  // since we are storing information in election as if it were a bulletin board, all
-  // the data is stored in a wire-compatible format, that is strings/jsons whatever
-  // we reconstruct the public key as if it had been read from such a format
-  val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
-
-  // open the election period
-  val startVotes = Election.startVotes(combined)
+  val combined = twoShares flatMap {
+    _twoShares => Election.combineShares(_twoShares)
+  }
 
   // generate dummy votes
   val plaintexts = Seq.fill(totalVotes)(scala.util.Random.nextInt(1000))
-
-  // encrypt the votes with the public key of the election
-  val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
-
-  // doing this in one step to avoid memory explosion
-  val electionGettingVotes = Election.addVotes(startVotes, votes.map(_.convertToString).toList)
+  
+  val electionGettingVotes = combined flatMap {
+    _combined => 
+      val startVotes = Election.startVotes(_combined)
+      
+      // since we are storing information in election as if it were a bulletin board, all
+      // the data is stored in a wire-compatible format, that is strings/jsons whatever
+      // we reconstruct the public key as if it had been read from such a format
+      val publicKey = Util.getPublicKeyFromString(_combined.state.publicKey, _combined.state.cSettings.generator)
+      // encrypt the votes with the public key of the election
+      val votes = Util.encryptVotes(plaintexts, _combined.state.cSettings, publicKey)
+      
+      startVotes flatMap {
+        _startVotes => 
+          // doing this in one step to avoid memory explosion
+          Election.addVotes(_startVotes, votes.map(_.convertToString).toList)
+      }
+  }
 
   // we are only timing the mixing phase
   val mixingStart = System.currentTimeMillis()
@@ -129,88 +142,131 @@ object ElectionTest extends App {
   MPBridge.total = 0;
 
   // stop the voting period
-  val stopVotes = Election.stopVotes(electionGettingVotes)
-
-  // we can start preshuffling for both mixers
-  // that way the second preshuffle will be concurrent with the first mix
-  val (predata1, proof1) = m1.preShuffleVotes(stopVotes)
-  val (predata2, proof2) = m2.preShuffleVotes(stopVotes)
+  val stopVotes = electionGettingVotes flatMap {
+    _electionGettingVotes => Election.stopVotes(_electionGettingVotes)
+  }
 
   // prepare for mixing
-  val startMix = Election.startMixing(stopVotes)
+  val startMix = stopVotes flatMap {
+    _stopVotes => 
+      // we can start preshuffling for both mixers
+      // that way the second preshuffle will be concurrent with the first mix
+      val (predata1, proof1) = m1.preShuffleVotes(_stopVotes)
+      val (predata2, proof2) = m2.preShuffleVotes(_stopVotes)
+      Election.startMixing(_stopVotes)
+  }
 
   // each mixing trustee extracts the needed information from the election
   // and performs the shuffle and proofs
-  val shuffle1 = m1.shuffleVotes(startMix, predata1, proof1)
+  val shuffle1 = stopVotes flatMap {
+    _stopVotes => 
+      // we can start preshuffling for both mixers
+      // that way the second preshuffle will be concurrent with the first mix
+      val (predata1, proof1) = m1.preShuffleVotes(_stopVotes)
+      val (predata2, proof2) = m2.preShuffleVotes(_stopVotes)
+      // prepare for mixing
+      val startMix = Election.startMixing(_stopVotes)
+      startMix flatMap {
+        _startMix => m1.shuffleVotes(_startMix, predata1, proof1)
+      }
+  }
+  
+  val mixing = stopVotes flatMap {
+    _stopVotes => 
+      // we can start preshuffling for both mixers
+      // that way the second preshuffle will be concurrent with the first mix
+      val (predata1, proof1) = m1.preShuffleVotes(_stopVotes)
+      val (predata2, proof2) = m2.preShuffleVotes(_stopVotes)
+      // prepare for mixing
+      Election.startMixing(_stopVotes) flatMap {
+        _startMix => 
+          val shuffle1 = m1.shuffleVotes(_startMix, predata1, proof1)
+          
+          // we compose futures, first mix then second mix
+          shuffle1.flatMap { shuffle =>
+            // the proof is verified and the shuffle is then added to the election, advancing its state
+            Election.addMix(_startMix, shuffle, m1.id)
 
-  // we compose futures, first mix then second mix
-  val mixing = shuffle1.map { shuffle =>
-    // the proof is verified and the shuffle is then added to the election, advancing its state
-    Election.addMix(startMix, shuffle, m1.id)
+          }.flatMap { mixOne =>
 
-  }.flatMap { mixOne =>
-
-    // each mixing trustee extracts the needed information from the election
-    // and performs the shuffle and proofs
-    m2.shuffleVotes(mixOne, predata2, proof2).map { shuffle =>
-      // the proof is verified and the shuffle is then added to the election, advancing its state
-      Election.addMix(mixOne, shuffle, m2.id)
-    }
+            // each mixing trustee extracts the needed information from the election
+            // and performs the shuffle and proofs
+            m2.shuffleVotes(mixOne, predata2, proof2).map { shuffle =>
+              // the proof is verified and the shuffle is then added to the election, advancing its state
+              Election.addMix(mixOne, shuffle, m2.id)
+            }
+          }
+          
+      }
   }
 
   // once all the mixes are finished we proceed to decryption
-  val all = mixing.flatMap { mixTwo =>
+  val all = mixing.flatMap {
+    mixTwo => mixTwo
+  } flatMap { mixTwo =>
 
     // we are done mixing
     val stopMix = Election.stopMixing(mixTwo)
+    
+    stopMix flatMap {
+      stopMix =>
+        val mixingEnd = System.currentTimeMillis()
 
-    val mixingEnd = System.currentTimeMillis()
+        // start the partial decryptions
+        // if we tried to do this before the mixing was completed, the compiler would protest
+        val startDecryptions = Election.startDecryptions(stopMix)
+        startDecryptions flatMap {
+        _startDecryptions =>
+          // each keymaker trustee extracts the votes from the last shuffle from the election and
+          // uses their private keys to do the partial decryption and create proofs
+          val pd1Future = Future { k1.partialDecryption(_startDecryptions) }
+          val pd2Future = Future { k2.partialDecryption(_startDecryptions) }
 
-    // start the partial decryptions
-    // if we tried to do this before the mixing was completed, the compiler would protest
-    val startDecryptions = Election.startDecryptions(stopMix)
+          // the two decryption futures execute in parallel
+          val decryptions = for {
+            pd1 <- pd1Future
+            pd2 <- pd2Future
+          } yield(pd1, pd2)
 
-    // each keymaker trustee extracts the votes from the last shuffle from the election and
-    // uses their private keys to do the partial decryption and create proofs
-    val pd1Future = Future { k1.partialDecryption(startDecryptions) }
-    val pd2Future = Future { k2.partialDecryption(startDecryptions) }
+          decryptions.map { case (pd1, pd2) =>
+            val partialOne = Election.addDecryption(_startDecryptions, pd1, k1.id)
+            val partialTwo = partialOne flatMap {
+              _partialOne => Election.addDecryption(_partialOne, pd2, k2.id)
+            }
 
-    // the two decryption futures execute in parallel
-    val decryptions = for {
-      pd1 <- pd1Future
-      pd2 <- pd2Future
-    } yield(pd1, pd2)
+            // the partial decryptions are combined, yielding the plaintexts
+            val electionDone = partialTwo flatMap {
+              _partialTwo => Election.combineDecryptions(_partialTwo)
+            }
+            
+            electionDone map {
+              _electionDone => 
+                // lets check that everything went well
+                // println(s"Plaintexts $plaintexts")
+                // println(s"Decrypted ${electionDone.state.decrypted}")
+                // println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
 
-    decryptions.map { case (pd1, pd2) =>
-      val partialOne = Election.addDecryption(startDecryptions, pd1, k1.id)
-      val partialTwo = Election.addDecryption(partialOne, pd2, k2.id)
+                val mixTime = (mixingEnd - mixingStart) / 1000.0
+                val totalTime = (System.currentTimeMillis() - mixingStart) / 1000.0
 
-      // the partial decryptions are combined, yielding the plaintexts
-      val electionDone = Election.combineDecryptions(partialTwo)
+                println("*************************************************************")
+                println(s"finished run with votes = $totalVotes")
+                println(s"mixTime: $mixTime")
+                println(s"totalTime: $totalTime")
+                println(s"sec / vote (mix): ${mixTime / totalVotes}")
+                println(s"sec / vote: ${totalTime / totalVotes}")
+                println(s"total modExps: ${MPBridge.total}")
+                println(s"found modExps: ${MPBridge.found}")
+                println(s"found modExps %: ${MPBridge.found/MPBridge.total.toDouble}")
+                println(s"extracted modExps: ${MPBridge.getExtracted}")
+                println(s"extracted modExps %: ${MPBridge.getExtracted/MPBridge.total.toDouble}")
+                println(s"modExps / vote: ${MPBridge.total.toFloat / totalVotes}")
+                println("*************************************************************")
 
-      // lets check that everything went well
-      // println(s"Plaintexts $plaintexts")
-      // println(s"Decrypted ${electionDone.state.decrypted}")
-      // println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
-
-      val mixTime = (mixingEnd - mixingStart) / 1000.0
-      val totalTime = (System.currentTimeMillis() - mixingStart) / 1000.0
-
-      println("*************************************************************")
-      println(s"finished run with votes = $totalVotes")
-      println(s"mixTime: $mixTime")
-      println(s"totalTime: $totalTime")
-      println(s"sec / vote (mix): ${mixTime / totalVotes}")
-      println(s"sec / vote: ${totalTime / totalVotes}")
-      println(s"total modExps: ${MPBridge.total}")
-      println(s"found modExps: ${MPBridge.found}")
-      println(s"found modExps %: ${MPBridge.found/MPBridge.total.toDouble}")
-      println(s"extracted modExps: ${MPBridge.getExtracted}")
-      println(s"extracted modExps %: ${MPBridge.getExtracted/MPBridge.total.toDouble}")
-      println(s"modExps / vote: ${MPBridge.total.toFloat / totalVotes}")
-      println("*************************************************************")
-
-      MPBridgeS.shutdown
+                MPBridgeS.shutdown
+            }        
+          }
+        }    
     }
   }
 
@@ -227,7 +283,7 @@ object ElectionTest extends App {
  * the number of trustee operations
  *
  */
-object ElectionTest3 extends App {
+/*object ElectionTest3 extends App {
   val totalVotes = args.toList.headOption.getOrElse("100").toInt
 
   val k1 = new KeyMakerTrustee("keymaker one")
@@ -412,7 +468,7 @@ object ElectionTestSerial extends App {
   println("*************************************************************")
 
   mpservice.MPService.shutdown
-}
+}*/
 
 /**************************** other tests ****************************/
 

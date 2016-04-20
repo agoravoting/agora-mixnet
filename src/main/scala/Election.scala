@@ -19,6 +19,7 @@ import mpservice.MPBridgeS
 import mpservice.MPBridge
 
 import scala.collection.JavaConversions._
+import scala.concurrent.Future
 
 /**
  * An election is a typed, purely function state machine with an immutable history
@@ -50,20 +51,20 @@ case class Decrypted(decrypted: Seq[String], prev: Decryptions[_ <: Nat]) extend
  * Method signatures allow the compiler to enforce the state machine logic.
  */
 trait ElectionTrait {
-  def create[W <: Nat](id: String, bits: Int) : Election[W, Created]
-  def startShares[W <: Nat](in: Election[W, Created]) : Election[W, Shares[_0]]
-  def addShare[W <: Nat, T <: Nat](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Election[W, Shares[Succ[T]]]
-  def combineShares[W <: Nat](in: Election[W, Shares[W]]) : Election[W, Combined]
-  def startVotes[W <: Nat](in: Election[W, Combined]) : Election[W, Votes]
-  def addVote[W <: Nat](in: Election[W, Votes], vote: String) : Election[W, Votes]
-  def addVotes[W <: Nat](in: Election[W, Votes], votes: List[String]) : Election[W, Votes]
-  def stopVotes[W <: Nat](in: Election[W, Votes]) : Election[W, VotesStopped]
-  def startMixing[W <: Nat](in: Election[W, VotesStopped]) : Election[W, Mixing[_0]]
-  def addMix[W <: Nat, T <: Nat](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Election[W, Mixing[Succ[T]]]
-  def stopMixing[W <: Nat](in: Election[W, Mixing[W]]) : Election[W, Mixed]
-  def startDecryptions[W <: Nat](in: Election[W, Mixed]) : Election[W, Decryptions[_0]]
-  def addDecryption[W <: Nat, T <: Nat](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Election[W, Decryptions[Succ[T]]]
-  def combineDecryptions[W <: Nat](in: Election[W, Decryptions[W]]) : Election[W, Decrypted]
+  def create[W <: Nat](id: String, bits: Int) : Future[Election[W, Created]]
+  def startShares[W <: Nat](in: Election[W, Created]) : Future[Election[W, Shares[_0]]]
+  def addShare[W <: Nat, T <: Nat](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]]
+  def combineShares[W <: Nat](in: Election[W, Shares[W]]) : Future[Election[W, Combined]]
+  def startVotes[W <: Nat](in: Election[W, Combined]) : Future[Election[W, Votes]]
+  def addVote[W <: Nat](in: Election[W, Votes], vote: String) : Future[Election[W, Votes]]
+  def addVotes[W <: Nat](in: Election[W, Votes], votes: List[String]) : Future[Election[W, Votes]]
+  def stopVotes[W <: Nat](in: Election[W, Votes]) : Future[Election[W, VotesStopped]]
+  def startMixing[W <: Nat](in: Election[W, VotesStopped]) : Future[Election[W, Mixing[_0]]]
+  def addMix[W <: Nat, T <: Nat](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Mixing[Succ[T]]]]
+  def stopMixing[W <: Nat](in: Election[W, Mixing[W]]) : Future[Election[W, Mixed]]
+  def startDecryptions[W <: Nat](in: Election[W, Mixed]) : Future[Election[W, Decryptions[_0]]]
+  def addDecryption[W <: Nat, T <: Nat](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Decryptions[Succ[T]]]]
+  def combineDecryptions[W <: Nat](in: Election[W, Decryptions[W]]) : Future[Election[W, Decrypted]]
 }
   
 object Election extends DefaultElectionImpl
