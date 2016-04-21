@@ -1,6 +1,8 @@
 
 import play.api.libs.json._
 
+case class ElectionMessage(mode: String, value: JsValue)
+
 trait JSONConverter {
   def CreatedToJS(input: Created) : JsValue = {
     /*

@@ -52,51 +52,17 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
-class Whatever @Inject()
-(ws: WSClient)
-{  
-  doIt()
-  
-  private def doIt() = {
-    println("Going to start Whatever!")
-    val futureResponse: Future[WSResponse] = 
-    ws.url(s"http://172.17.0.1:1028/accumulate")
-    .withHeaders(
-      "Content-Type" -> "application/json",
-      "Accept" -> "application/json")
-    .post(JsNull)
-    
-    futureResponse onComplete {
-      case Success(e) => println("--Success!")
-                         ws.close()
-                         println("--Closed!")
-      case Failure(e) => println("--Failure!")
-                         ws.close()
-                         println("--Closed!")
-    }
-  }
-}
-
 class MyController @Inject()
 (implicit val mat: Materializer) 
-//extends Actor
 {
-  //implicit val materializer = ActorMaterializer()
   val classLoader = Thread.currentThread().getContextClassLoader
   val env = new play.api.Environment(new File("."), classLoader, Mode.Dev)
   val rawConfig = play.api.Configuration.load(env)
   val ws = createClient(rawConfig)
-  //val what = new Whatever(ws)
   
   def getWS() : WSClient = {
     ws
   }
-   
-  /*def receive = {
-   case _ => 
-     //println("ENDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD\n\n\n\n\n\n\n")
-     val what = new Whatever(ws)
-  }*/
   
   def createClient(rawConfig: play.api.Configuration): WSClient = {
     val parser = new WSConfigParser(rawConfig, new Environment(new File("."), classLoader, Mode.Test))
@@ -124,7 +90,7 @@ trait BoardPoster extends JSONConverter
     val promise = Promise[Election[W, Created]]()
     
     val futureResponse: Future[WSResponse] = 
-    ws.url(s"http://172.17.0.1:1028/accumulate")
+    ws.url(s"http://172.17.0.1:9500/election/create")
     .withHeaders(
       "Content-Type" -> "application/json",
       "Accept" -> "application/json")
@@ -137,6 +103,11 @@ trait BoardPoster extends JSONConverter
     
     promise.future
   }
+  
+  def closeSystem() {
+    ws.close()
+    system.terminate()
+  }
 }
 
 /**
@@ -146,14 +117,9 @@ trait BoardPoster extends JSONConverter
  */
 trait BoardElectionImpl extends ElectionTrait with BoardPoster
 {
-  //implicit val system = ActorSystem("HelloSystem")
-  //implicit val materializer = ActorMaterializer()
   // create an election
   def create[W <: Nat](id: String, bits: Int) : Future[Election[W, Created]] = {
     println("Going to start a new Election!")
-    /*val helloActor = system. actorOf(Props(new MyController()), name = "helloactor")
-    helloActor ! " "*/
-
     val group = GStarModSafePrime.getFirstInstance(bits)
 // import ch.bfh.unicrypt.math.algebra.additive.parameters.ECZModPrimeParameters
 // import ch.bfh.unicrypt.math.algebra.additive.classes.ECZModPrime
@@ -374,7 +340,7 @@ trait BoardElectionImpl extends ElectionTrait with BoardPoster
       val decrypted = (votes zip combined).par.map(c => c._1.getSecond().apply(c._2)).seq
       val encoder = ZModPrimeToGStarModSafePrime.getInstance(in.state.cSettings.group)
 
-      system.terminate()
+      closeSystem()
       new Election[W, Decrypted](Decrypted(decrypted.par.map(encoder.decode(_).convertToString).seq, in.state))
     }
   }
