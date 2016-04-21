@@ -3,8 +3,21 @@ import nat._
 import syntax.sized._
 import ops.nat._
 import LT._
+import javax.inject._
+import play.api.libs.ws._
+import play.api.libs.ws.ahc._
+
+import play.api.libs.json._
+import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
+import scala.util.{Try, Success, Failure}
+import scala.concurrent.{Future, Promise}
 import com.github.nscala_time.time.Imports._
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
+import play.api._
+import java.io.File
+import java.math.BigInteger;
+import java.util.concurrent.TimeUnit._
 
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
@@ -19,30 +32,101 @@ import mpservice.MPBridgeS
 import mpservice.MPBridge
 
 import scala.collection.JavaConversions._
-import scala.concurrent.Future
+
+import javax.inject.Inject
+import scala.concurrent.duration._
+
+import play.api.mvc._
+import play.api.http.HttpEntity
+
+import akka.actor.Actor
+import akka.stream.Materializer
+import akka.actor.ActorSystem
+import akka.actor.Props
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl._
+import akka.util.ByteString
+
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
+
+
+class MyController @Inject()
+(implicit val mat: Materializer) 
+{
+  val classLoader = Thread.currentThread().getContextClassLoader
+  val env = new play.api.Environment(new File("."), classLoader, Mode.Dev)
+  val rawConfig = play.api.Configuration.load(env)
+  val ws = createClient(rawConfig)
+  
+  def getWS() : WSClient = {
+    ws
+  }
+  
+  def createClient(rawConfig: play.api.Configuration): WSClient = {
+    val parser = new WSConfigParser(rawConfig, new Environment(new File("."), classLoader, Mode.Test))
+    val clientConfig = new AhcWSClientConfig(parser.parse())
+    // Debug flags only take effect in JSSE when DebugConfiguration().configure is called.
+    //import play.api.libs.ws.ssl.debug.DebugConfiguration
+    //clientConfig.ssl.map {
+    //   _.debug.map(new DebugConfiguration().configure)
+    //}
+    val builder = new AhcConfigBuilder(clientConfig)
+    val client = new AhcWSClient(builder.build())
+    client
+  }
+}
+
+trait BoardPoster extends JSONConverter
+{
+
+  implicit val system = ActorSystem("HelloSystem")
+  implicit val materializer = ActorMaterializer()
+  val controller = new MyController()
+  val ws = controller.getWS()
+  
+  def createPost[W <: Nat](election: Election[W, Created]) : Future[Election[W, Created]] = {
+    val promise = Promise[Election[W, Created]]()
+    
+    val futureResponse: Future[WSResponse] = 
+    ws.url(s"http://172.17.0.1:9500/election/create")
+    .withHeaders(
+      "Content-Type" -> "application/json",
+      "Accept" -> "application/json")
+    .post(CreatedToJS(election.state))    
+    
+    futureResponse onComplete {
+      case Success(e) => promise.success(election)
+      case Failure(e) => promise.failure(e)
+    }
+    
+    promise.future
+  }
+  
+  def closeSystem() {
+    ws.close()
+    system.terminate()
+  }
+}
 
 /**
  * The state machine transitions
  *
  * Method signatures allow the compiler to enforce the state machine logic.
  */
-trait DefaultElectionImpl extends ElectionTrait
+trait BoardElectionImpl extends ElectionTrait with BoardPoster
 {
   // create an election
   def create[W <: Nat](id: String, bits: Int) : Future[Election[W, Created]] = {
-    Future {
-      println("Going to start a new Election!")
-
-      val group = GStarModSafePrime.getFirstInstance(bits)
-  // import ch.bfh.unicrypt.math.algebra.additive.parameters.ECZModPrimeParameters
-  // import ch.bfh.unicrypt.math.algebra.additive.classes.ECZModPrime
-  // val group = ECZModPrime.getInstance(ECZModPrimeParameters.SECP521r1)
-      val generator = group.getDefaultGenerator()
-      val cSettings = CryptoSettings(group, generator)
-      
-      new Election[W, Created](Created(id, cSettings))
-    }
+    println("Going to start a new Election!")
+    val group = GStarModSafePrime.getFirstInstance(bits)
+// import ch.bfh.unicrypt.math.algebra.additive.parameters.ECZModPrimeParameters
+// import ch.bfh.unicrypt.math.algebra.additive.classes.ECZModPrime
+// val group = ECZModPrime.getInstance(ECZModPrimeParameters.SECP521r1)
+    val generator = group.getDefaultGenerator()
+    val cSettings = CryptoSettings(group, generator)
+    createPost(new Election[W, Created](Created(id, cSettings)))
   }
 
   // now ready to receive shares
@@ -256,6 +340,7 @@ trait DefaultElectionImpl extends ElectionTrait
       val decrypted = (votes zip combined).par.map(c => c._1.getSecond().apply(c._2)).seq
       val encoder = ZModPrimeToGStarModSafePrime.getInstance(in.state.cSettings.group)
 
+      closeSystem()
       new Election[W, Decrypted](Decrypted(decrypted.par.map(encoder.decode(_).convertToString).seq, in.state))
     }
   }
