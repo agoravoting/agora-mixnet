@@ -35,7 +35,7 @@ class Election[+W <: Nat, +S <: ElectionState] (val state: S) {
  * These types represent the state of the election and associated information
  *
  */
-case class Created(override val id: String, override val cSettings: CryptoSettings) extends ElectionState(id, cSettings)
+case class Created(override val id: String, override val cSettings: CryptoSettings, val uid: String) extends ElectionState(id, cSettings)
 case class Shares[T <: Nat](val shares: Sized[List[(String, String)], T], prev: ElectionState) extends ElectionStateShares(prev, shares.toList) with HasHistory
 case class Combined(override val publicKey: String, prev: ElectionStateShares) extends ElectionStatePk(prev, publicKey) with HasHistory
 case class Votes(votes: List[String], prev: ElectionStatePk) extends ElectionStatePk(prev, prev.publicKey) with HasHistory
@@ -51,7 +51,7 @@ case class Decrypted(decrypted: Seq[String], prev: Decryptions[_ <: Nat]) extend
  * Method signatures allow the compiler to enforce the state machine logic.
  */
 trait ElectionTrait {
-  def create[W <: Nat](id: String, bits: Int) : Future[Election[W, Created]]
+  def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]]
   def startShares[W <: Nat](in: Election[W, Created]) : Future[Election[W, Shares[_0]]]
   def addShare[W <: Nat, T <: Nat](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]]
   def combineShares[W <: Nat](in: Election[W, Shares[W]]) : Future[Election[W, Combined]]

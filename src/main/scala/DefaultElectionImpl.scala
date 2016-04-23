@@ -30,9 +30,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 trait DefaultElectionImpl extends ElectionTrait
 {
   // create an election
-  def create[W <: Nat](id: String, bits: Int) : Future[Election[W, Created]] = {
+  def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = {
     Future {
       println("Going to start a new Election!")
+      
+      ToInt[W]
 
       val group = GStarModSafePrime.getFirstInstance(bits)
   // import ch.bfh.unicrypt.math.algebra.additive.parameters.ECZModPrimeParameters
@@ -41,7 +43,7 @@ trait DefaultElectionImpl extends ElectionTrait
       val generator = group.getDefaultGenerator()
       val cSettings = CryptoSettings(group, generator)
       
-      new Election[W, Created](Created(id, cSettings))
+      new Election[W, Created](Created(id, cSettings, "0"))
     }
   }
 
