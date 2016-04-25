@@ -13,7 +13,7 @@ trait ElectionJsonFormatter {
     (JsPath \ "group").write[String] and
     (JsPath \ "generator").write[String]
   )(unlift(JsCryptoSettings.unapply))
-  
+   
   implicit val jsElectionStateWrites: Writes[JsElectionState] = (
     (JsPath \ "id").write[String] and
     (JsPath \ "cSettings").write[JsCryptoSettings]

@@ -62,6 +62,8 @@ import mpservice.MPBridge
  *
  * This demo uses two trustees, ElectionTest3 below shows how number of trustees generalizes
  */
+ 
+
 object ElectionTest extends App {
 
   val config = ConfigFactory.load()

@@ -84,7 +84,9 @@ object BoardPoster extends ElectionMachineJSONConverter
   implicit val system = ActorSystem("BoardPoster")
   implicit val materializer = ActorMaterializer()
   val controller = new MyController()
-  val ws = controller.getWS()
+  implicit val ws = controller.getWS()
+  
+  val subscriber = new ElectionCreateSubscriber(ws)
   
   var agoraBoard = "http://172.17.0.1:9500"
   
@@ -122,7 +124,8 @@ object BaseImpl extends DefaultElectionImpl {}
 trait ElectionMachine extends ElectionTrait
 {
   // create an election
-  def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = {    
+  def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = { 
+    controllers.Router.open()   
     BaseImpl.create(id, bits) flatMap { election =>
       BoardPoster.create(election)
     }
@@ -192,6 +195,7 @@ trait ElectionMachine extends ElectionTrait
   def combineDecryptions[W <: Nat](in: Election[W, Decryptions[W]]) : Future[Election[W, Decrypted]] = {
     BaseImpl.combineDecryptions(in) map { election =>
       BoardPoster.closeSystem()
+      controllers.Router.close()
       election
     }
   }

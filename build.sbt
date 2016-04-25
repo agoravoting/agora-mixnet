@@ -1,6 +1,6 @@
 scalaVersion := "2.11.7"
 
-lazy val akkaVersion = "2.4.0"
+lazy val akkaVersion = "2.4.4"
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("releases"),
@@ -17,6 +17,10 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster-metrics" % akkaVersion,
+  "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
   "org.fusesource" % "sigar" % "1.6.4"
 )
 

@@ -67,7 +67,7 @@ trait ElectionTrait {
   def combineDecryptions[W <: Nat](in: Election[W, Decryptions[W]]) : Future[Election[W, Decrypted]]
 }
   
-object Election extends DefaultElectionImpl
+object Election extends ElectionMachine
 { }
 
 
