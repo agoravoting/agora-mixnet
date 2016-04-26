@@ -1,3 +1,5 @@
+package app
+
 import play.api.libs.json._
 import shapeless._
 import shapeless.ops.nat._

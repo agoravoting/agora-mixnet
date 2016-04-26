@@ -1,3 +1,5 @@
+package app
+
 import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme

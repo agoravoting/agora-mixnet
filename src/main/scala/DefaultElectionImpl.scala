@@ -1,3 +1,5 @@
+package app
+
 import shapeless._
 import nat._
 import syntax.sized._

@@ -1,3 +1,5 @@
+package app
+
 // Note: See Election.scala for the election and election state models
 
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element

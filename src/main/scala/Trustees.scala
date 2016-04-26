@@ -1,3 +1,5 @@
+package app
+
 import scala.collection.mutable.{ Map => MutableMap }
 
 import ch.bfh.unicrypt.crypto.mixer.classes.ReEncryptionMixer

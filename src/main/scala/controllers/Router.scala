@@ -15,8 +15,12 @@ import scala.util._
 import play.api.libs.json._
 import play.api.mvc.Results._
 import play.api.libs.functional.syntax._
+import models._
+import java.util.Base64
+import java.nio.charset.StandardCharsets
+import app._
 
-object Router
+object Router extends BoardJSONFormatter with ElectionJsonFormatter
 {
   implicit val system = ActorSystem()
   implicit val executor = system.dispatcher
@@ -27,8 +31,9 @@ object Router
   
   def getString(entity: HttpEntity) : Future[String] = {
     entity.toStrict(5.seconds) map { st =>
+      //new String(st.data.decodeString("UTF-8").getBytes())
       st.data.decodeString("UTF-8")
-    }    
+    }
   }
   
   val requestHandler: HttpRequest => Future[HttpResponse] = {
@@ -36,9 +41,42 @@ object Router
       val promise = Promise[HttpResponse]()
       getString(entity) onComplete {
        case Success(bodyStr) =>
-         //val pretty = Json.prettyPrint(Json.toJson(bodyStr))
          println("FF ACCUMULATE")
          println(s"FF     Received: ${bodyStr}")
+         val js = Json.parse(bodyStr)
+         println(s"FF     JSON: ${Json.stringify(js)}")
+         /*js.validate[Seq[JsValue]] match {
+           case jSeqPost: JsSuccess[Seq[JsValue]] =>
+             val seqJsSeq = jSeqPost.get
+             seqJsSeq foreach { x =>
+               println(s"FF     JSON2:"+ Json.stringify(x))
+             }
+             
+           case e: JsError => 
+             println(s"Router JsError e: $e")
+         }*/
+         js.validate[Seq[Post]] match {
+           case jSeqPost: JsSuccess[Seq[Post]] =>
+             val seqPost = jSeqPost.get
+             seqPost foreach { post => 
+               if(post.user_attributes.section == "election" &&
+                  post.user_attributes.group == "create") {
+                 val messageB64 = post.message.replace('.', '=')
+                 val message = new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)
+                 val jsMsg = Json.parse(message)
+                 jsMsg.validate[JsElection[JsElectionState]] match {
+                   case jSeqPost: JsSuccess[JsElection[JsElectionState]] =>
+                     println(s"\nRouter 1 JsSuccess : ${Json.stringify(jsMsg)}")
+                   case e: JsError => 
+                     println(s"\nRouter 1 JsError error: ${e} message ${message}")
+                 }
+               } else {
+                     println("\nRouter else")
+               }
+             }
+           case e: JsError => 
+             println(s"Router JsError e: $e")
+         }
          promise.success(HttpResponse(entity = s"FF     Received: ${bodyStr}")) 
        case Failure(e) =>
          promise.success(HttpResponse(400, entity = s"Error $e"))

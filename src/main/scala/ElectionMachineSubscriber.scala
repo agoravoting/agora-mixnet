@@ -1,3 +1,5 @@
+package app
+
 import javax.inject._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Success, Failure}

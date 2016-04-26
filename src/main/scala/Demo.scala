@@ -17,7 +17,7 @@ import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
 import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
 import mpservice.MPBridgeS
 import mpservice.MPBridge
-
+import app._
 
 /**
  * An election process DEMO

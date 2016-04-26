@@ -1,3 +1,5 @@
+package app
+
 import ch.bfh.unicrypt.crypto.keygenerator.interfaces.KeyPairGenerator
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
