@@ -21,7 +21,7 @@ import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import java.math.BigInteger
 import scala.concurrent.{Future, Promise}
 import scala.reflect.runtime.universe._
-import scala.util.{Success, Failure}
+import scala.util.{Try, Success, Failure}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.Queue
 import java.util.concurrent.atomic.AtomicInteger
@@ -109,9 +109,8 @@ class ElectionSubscriber[W <: Nat : ToInt : TypeTag](val uid : String){
 }
 
 class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
-extends ElectionJsonFormatter
-{
-  
+  extends ElectionJsonFormatter
+{  
   def startShares(in: Election[W, Created]) : Election[W, Shares[_0]] = {
       println("Now waiting for shares")
       new Election[W, Shares[_0]](Shares[_0](List[(String, String)]().sized(0).get, in.state))
@@ -122,8 +121,7 @@ extends ElectionJsonFormatter
     new Election[W, Shares[Succ[T]]](Shares[Succ[T]](in.state.shares :+ (proverId, keyShare), in.state))
   }
   
-  
-  val subscriber = new ElectionSubscriber[W](uid)  
+  private val subscriber = new ElectionSubscriber[W](uid)
   
   def pushShares(jsShares: JsShares) {
     val maxLevel = ToInt[W].apply()
@@ -221,37 +219,72 @@ extends ElectionJsonFormatter
             println("ElectionStateMaintainer else")
       }
   }
+  
+  def getSubscriber() : ElectionSubscriber[W] = {
+    subscriber
+  }
 }
 
-/*case class Caster[T <: Nat : ToInt]() {
-  def whatever() : String = {
-    "hola"
+class MaintainerWrapper(level: Int, uid: String) {
+  
+  val maintainer =  if(1 == level) {
+    new ElectionStateMaintainer[_1](uid)
+  } else if(2 == level) {
+    new ElectionStateMaintainer[_2](uid)
+  } else if(3 == level) {
+    new ElectionStateMaintainer[_3](uid)
+  } else if(4 == level) {
+    new ElectionStateMaintainer[_4](uid)
+  } else if(5 == level) {
+    new ElectionStateMaintainer[_5](uid)
+  } else if(6 == level) {
+    new ElectionStateMaintainer[_6](uid)
+  } else if(7 == level) {
+    new ElectionStateMaintainer[_7](uid)
+  } else if(8 == level) {
+    new ElectionStateMaintainer[_8](uid)
+  } else if(9 == level) {
+    new ElectionStateMaintainer[_9](uid)
+  } else {
+    throw new Error(s"level is $level and should be limited to [1-9]")
   }
   
-  type TheType = T
-}*/
+  def push(post: Post) {
+    maintainer.push(post)
+  }
+  
+  def getSubscriber() = {
+    maintainer.getSubscriber()
+  }
+}
 
-trait PostOffice {
+
+trait PostOffice extends ElectionJsonFormatter
+{
   // post index counter
-  private var index = 0
+  private var index : Long = 0
   private var queue = Queue[Option[Post]]()
+  // the first parameter is the uid
+  private var electionMap = Map[Long, MaintainerWrapper]()
+  
   def add(post: Post) {
     queue.synchronized {
-      val postIndex = post.board_attributes.index.toInt
+      // TODO: Try {} on toLong
+      val postIndex = post.board_attributes.index.toLong
       if(postIndex < index) {
         println("Error: old post")
       } else if(postIndex >= index) {
         if(postIndex < index + queue.size) {
-          queue.get(postIndex - index) map { x =>
+          queue.get((postIndex - index).toInt) map { x =>
             x match {
               case Some(p) =>
                 println("Error: duplicated post")
               case None =>
-                queue.update(postIndex - index, Some(post))
+                queue.update((postIndex - index).toInt, Some(post))
             }
           } 
         } else {
-          queue ++= List.fill(postIndex - (index + queue.size))(None)
+          queue ++= List.fill((postIndex - (index + (queue.size).toLong)).toInt)(None)
           queue += Some(post)
         }
       }
@@ -259,8 +292,49 @@ trait PostOffice {
     remove()
   }
   
-  def send(post: Post)
-  
+  private def send(post: Post) {
+    if("election" == post.user_attributes.section) {
+      val group : String = post.user_attributes.group
+      val electionIdStr = post.board_attributes.index
+      if("create" == group) {
+        Try { electionIdStr.toLong } match {
+          case Success(electionId) =>
+            electionMap.get(electionId) match {
+              case Some(electionWrapper) =>
+                println(s"Error: duplicated Election Id: ${electionId}")
+              case None =>
+                val messageB64 = post.message.replace('.', '=')
+                val message = new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)
+                val jsMsg = Json.parse(message)
+                jsMsg.validate[JsElection] match {
+                  case jSeqPost: JsSuccess[JsElection] =>
+                    val maintainer = new MaintainerWrapper(jSeqPost.get.level, electionIdStr)
+                    maintainer.push(post)
+                    electionMap += (electionId -> maintainer)
+                  case e: JsError => 
+                    println("Error: JsCreate format error")
+                }
+            }
+          case Failure(e) =>
+            println(s"Error: Election Id is not a number (but It should be): ${electionIdStr}")
+        }
+      } else {
+        Try { group.toLong } match {
+          case Success(electionId) => 
+            electionMap.get(electionId) match {
+              case Some(electionWrapper) => 
+                electionWrapper.push(post)
+              case None =>
+                println(s"Error: Election Id not found in db: ${electionId}")
+            }
+          case Failure(e) => 
+            println(s"Error: group is not a number : ${group}")
+        }
+      }
+    } else {
+      println("Error: post is not an election")
+    }
+  }
   
   private def remove() {
     var head : Option[Post] = None
@@ -282,14 +356,25 @@ trait PostOffice {
     }
   }
   
+  def getSubscriber(uid : String) = {
+    Try { uid.toLong } match {
+      case Success(electionId) =>
+        electionMap.get(electionId) match {
+          case Some(electionWrapper) => 
+            electionWrapper.getSubscriber()
+          case None =>
+            throw new Error(s"Error subscribing: Election Id not found in db: ${electionId}")
+        }
+      case Failure(e) =>
+        throw new Error(s"Error subscribing: Election id is not a number: {uid}")
+    }
+  }
 }
 
 object BoardReader
   extends ElectionJsonFormatter
   with PostOffice
 {  
-  def send(post: Post) {
-  }
   
   def push(seqPost: Seq[Post]) = {
     seqPost foreach { post => 
