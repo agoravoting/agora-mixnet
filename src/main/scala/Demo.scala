@@ -18,6 +18,9 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
 import mpservice.MPBridgeS
 import mpservice.MPBridge
 import app._
+import scala.reflect.runtime.universe._
+
+import scala.util.{Success, Failure}
 
 /**
  * An election process DEMO
@@ -65,7 +68,32 @@ import app._
  
 
 object ElectionTest extends App {
-
+  
+  /*def printType[T : TypeTag](x: T) = {
+    println(typeOf[T].toString)
+  }
+  
+  println("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
+  var map = Map[String, Any]()
+  val promise = Promise[Int]()
+  val aAny: Any = promise
+  map += ("2" -> aAny)
+  promise.success(5)
+  println("====")
+  
+  map.get("2") match {
+    case Some(any) =>
+      val p = any.asInstanceOf[Promise[Int]]
+      p.future onComplete {
+        case Success(f) =>
+          println(s"WW Success $f")
+        case Failure(e) =>
+          println(s"WW Failure $e")
+      }
+    case None =>
+      println("WW None")
+  }*/
+  
   val config = ConfigFactory.load()
   val useGmp = config.getBoolean("mpservice.use-gmp")
   val useExtractor = config.getBoolean("mpservice.use-extractor")

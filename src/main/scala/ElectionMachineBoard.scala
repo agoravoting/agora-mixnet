@@ -135,17 +135,26 @@ trait ElectionMachine extends ElectionTrait
 
   // now ready to receive shares
   def startShares[W <: Nat](in: Election[W, Created]) : Future[Election[W, Shares[_0]]] = {
-    BaseImpl.startShares(in)
+    BaseImpl.startShares(in) map { election =>
+      println(s"RR $election")
+      election
+    }
   }
 
   // verify and add a share
   def addShare[W <: Nat, T <: Nat](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]] = {
-    BaseImpl.addShare(in, share, proverId)
+    BaseImpl.addShare(in, share, proverId) map { election => 
+      println(s"RR $election")
+      election
+    }
   }
 
   // combine the shares into a public key, can only happen if we have all the shares
   def combineShares[W <: Nat](in: Election[W, Shares[W]]) : Future[Election[W, Combined]] = {
-    BaseImpl.combineShares(in)
+    BaseImpl.combineShares(in) map { election =>
+      println(s"RR $election")
+      election
+    }
   }
 
   // start the voting period

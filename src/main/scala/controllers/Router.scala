@@ -16,8 +16,6 @@ import play.api.libs.json._
 import play.api.mvc.Results._
 import play.api.libs.functional.syntax._
 import models._
-import java.util.Base64
-import java.nio.charset.StandardCharsets
 import app._
 
 object Router extends BoardJSONFormatter with ElectionJsonFormatter
@@ -57,23 +55,7 @@ object Router extends BoardJSONFormatter with ElectionJsonFormatter
          }*/
          js.validate[Seq[Post]] match {
            case jSeqPost: JsSuccess[Seq[Post]] =>
-             val seqPost = jSeqPost.get
-             seqPost foreach { post => 
-               if(post.user_attributes.section == "election" &&
-                  post.user_attributes.group == "create") {
-                 val messageB64 = post.message.replace('.', '=')
-                 val message = new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)
-                 val jsMsg = Json.parse(message)
-                 jsMsg.validate[JsElection[JsElectionState]] match {
-                   case jSeqPost: JsSuccess[JsElection[JsElectionState]] =>
-                     println(s"\nRouter 1 JsSuccess : ${Json.stringify(jsMsg)}")
-                   case e: JsError => 
-                     println(s"\nRouter 1 JsError error: ${e} message ${message}")
-                 }
-               } else {
-                     println("\nRouter else")
-               }
-             }
+             BoardReader.push(jSeqPost.get)
            case e: JsError => 
              println(s"Router JsError e: $e")
          }
