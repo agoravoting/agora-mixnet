@@ -52,7 +52,8 @@ import akka.util.ByteString
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
-
+import services._
+import models._
 
 class MyController @Inject()
 (implicit val mat: Materializer) 
@@ -80,7 +81,7 @@ class MyController @Inject()
   }
 }
 
-object BoardPoster extends ElectionMachineJSONConverter
+object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
 {
 
   implicit val system = ActorSystem("BoardPoster")
@@ -96,18 +97,24 @@ object BoardPoster extends ElectionMachineJSONConverter
     agoraBoard = str
   }
   
-  def create[W <: Nat: ToInt](election: Election[W, Created]) : Future[Election[W, Created]] = {    
+  def create[W <: Nat: ToInt](election: Election[W, Created]) : Future[Election[W, Created]] = {   
+    
     val futureResponse: Future[WSResponse] = 
-    ws.url(s"${agoraBoard}/election/create")
+    ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
     .withHeaders(
       "Content-Type" -> "application/json",
       "Accept" -> "application/json")
-    .post(CreatedToJS(election))
+    .post(Json.toJson(CreatedToPostRequest(election)))
     
-    futureResponse map { success =>
-      println("Success! \n" + success.body)
-      // create new election with the unique id that is contained in success.body
-      new Election[W, Created](Created(election.state.id, election.state.cSettings, success.body))
+    futureResponse map { case response =>
+     response.json.validate[BoardAttributes] match { 
+       case attr: JsSuccess[BoardAttributes] =>
+         println("Success! \n" + response.json)
+         // The post message index will be the unique id of the election
+         new Election[W, Created](Created(election.state.id, election.state.cSettings, attr.get.index))
+       case JsError(e) =>
+         throw new Error(s"$e")
+     }
     }
   }
   

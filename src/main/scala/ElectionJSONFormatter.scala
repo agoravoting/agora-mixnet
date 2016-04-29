@@ -6,6 +6,7 @@ import shapeless.ops.nat._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
+import models._
 
 case class JsCryptoSettings(group: String, generator: String)
 case class JsElectionState(id: String, cSettings: JsCryptoSettings)
@@ -93,9 +94,11 @@ trait ElectionJsonFormatter {
   )(JsShares.apply _)
 }
 
-trait ElectionMachineJSONConverter extends ElectionJsonFormatter {
-  
-  def CreatedToJS[W <: Nat: ToInt](input: Election[W, Created]) : JsValue = {
+trait ElectionMachineJSONConverter
+  extends ElectionJsonFormatter 
+  with BoardJSONFormatter 
+{
+  def CreatedToPostRequest[W <: Nat: ToInt](input: Election[W, Created]) : PostRequest = {
     val jsElection = JsElection(
       ToInt[W].apply(),
       JsCreated(
@@ -106,6 +109,9 @@ trait ElectionMachineJSONConverter extends ElectionJsonFormatter {
         ),
         input.state.uid
     ))
-    Json.toJson(jsElection)
+    val b64 = new Base64Message(Json.toJson(jsElection))
+    // for some reason Fiware doesn't like the '=' character on a String (or \")
+    val message = b64.toString().replace('=', '.')
+    PostRequest(message, UserAttributes("election", "create", None, None))
   }
 }
