@@ -48,21 +48,33 @@ class ElectionSubscriber[W <: Nat : ToInt : TypeTag](val uid : String){
   def push[B <: ElectionState : TypeTag](election : Election[W, B]) = {
     val promise = Promise[Election[W, B]]()
     val str = getElectionType(promise)
+    println(s"GG ElectionSubscriber:push $str")
     val any = getOrAdd(str, promise)
-    val p = any.asInstanceOf[Promise[Election[W, B]]]  // TODO: This could fail
-    if (p.isCompleted) {
-      println("Error: trying to complete an already completed future")
-    } else {
-      p.success(election) 
+    Try {
+      any.asInstanceOf[Promise[Election[W, B]]]
+    } map { p =>
+      if (p.isCompleted) {
+        println("Error: trying to complete an already completed future")
+      } else {
+        p.success(election)  
+      }
     }
   }
   
   private def pull[B <: ElectionState : TypeTag](): Future[Election[W, B]] = {
+    println(s"GG ElectionSubscriber:pull")
     val promise = Promise[Election[W, B]]()
     val str = getElectionType(promise)
     val any = getOrAdd(str, promise)
-    val p = any.asInstanceOf[Promise[Election[W, B]]]  // TODO: This could fail
-    promise.future
+    Try {
+      any.asInstanceOf[Promise[Election[W, B]]]
+    } match {
+      case Success(p) =>
+        p.future
+      case Failure(e) =>
+        promise.failure(e)
+        promise.future
+    }
   }
   
   def create() : Future[Election[W, Created]] = 
@@ -170,6 +182,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
   }
   
   def pushCreate(jsElection: JsElection) {
+    println("GG ElectionStateMaintainer:pushCreate")
     val group = GStarModSafePrime.getInstance(new BigInteger(jsElection.state.cSettings.group))
     val cSettings = CryptoSettings(group, group.getDefaultGenerator())
     if (jsElection.level == ToInt[W].apply()) {
@@ -182,6 +195,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
   }
   
   def push(post: Post) {
+    println("GG ElectionStateMaintainer:push")
     val messageB64 = post.message.replace('.', '=')
     val message = new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)
     val jsMsg = Json.parse(message)
@@ -202,19 +216,17 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
               case "JsShares" =>
                 jsMessage.message.validate[JsShares] match {
                   case b: JsSuccess[JsShares] =>
-                    pushShares(b.get)                  
+                    pushShares(b.get)
                   case e: JsError =>
                     println(s"JsError error: ${e} message ${message}")
                 }
               case _ => ;
                 println(s"ElectionStateMaintainer JsMessage type error: ${jsMessage.messageType}")
             }
-            
           case e: JsError => 
             println(s"ElectionStateMaintainer error: ${e} message ${message}")
         }
         val futureShare = subscriber.addShare[_1]()
-        
       } else {
             println("ElectionStateMaintainer else")
       }
@@ -226,6 +238,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
 }
 
 class MaintainerWrapper(level: Int, uid: String) {
+  println("GG MaintainerWrapper:constructor")
   
   val maintainer =  if(1 == level) {
     new ElectionStateMaintainer[_1](uid)
@@ -250,6 +263,7 @@ class MaintainerWrapper(level: Int, uid: String) {
   }
   
   def push(post: Post) {
+    println("GG MaintainerWrapper:push")
     maintainer.push(post)
   }
   
@@ -258,7 +272,6 @@ class MaintainerWrapper(level: Int, uid: String) {
   }
 }
 
-
 trait PostOffice extends ElectionJsonFormatter
 {
   // post index counter
@@ -266,33 +279,39 @@ trait PostOffice extends ElectionJsonFormatter
   private var queue = Queue[Option[Post]]()
   // the first parameter is the uid
   private var electionMap = Map[Long, MaintainerWrapper]()
+  // list of callbacks to be called when a new election is created
+  private var callbackQueue = Queue[String => Unit]()
   
   def add(post: Post) {
     queue.synchronized {
-      // TODO: Try {} on toLong
-      val postIndex = post.board_attributes.index.toLong
-      if(postIndex < index) {
-        println("Error: old post")
-      } else if(postIndex >= index) {
-        if(postIndex < index + queue.size) {
-          queue.get((postIndex - index).toInt) map { x =>
-            x match {
-              case Some(p) =>
-                println("Error: duplicated post")
-              case None =>
-                queue.update((postIndex - index).toInt, Some(post))
+      println("GG PostOffice:add")
+      Try {
+        post.board_attributes.index.toLong
+      } map { postIndex =>
+        if(postIndex < index) {
+          println("Error: old post")
+        } else if(postIndex >= index) {
+          if(postIndex < index + queue.size) {
+            queue.get((postIndex - index).toInt) map { x =>
+              x match {
+                case Some(p) =>
+                  println("Error: duplicated post")
+                case None =>
+                  queue.update((postIndex - index).toInt, Some(post))
+              }
             }
-          } 
-        } else {
-          queue ++= List.fill((postIndex - (index + (queue.size).toLong)).toInt)(None)
-          queue += Some(post)
+          } else {
+            queue ++= List.fill((postIndex - (index + (queue.size).toLong)).toInt)(None)
+            queue += Some(post)
+          }
         }
       }
+      remove()
     }
-    remove()
   }
   
   private def send(post: Post) {
+    println("GG PostOffice:send")
     if("election" == post.user_attributes.section) {
       val group : String = post.user_attributes.group
       val electionIdStr = post.board_attributes.index
@@ -311,6 +330,11 @@ trait PostOffice extends ElectionJsonFormatter
                     val maintainer = new MaintainerWrapper(jSeqPost.get.level, electionIdStr)
                     maintainer.push(post)
                     electionMap += (electionId -> maintainer)
+                    callbackQueue.synchronized {
+                      callbackQueue foreach { func =>
+                        func(electionIdStr)
+                      }
+                    }
                   case e: JsError => 
                     println("Error: JsCreate format error")
                 }
@@ -337,6 +361,7 @@ trait PostOffice extends ElectionJsonFormatter
   }
   
   private def remove() {
+    println("GG PostOffice:remove")
     var head : Option[Post] = None
     queue.synchronized {
       if(queue.size > 0) {
@@ -369,13 +394,18 @@ trait PostOffice extends ElectionJsonFormatter
         throw new Error(s"Error subscribing: Election id is not a number: {uid}")
     }
   }
+  
+  def addElectionCreationListener(callback: (String) => Unit) {
+    callbackQueue.synchronized {
+      callbackQueue += callback
+    }
+  }
 }
 
 object BoardReader
   extends ElectionJsonFormatter
   with PostOffice
 {  
-  
   def push(seqPost: Seq[Post]) = {
     seqPost foreach { post => 
       add(post)

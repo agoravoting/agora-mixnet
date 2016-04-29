@@ -19,6 +19,7 @@ import mpservice.MPBridgeS
 import mpservice.MPBridge
 import app._
 import scala.reflect.runtime.universe._
+import controllers._
 
 import scala.util.{Success, Failure}
 
@@ -65,9 +66,8 @@ import scala.util.{Success, Failure}
  *
  * This demo uses two trustees, ElectionTest3 below shows how number of trustees generalizes
  */
- 
 
-object ElectionTest extends App {  
+object ElectionTest extends App {   
   val config = ConfigFactory.load()
   val useGmp = config.getBoolean("mpservice.use-gmp")
   val useExtractor = config.getBoolean("mpservice.use-extractor")
@@ -93,12 +93,29 @@ object ElectionTest extends App {
   // these are responsible for shuffling the votes
   val m1 = new MixerTrustee("mixer one")
   val m2 = new MixerTrustee("mixer two")
-
+   
   // create the election,
   // we are using privacy level 2, two trustees of each kind
   // we are 2048 bits for the size of the group modulus
   val start = Election.create[_2]("my election", 2048)
   
+  // get subscriber when we have the uid
+  // then subscribe to the election creation
+  var uidPromise = Promise[String]()
+  BoardReader.addElectionCreationListener{ uid =>
+    if(!uidPromise.isCompleted) {
+      uidPromise.success(uid)
+    }
+  }
+  uidPromise.future map { uid =>
+    val subscriber = BoardReader.getSubscriber(uid)
+    subscriber.create() onComplete { 
+      case Success(dd) =>
+        println("GGG subscriber gives created!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+      case Failure(e) =>
+        println(s"GGG $e")
+    }
+  }
   // the election is now ready to receive key shares
   val readyForShares = start flatMap { start =>
     Election.startShares(start)
@@ -183,7 +200,6 @@ object ElectionTest extends App {
     var mixingEnd = System.currentTimeMillis()
     val startDecryptions = stopMix flatMap { stopMix =>
       mixingEnd = System.currentTimeMillis()
-      
       // start the partial decryptions
       // if we tried to do this before the mixing was completed, the compiler would protest
       Election.startDecryptions(stopMix)

@@ -39,20 +39,10 @@ object Router extends BoardJSONFormatter with ElectionJsonFormatter
       val promise = Promise[HttpResponse]()
       getString(entity) onComplete {
        case Success(bodyStr) =>
-         println("FF ACCUMULATE")
-         println(s"FF     Received: ${bodyStr}")
+         //println("FF ACCUMULATE")
+         //println(s"FF     Received: ${bodyStr}")
          val js = Json.parse(bodyStr)
-         println(s"FF     JSON: ${Json.stringify(js)}")
-         /*js.validate[Seq[JsValue]] match {
-           case jSeqPost: JsSuccess[Seq[JsValue]] =>
-             val seqJsSeq = jSeqPost.get
-             seqJsSeq foreach { x =>
-               println(s"FF     JSON2:"+ Json.stringify(x))
-             }
-             
-           case e: JsError => 
-             println(s"Router JsError e: $e")
-         }*/
+         //println(s"FF     JSON: ${Json.stringify(js)}")
          js.validate[Seq[Post]] match {
            case jSeqPost: JsSuccess[Seq[Post]] =>
              BoardReader.push(jSeqPost.get)
