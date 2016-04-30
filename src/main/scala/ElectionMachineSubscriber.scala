@@ -9,6 +9,7 @@ import play.api.libs.json._
 import play.api.libs.ws._
 import play.api.Logger
 import models._
+import services._
 
  
 class ElectionCreateSubscriber @Inject
@@ -21,7 +22,7 @@ extends BoardJSONFormatter
   def subscribeToCreate() {
     val acc = new SubscribeRequest("election", "create", "http://localhost:9800/accumulate")
     val futureResponse: Future[WSResponse] = 
-    ws.url(s"http://localhost:9500/subscribe")
+    ws.url(s"${BoardConfig.agoraboard.url}/bulletin_subscribe")
     .withHeaders(
       "Content-Type" -> "application/json",
       "Accept" -> "application/json")

@@ -90,13 +90,7 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
   implicit val ws = controller.getWS()
   
   val subscriber = new ElectionCreateSubscriber(ws)
-  
-  var agoraBoard = "http://172.17.0.1:9500"
-  
-  def setAgoraBoard(str: String) {
-    agoraBoard = str
-  }
-  
+    
   def create[W <: Nat: ToInt](election: Election[W, Created]) : Future[Election[W, Created]] = {   
     
     val futureResponse: Future[WSResponse] = 

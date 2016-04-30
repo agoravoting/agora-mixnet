@@ -18,7 +18,7 @@ import play.api.libs.functional.syntax._
 import models._
 import app._
 
-object Router extends BoardJSONFormatter with ElectionJsonFormatter
+object Router extends BoardJSONFormatter with ElectionJsonFormatter with FiwareJSONFormatter
 {
   implicit val system = ActorSystem()
   implicit val executor = system.dispatcher
@@ -39,17 +39,37 @@ object Router extends BoardJSONFormatter with ElectionJsonFormatter
       val promise = Promise[HttpResponse]()
       getString(entity) onComplete {
        case Success(bodyStr) =>
-         //println("FF ACCUMULATE")
-         //println(s"FF     Received: ${bodyStr}")
-         val js = Json.parse(bodyStr)
-         //println(s"FF     JSON: ${Json.stringify(js)}")
-         js.validate[Seq[Post]] match {
-           case jSeqPost: JsSuccess[Seq[Post]] =>
-             BoardReader.push(jSeqPost.get)
-           case e: JsError => 
-             println(s"Router JsError e: $e")
+         println(s"Router accumulate: $bodyStr")
+         val json = Json.parse(bodyStr)
+         json.validate[AccumulateRequest] match {
+          case sr: JsSuccess[AccumulateRequest] =>
+            var jsonError: Option[String] = None
+            val postSeq = sr.get.contextResponses flatMap {  x => 
+              x.contextElement.attributes flatMap { y =>
+                y.value.validate[Post] match {
+                  case post: JsSuccess[Post] =>
+                    Some(post.get)
+                  case e: JsError =>
+                    val str = "processAccumulate has a None: this is not " +
+                              s"a valid Post: ${y.value}! error: $json"
+                    println(str)
+                    jsonError = Some(str)
+                    None
+                }
+              }
+            }
+            jsonError match {
+              case Some(e) =>
+                promise.success(HttpResponse(400, entity = e))
+              case None => 
+                BoardReader.push(postSeq)
+                promise.success(HttpResponse(entity = s"OK"))
+            }
+          case e: JsError =>
+            val errorText = s"Bad request: invalid AccumulateRequest json: $bodyStr\nerror: ${e}\n"
+            println(errorText)
+            promise.success(HttpResponse(400, entity = errorText))
          }
-         promise.success(HttpResponse(entity = s"FF     Received: ${bodyStr}")) 
        case Failure(e) =>
          promise.success(HttpResponse(400, entity = s"Error $e"))
       }  
