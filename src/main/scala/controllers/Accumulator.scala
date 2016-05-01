@@ -25,6 +25,7 @@ import scala.util.{Try, Success, Failure}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.Queue
 import java.util.concurrent.atomic.AtomicInteger
+import akka.http.scaladsl.model._
 
 class ElectionSubscriber[W <: Nat : ToInt : TypeTag](val uid : String){
   private var map = Map[String, Any]()
@@ -402,10 +403,49 @@ trait PostOffice extends ElectionJsonFormatter
   }
 }
 
+
 object BoardReader
   extends ElectionJsonFormatter
   with PostOffice
+  with FiwareJSONFormatter
+  with BoardJSONFormatter
 {  
+  def accumulate(bodyStr: String) : Future[HttpResponse] = {
+    val promise = Promise[HttpResponse]()
+    println(s"Router accumulate: $bodyStr")
+    val json = Json.parse(bodyStr)
+    json.validate[AccumulateRequest] match {
+      case sr: JsSuccess[AccumulateRequest] =>
+        var jsonError: Option[String] = None
+        val postSeq = sr.get.contextResponses flatMap {  x => 
+          x.contextElement.attributes flatMap { y =>
+            y.value.validate[Post] match {
+              case post: JsSuccess[Post] =>
+                Some(post.get)
+              case e: JsError =>
+                val str = "processAccumulate has a None: this is not " +
+                        s"a valid Post: ${y.value}! error: $json"
+              println(str)
+              jsonError = Some(str)
+              None
+          }
+        }
+     }
+     jsonError match {
+       case Some(e) =>
+         promise.success(HttpResponse(400, entity = e))
+       case None => 
+         push(postSeq)
+         promise.success(HttpResponse(entity = s"OK"))
+     }
+     case e: JsError =>
+       val errorText = s"Bad request: invalid AccumulateRequest json: $bodyStr\nerror: ${e}\n"
+         println(errorText)
+         promise.success(HttpResponse(400, entity = errorText))
+    }
+    promise.future
+  }
+  
   def push(seqPost: Seq[Post]) = {
     seqPost foreach { post => 
       add(post)

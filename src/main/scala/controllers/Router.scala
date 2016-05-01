@@ -18,7 +18,7 @@ import play.api.libs.functional.syntax._
 import models._
 import app._
 
-object Router extends BoardJSONFormatter with ElectionJsonFormatter with FiwareJSONFormatter
+object Router
 {
   implicit val system = ActorSystem()
   implicit val executor = system.dispatcher
@@ -29,7 +29,6 @@ object Router extends BoardJSONFormatter with ElectionJsonFormatter with FiwareJ
   
   def getString(entity: HttpEntity) : Future[String] = {
     entity.toStrict(5.seconds) map { st =>
-      //new String(st.data.decodeString("UTF-8").getBytes())
       st.data.decodeString("UTF-8")
     }
   }
@@ -40,36 +39,7 @@ object Router extends BoardJSONFormatter with ElectionJsonFormatter with FiwareJ
       getString(entity) onComplete {
        case Success(bodyStr) =>
          println(s"Router accumulate: $bodyStr")
-         val json = Json.parse(bodyStr)
-         json.validate[AccumulateRequest] match {
-          case sr: JsSuccess[AccumulateRequest] =>
-            var jsonError: Option[String] = None
-            val postSeq = sr.get.contextResponses flatMap {  x => 
-              x.contextElement.attributes flatMap { y =>
-                y.value.validate[Post] match {
-                  case post: JsSuccess[Post] =>
-                    Some(post.get)
-                  case e: JsError =>
-                    val str = "processAccumulate has a None: this is not " +
-                              s"a valid Post: ${y.value}! error: $json"
-                    println(str)
-                    jsonError = Some(str)
-                    None
-                }
-              }
-            }
-            jsonError match {
-              case Some(e) =>
-                promise.success(HttpResponse(400, entity = e))
-              case None => 
-                BoardReader.push(postSeq)
-                promise.success(HttpResponse(entity = s"OK"))
-            }
-          case e: JsError =>
-            val errorText = s"Bad request: invalid AccumulateRequest json: $bodyStr\nerror: ${e}\n"
-            println(errorText)
-            promise.success(HttpResponse(400, entity = errorText))
-         }
+         promise.completeWith(BoardReader.accumulate(bodyStr))         
        case Failure(e) =>
          promise.success(HttpResponse(400, entity = s"Error $e"))
       }  
