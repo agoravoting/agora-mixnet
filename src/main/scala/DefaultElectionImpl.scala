@@ -31,7 +31,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 trait DefaultElectionImpl extends ElectionTrait
 {
-  // create an election
+  // create an election 
   def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = {
     Future {
       println("Going to start a new Election!")
@@ -50,7 +50,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // now ready to receive shares
-  def startShares[W <: Nat](in: Election[W, Created]) : Future[Election[W, Shares[_0]]] = {
+  def startShares[W <: Nat : ToInt](in: Election[W, Created]) : Future[Election[W, Shares[_0]]] = {
     Future {
       println("Now waiting for shares")
       new Election[W, Shares[_0]](Shares[_0](List[(String, String)]().sized(0).get, in.state))
@@ -58,7 +58,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // verify and add a share
-  def addShare[W <: Nat, T <: Nat](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]] = {
+  def addShare[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]] = {
     Future {
       println(s"Adding share...")
 
@@ -73,7 +73,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // combine the shares into a public key, can only happen if we have all the shares
-  def combineShares[W <: Nat](in: Election[W, Shares[W]]) : Future[Election[W, Combined]] = {
+  def combineShares[W <: Nat : ToInt](in: Election[W, Shares[W]]) : Future[Election[W, Combined]] = {
     Future {
       println("Combining shares..")
 
@@ -87,7 +87,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // start the voting period
-  def startVotes[W <: Nat](in: Election[W, Combined]) : Future[Election[W, Votes]] = {
+  def startVotes[W <: Nat : ToInt](in: Election[W, Combined]) : Future[Election[W, Votes]] = {
     Future {
       println("Now waiting for votes")
       new Election[W, Votes](Votes(List[String](), in.state))
@@ -95,7 +95,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // votes are cast here
-  def addVote[W <: Nat](in: Election[W, Votes], vote: String) : Future[Election[W, Votes]] = {
+  def addVote[W <: Nat : ToInt](in: Election[W, Votes], vote: String) : Future[Election[W, Votes]] = {
     Future {
       print("+")
 
@@ -111,7 +111,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // votes are cast here
-  def addVotes[W <: Nat](in: Election[W, Votes], votes: List[String]) : Future[Election[W, Votes]] = {
+  def addVotes[W <: Nat : ToInt](in: Election[W, Votes], votes: List[String]) : Future[Election[W, Votes]] = {
     Future {
       print("+")
 
@@ -127,7 +127,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // stop election period
-  def stopVotes[W <: Nat](in: Election[W, Votes]) : Future[Election[W, VotesStopped]] = {
+  def stopVotes[W <: Nat : ToInt](in: Election[W, Votes]) : Future[Election[W, VotesStopped]] = {
     Future {
       println("No more votes")
       new Election[W, VotesStopped](VotesStopped(in.state))
@@ -135,7 +135,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // start mixing
-  def startMixing[W <: Nat](in: Election[W, VotesStopped]) : Future[Election[W, Mixing[_0]]] = {
+  def startMixing[W <: Nat : ToInt](in: Election[W, VotesStopped]) : Future[Election[W, Mixing[_0]]] = {
     Future {
       println("Now waiting for mixes")
       new Election[W, Mixing[_0]](Mixing[_0](List[ShuffleResultDTO]().sized(0).get, in.state))
@@ -143,7 +143,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // add a mix by a mixer trustee
-  def addMix[W <: Nat, T <: Nat](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Mixing[Succ[T]]]] = {
+  def addMix[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Mixing[Succ[T]]]] = {
     Future {
       println("Adding mix...")
       val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
@@ -194,7 +194,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // stop receiving mixes, can only happen if we have all the mixes
-  def stopMixing[W <: Nat](in: Election[W, Mixing[W]]) : Future[Election[W, Mixed]] = {
+  def stopMixing[W <: Nat : ToInt](in: Election[W, Mixing[W]]) : Future[Election[W, Mixed]] = {
     Future {
       println("Mixes done..")
       new Election[W, Mixed](Mixed(in.state))
@@ -202,7 +202,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // start receiving partial decryptions
-  def startDecryptions[W <: Nat](in: Election[W, Mixed]) : Future[Election[W, Decryptions[_0]]] = {
+  def startDecryptions[W <: Nat : ToInt](in: Election[W, Mixed]) : Future[Election[W, Decryptions[_0]]] = {
     Future {
       println("Now waiting for decryptions")
       new Election[W, Decryptions[_0]](Decryptions[_0](List[PartialDecryptionDTO]().sized(0).get, in.state))
@@ -210,7 +210,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // verify and add a partial decryption
-  def addDecryption[W <: Nat, T <: Nat](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Decryptions[Succ[T]]]] = {
+  def addDecryption[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Decryptions[Succ[T]]]] = {
     Future {
       println("Adding decryption...")
 
@@ -228,7 +228,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // combine partial decryptions, can only happen if we have all of them
-  def combineDecryptions[W <: Nat](in: Election[W, Decryptions[W]]) : Future[Election[W, Decrypted]] = {
+  def combineDecryptions[W <: Nat : ToInt](in: Election[W, Decryptions[W]]) : Future[Election[W, Decrypted]] = {
     Future {
       println("Combining decryptions...")
 

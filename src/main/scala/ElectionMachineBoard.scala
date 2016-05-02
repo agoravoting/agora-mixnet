@@ -116,6 +116,26 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
     ws.close()
     system.terminate()
   }
+  
+  /*def startShares[W <: Nat: ToInt](election: Election[W, Shares[_0]]) : Future[Election[W, Shares[_0]]] = {   
+    val futureResponse: Future[WSResponse] = 
+    ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+    .withHeaders(
+      "Content-Type" -> "application/json",
+      "Accept" -> "application/json")
+    .post(Json.toJson(SharesToPostRequest(election)))
+    
+    futureResponse map { case response =>
+     response.json.validate[BoardAttributes] match { 
+       case attr: JsSuccess[BoardAttributes] =>
+         println("Success! \n" + response.json)
+         // The post message index will be the unique id of the election
+         election
+       case JsError(e) =>
+         throw new Error(s"$e")
+     }
+    }
+  }*/
 }
 
 object BaseImpl extends DefaultElectionImpl {}
@@ -135,15 +155,15 @@ trait ElectionMachine extends ElectionTrait
   }
 
   // now ready to receive shares
-  def startShares[W <: Nat](in: Election[W, Created]) : Future[Election[W, Shares[_0]]] = {
+  def startShares[W <: Nat : ToInt](in: Election[W, Created]) : Future[Election[W, Shares[_0]]] = {
     BaseImpl.startShares(in) map { election =>
-      //println(s"RR $election")
+      //BoardPoster.startShares(election)
       election
     }
   }
 
   // verify and add a share
-  def addShare[W <: Nat, T <: Nat](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]] = {
+  def addShare[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]] = {
     BaseImpl.addShare(in, share, proverId) map { election => 
       //println(s"RR $election")
       election
@@ -151,7 +171,7 @@ trait ElectionMachine extends ElectionTrait
   }
 
   // combine the shares into a public key, can only happen if we have all the shares
-  def combineShares[W <: Nat](in: Election[W, Shares[W]]) : Future[Election[W, Combined]] = {
+  def combineShares[W <: Nat : ToInt](in: Election[W, Shares[W]]) : Future[Election[W, Combined]] = {
     BaseImpl.combineShares(in) map { election =>
       //println(s"RR $election")
       election
@@ -159,52 +179,52 @@ trait ElectionMachine extends ElectionTrait
   }
 
   // start the voting period
-  def startVotes[W <: Nat](in: Election[W, Combined]) : Future[Election[W, Votes]] = {
+  def startVotes[W <: Nat : ToInt](in: Election[W, Combined]) : Future[Election[W, Votes]] = {
     BaseImpl.startVotes(in)
   }
 
   // votes are cast here
-  def addVote[W <: Nat](in: Election[W, Votes], vote: String) : Future[Election[W, Votes]] = {
+  def addVote[W <: Nat : ToInt](in: Election[W, Votes], vote: String) : Future[Election[W, Votes]] = {
     BaseImpl.addVote(in, vote)
   }
 
   // votes are cast here
-  def addVotes[W <: Nat](in: Election[W, Votes], votes: List[String]) : Future[Election[W, Votes]] = {
+  def addVotes[W <: Nat : ToInt](in: Election[W, Votes], votes: List[String]) : Future[Election[W, Votes]] = {
     BaseImpl.addVotes(in, votes)
   }
 
   // stop election period
-  def stopVotes[W <: Nat](in: Election[W, Votes]) : Future[Election[W, VotesStopped]] = {
+  def stopVotes[W <: Nat : ToInt](in: Election[W, Votes]) : Future[Election[W, VotesStopped]] = {
     BaseImpl.stopVotes(in)
   }
 
   // start mixing
-  def startMixing[W <: Nat](in: Election[W, VotesStopped]) : Future[Election[W, Mixing[_0]]] = {
+  def startMixing[W <: Nat : ToInt](in: Election[W, VotesStopped]) : Future[Election[W, Mixing[_0]]] = {
     BaseImpl.startMixing(in)
   }
 
   // add a mix by a mixer trustee
-  def addMix[W <: Nat, T <: Nat](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Mixing[Succ[T]]]] = {
+  def addMix[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Mixing[Succ[T]]]] = {
     BaseImpl.addMix(in, mix, proverId)
   }
 
   // stop receiving mixes, can only happen if we have all the mixes
-  def stopMixing[W <: Nat](in: Election[W, Mixing[W]]) : Future[Election[W, Mixed]] = {
+  def stopMixing[W <: Nat : ToInt](in: Election[W, Mixing[W]]) : Future[Election[W, Mixed]] = {
     BaseImpl.stopMixing(in)
   }
 
   // start receiving partial decryptions
-  def startDecryptions[W <: Nat](in: Election[W, Mixed]) : Future[Election[W, Decryptions[_0]]] = {
+  def startDecryptions[W <: Nat : ToInt](in: Election[W, Mixed]) : Future[Election[W, Decryptions[_0]]] = {
     BaseImpl.startDecryptions(in)
   }
 
   // verify and add a partial decryption
-  def addDecryption[W <: Nat, T <: Nat](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Decryptions[Succ[T]]]] = {
+  def addDecryption[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Decryptions[Succ[T]]]] = {
     BaseImpl.addDecryption(in, decryption, proverId)
   }
 
   // combine partial decryptions, can only happen if we have all of them
-  def combineDecryptions[W <: Nat](in: Election[W, Decryptions[W]]) : Future[Election[W, Decrypted]] = {
+  def combineDecryptions[W <: Nat : ToInt](in: Election[W, Decryptions[W]]) : Future[Election[W, Decrypted]] = {
     BaseImpl.combineDecryptions(in) map { election =>
       BoardPoster.closeSystem()
       controllers.Router.close()

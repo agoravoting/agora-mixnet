@@ -129,7 +129,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
       new Election[W, Shares[_0]](Shares[_0](List[(String, String)]().sized(0).get, in.state))
   }
   
-  def addShare[T <: Nat](in: Election[W, Shares[T]], keyShare: String, proverId: String) : Election[W, Shares[Succ[T]]] = {
+  def addShare[T <: Nat : ToInt](in: Election[W, Shares[T]], keyShare: String, proverId: String) : Election[W, Shares[Succ[T]]] = {
     println(s"Adding share...")
     new Election[W, Shares[Succ[T]]](Shares[Succ[T]](in.state.shares :+ (proverId, keyShare), in.state))
   }
