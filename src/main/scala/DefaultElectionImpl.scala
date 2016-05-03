@@ -58,7 +58,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // verify and add a share
-  def addShare[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]] = {
+  def addShare[W <: Nat : ToInt, T <: Nat](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]] = {
     Future {
       println(s"Adding share...")
 
@@ -143,7 +143,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // add a mix by a mixer trustee
-  def addMix[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Mixing[Succ[T]]]] = {
+  def addMix[W <: Nat : ToInt, T <: Nat](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Mixing[Succ[T]]]] = {
     Future {
       println("Adding mix...")
       val elGamal = ElGamalEncryptionScheme.getInstance(in.state.cSettings.generator)
@@ -210,7 +210,7 @@ trait DefaultElectionImpl extends ElectionTrait
   }
 
   // verify and add a partial decryption
-  def addDecryption[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Decryptions[Succ[T]]]] = {
+  def addDecryption[W <: Nat : ToInt, T <: Nat](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Decryptions[Succ[T]]]] = {
     Future {
       println("Adding decryption...")
 
