@@ -109,9 +109,11 @@ trait ElectionMachineJSONConverter
         ),
         input.state.uid
     ))
-    val b64 = new Base64Message(Json.toJson(jsElection))
+    /*val b64 = new Base64Message(Json.toJson(jsElection))
     // for some reason Fiware doesn't like the '=' character on a String (or \")
-    val message = b64.toString().replace('=', '.')
+    val message = b64.toString().replace('=', '.')*/
+    val message = Json.stringify(Json.toJson(jsElection))
+    println("GG Post message: " + message)
     PostRequest(message, UserAttributes("election", "create", None, None))
   }
 }

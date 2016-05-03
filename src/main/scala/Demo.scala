@@ -18,7 +18,6 @@ import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
 import mpservice.MPBridgeS
 import mpservice.MPBridge
 import app._
-import scala.reflect.runtime.universe._
 import controllers._
 
 import scala.util.{Success, Failure}
@@ -67,7 +66,7 @@ import scala.util.{Success, Failure}
  * This demo uses two trustees, ElectionTest3 below shows how number of trustees generalizes
  */
 
-object ElectionTest extends App {  
+object ElectionTest extends App {
   val config = ConfigFactory.load()
   val useGmp = config.getBoolean("mpservice.use-gmp")
   val useExtractor = config.getBoolean("mpservice.use-extractor")

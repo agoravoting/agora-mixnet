@@ -27,7 +27,18 @@ import scala.collection.mutable.Queue
 import java.util.concurrent.atomic.AtomicInteger
 import akka.http.scaladsl.model._
 
-class ElectionSubscriber[W <: Nat : ToInt : TypeTag](val uid : String){
+trait GetType {
+  def geType[S : TypeTag](x: S) : String = {
+    typeOf[S].toString
+  }
+  
+  def geTypeNoArgs[S : TypeTag]() : String = {
+    typeOf[S].toString
+  }
+}
+
+class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: TypeTag[W]) extends GetType {
+  println("GG ElectionSubscriber:constructor")
   private var map = Map[String, Any]()
   
   private def getOrAdd(key: String, value: Any) : Any = {
@@ -42,15 +53,10 @@ class ElectionSubscriber[W <: Nat : ToInt : TypeTag](val uid : String){
     }
   }
   
-  private def getElectionType[S <: ElectionState : TypeTag](x: Promise[Election[W, S]]) : String = {
-    typeOf[Promise[Election[W, S]]].toString
-  }
-  
-  def push[B <: ElectionState : TypeTag](election : Election[W, B]) = {
+  def push[B <: ElectionState](election : Election[W, B], electionType: String) = {
+    println(s"GG ElectionSubscriber:push")
     val promise = Promise[Election[W, B]]()
-    val str = getElectionType(promise)
-    println(s"GG ElectionSubscriber:push $str")
-    val any = getOrAdd(str, promise)
+    val any = getOrAdd(electionType, promise)
     Try {
       any.asInstanceOf[Promise[Election[W, B]]]
     } map { p =>
@@ -62,11 +68,10 @@ class ElectionSubscriber[W <: Nat : ToInt : TypeTag](val uid : String){
     }
   }
   
-  private def pull[B <: ElectionState : TypeTag](): Future[Election[W, B]] = {
+  private def pull[B <: ElectionState](electionType: String): Future[Election[W, B]] = {
     println(s"GG ElectionSubscriber:pull")
     val promise = Promise[Election[W, B]]()
-    val str = getElectionType(promise)
-    val any = getOrAdd(str, promise)
+    val any = getOrAdd(electionType, promise)
     Try {
       any.asInstanceOf[Promise[Election[W, B]]]
     } match {
@@ -79,51 +84,55 @@ class ElectionSubscriber[W <: Nat : ToInt : TypeTag](val uid : String){
   }
   
   def create() : Future[Election[W, Created]] = 
-    pull[Created]()
+    pull[Created](geTypeNoArgs[Election[W, Created]])
   
   def startShares() : Future[Election[W, Shares[_0]]] =
-    pull[Shares[_0]]()
+    pull[Shares[_0]](geTypeNoArgs[Election[W, Shares[_0]]])
   
-  def addShare[T <: Nat : TypeTag]() : Future[Election[W, Shares[T]]] =
-    pull[Shares[T]]()
+  def addShare[T <: Nat]()(implicit tag2: TypeTag[T]) : Future[Election[W, Shares[T]]] =
+    pull[Shares[T]](geTypeNoArgs[Election[W, Shares[T]]])
     
   def combineShares() : Future[Election[W, Combined]]  = 
-    pull[Combined]()
+    pull[Combined](geTypeNoArgs[Election[W, Combined]])
     
   def startVotes() : Future[Election[W, Votes]] =
-    pull[Votes]()
+    pull[Votes](geTypeNoArgs[Election[W, Votes]])
     
   def addVote() : Future[Election[W, Votes]]  = 
-    pull[Votes]()
+    pull[Votes](geTypeNoArgs[Election[W, Votes]])
   
   def addVotes() : Future[Election[W, Votes]]  = 
-    pull[Votes]()
+    pull[Votes](geTypeNoArgs[Election[W, Votes]])
   
   def stopVotes() : Future[Election[W, VotesStopped]]  = 
-    pull[VotesStopped]()
+    pull[VotesStopped](geTypeNoArgs[Election[W, VotesStopped]])
   
   def startMixing() : Future[Election[W, Mixing[_0]]]  = 
-    pull[Mixing[_0]]()
+    pull[Mixing[_0]](geTypeNoArgs[Election[W, Mixing[_0]]])
   
-  def addMix[T <: Nat : TypeTag](): Future[Election[W, Mixing[Succ[T]]]]  = 
-    pull[Mixing[Succ[T]]]()
+  def addMix[T <: Nat]()(implicit tag2: TypeTag[T]): Future[Election[W, Mixing[Succ[T]]]]  = 
+    pull[Mixing[Succ[T]]](geTypeNoArgs[Election[W, Mixing[Succ[T]]]])
   
   def stopMixing() : Future[Election[W, Mixed]]  = 
-    pull[Mixed]()
+    pull[Mixed](geTypeNoArgs[Election[W, Mixed]])
   
   def startDecryptions() : Future[Election[W, Decryptions[_0]]]  = 
-    pull[Decryptions[_0]]()
+    pull[Decryptions[_0]](geTypeNoArgs[Election[W, Decryptions[_0]]])
   
-  def addDecryption[T <: Nat : TypeTag](): Future[Election[W, Decryptions[Succ[T]]]]  = 
-    pull[ Decryptions[Succ[T]]]()
+  def addDecryption[T <: Nat]()(implicit tag2: TypeTag[T]): Future[Election[W, Decryptions[Succ[T]]]]  = 
+    pull[ Decryptions[Succ[T]]](geTypeNoArgs[Election[W, Decryptions[Succ[T]]]])
   
   def combineDecryptions() : Future[Election[W, Decrypted]]  = 
-    pull[Decrypted]()
+    pull[Decrypted](geTypeNoArgs[Election[W, Decrypted]])
 }
 
-class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
+class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3: TypeTag[W])
   extends ElectionJsonFormatter
-{  
+  with GetType
+{
+  println("GG ElectionStateMaintainer:constructor")
+  private val subscriber = new ElectionSubscriber[W](uid)
+  
   def startShares(in: Election[W, Created]) : Election[W, Shares[_0]] = {
       println("Now waiting for shares")
       new Election[W, Shares[_0]](Shares[_0](List[(String, String)]().sized(0).get, in.state))
@@ -134,8 +143,6 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
     new Election[W, Shares[Succ[T]]](Shares[Succ[T]](in.state.shares :+ (proverId, keyShare), in.state))
   }
   
-  private val subscriber = new ElectionSubscriber[W](uid)
-  
   def pushShares(jsShares: JsShares) {
     val maxLevel = ToInt[W].apply()
     if(jsShares.level == 0) {
@@ -143,7 +150,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
       futureCreate onComplete {
         case Success(cc) =>
           val election = startShares(cc)
-          subscriber.push(election)
+          subscriber.push(election, geType(election))
         case Failure(e) =>
           println(s"Future error: ${e}")
       }
@@ -154,7 +161,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
           futureShare onComplete { 
             case Success(share) =>
               val election = addShare(share, jsShares.shares._2, jsShares.shares._1)
-              subscriber.push(election)
+              subscriber.push(election, geType(election))
             case Failure(e) => 
               println(s"Future error: ${e}")
           }
@@ -163,7 +170,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
           futureShare onComplete { 
             case Success(share) =>
               val election = addShare(share, jsShares.shares._2, jsShares.shares._1)
-              subscriber.push(election)
+              subscriber.push(election, geType(election))
             case Failure(e) => 
               println(s"Future error: ${e}")
           }
@@ -172,7 +179,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
           futureShare onComplete { 
             case Success(share) =>
               val election = addShare(share, jsShares.shares._2, jsShares.shares._1)
-              subscriber.push(election)
+              subscriber.push(election, geType(election))
             case Failure(e) => 
               println(s"Future error: ${e}")
           }
@@ -183,13 +190,12 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
   }
   
   def pushCreate(jsElection: JsElection) {
-    println("GG ElectionStateMaintainer:pushCreate")
     val group = GStarModSafePrime.getInstance(new BigInteger(jsElection.state.cSettings.group))
     val cSettings = CryptoSettings(group, group.getDefaultGenerator())
     if (jsElection.level == ToInt[W].apply()) {
       val election = 
         new Election[W, Created](Created(jsElection.state.id, cSettings, jsElection.state.uid))
-      subscriber.push(election)
+      subscriber.push(election, geType(election))
     } else {
       println("Error, mismatched levels")
     }
@@ -197,16 +203,14 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
   
   def push(post: Post) {
     println("GG ElectionStateMaintainer:push")
-    val messageB64 = post.message.replace('.', '=')
-    val message = new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)
-    val jsMsg = Json.parse(message)
+    val jsMsg = Json.parse(post.message)
     if(post.user_attributes.section == "election" &&
          post.user_attributes.group == "create") {
         jsMsg.validate[JsElection] match {
           case jSeqPost: JsSuccess[JsElection] =>
             pushCreate(jSeqPost.get)            
           case e: JsError => 
-            println(s"\ElectionStateMaintainer 1 JsError error: ${e} message ${message}")
+            println(s"\ElectionStateMaintainer JsError error: ${e} message ${post.message}")
         }
       } else if (post.user_attributes.section == "election" &&
          post.user_attributes.group == uid) {
@@ -219,13 +223,13 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
                   case b: JsSuccess[JsShares] =>
                     pushShares(b.get)
                   case e: JsError =>
-                    println(s"JsError error: ${e} message ${message}")
+                    println(s"JsError error: ${e} message ${post.message}")
                 }
               case _ => ;
                 println(s"ElectionStateMaintainer JsMessage type error: ${jsMessage.messageType}")
             }
           case e: JsError => 
-            println(s"ElectionStateMaintainer error: ${e} message ${message}")
+            println(s"ElectionStateMaintainer error: ${e} message ${post.message}")
         }
         val futureShare = subscriber.addShare[_1]()
       } else {
@@ -239,8 +243,6 @@ class ElectionStateMaintainer[W <: Nat : ToInt : TypeTag](val uid : String)
 }
 
 class MaintainerWrapper(level: Int, uid: String) {
-  println("GG MaintainerWrapper:constructor")
-  
   val maintainer =  if(1 == level) {
     new ElectionStateMaintainer[_1](uid)
   } else if(2 == level) {
@@ -264,7 +266,6 @@ class MaintainerWrapper(level: Int, uid: String) {
   }
   
   def push(post: Post) {
-    println("GG MaintainerWrapper:push")
     maintainer.push(post)
   }
   
@@ -275,6 +276,12 @@ class MaintainerWrapper(level: Int, uid: String) {
 
 trait PostOffice extends ElectionJsonFormatter
 {
+  // NOTE: At least up to Scala 2.11.8, if this hack is not included,  instantiating ElectionStateMaintainer
+  // won't be possible. It has something to do with TypeTag still not being concurrently safe, I think.
+  def typeTagHack[W <: Nat]()(implicit tag3: TypeTag[W]) {
+  }
+  typeTagHack[_1]()
+  
   // post index counter
   private var index : Long = 0
   private var queue = Queue[Option[Post]]()
@@ -312,7 +319,6 @@ trait PostOffice extends ElectionJsonFormatter
   }
   
   private def send(post: Post) {
-    println("GG PostOffice:send")
     if("election" == post.user_attributes.section) {
       val group : String = post.user_attributes.group
       val electionIdStr = post.board_attributes.index
@@ -323,9 +329,9 @@ trait PostOffice extends ElectionJsonFormatter
               case Some(electionWrapper) =>
                 println(s"Error: duplicated Election Id: ${electionId}")
               case None =>
-                val messageB64 = post.message.replace('.', '=')
-                val message = new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)
-                val jsMsg = Json.parse(message)
+                /*val messageB64 = post.message.replace('.', '=')
+                val message = new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)*/
+                val jsMsg = Json.parse(post.message)
                 jsMsg.validate[JsElection] match {
                   case jSeqPost: JsSuccess[JsElection] =>
                     val maintainer = new MaintainerWrapper(jSeqPost.get.level, electionIdStr)
@@ -362,7 +368,7 @@ trait PostOffice extends ElectionJsonFormatter
   }
   
   private def remove() {
-    println("GG PostOffice:remove")
+    println("GG PostOffice::remove")
     var head : Option[Post] = None
     queue.synchronized {
       if(queue.size > 0) {
@@ -423,21 +429,21 @@ object BoardReader
               case post: JsSuccess[Post] =>
                 Some(post.get)
               case e: JsError =>
-                val str = "processAccumulate has a None: this is not " +
+                val str = "Accumulate has a None: this is not " +
                         s"a valid Post: ${y.value}! error: $json"
-              println(str)
-              jsonError = Some(str)
-              None
-          }
-        }
-     }
-     jsonError match {
-       case Some(e) =>
-         promise.success(HttpResponse(400, entity = e))
-       case None => 
-         push(postSeq)
-         promise.success(HttpResponse(entity = s"OK"))
-     }
+                println(str)
+                jsonError = Some(str)
+                None
+              }
+            }
+         }
+         jsonError match {
+           case Some(e) =>
+             promise.success(HttpResponse(400, entity = e))
+           case None => 
+             push(postSeq)
+             promise.success(HttpResponse(200, entity = s"{}"))
+         }
      case e: JsError =>
        val errorText = s"Bad request: invalid AccumulateRequest json: $bodyStr\nerror: ${e}\n"
          println(errorText)

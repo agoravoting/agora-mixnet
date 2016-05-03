@@ -83,7 +83,6 @@ class MyController @Inject()
 
 object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
 {
-
   implicit val system = ActorSystem("BoardPoster")
   implicit val materializer = ActorMaterializer()
   val controller = new MyController()
@@ -91,8 +90,7 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
   
   val subscriber = new ElectionCreateSubscriber(ws)
     
-  def create[W <: Nat: ToInt](election: Election[W, Created]) : Future[Election[W, Created]] = {   
-    
+  def create[W <: Nat: ToInt](election: Election[W, Created]) : Future[Election[W, Created]] = {    
     val futureResponse: Future[WSResponse] = 
     ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
     .withHeaders(

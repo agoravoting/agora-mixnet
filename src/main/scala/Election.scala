@@ -22,6 +22,7 @@ import mpservice.MPBridge
 
 import scala.collection.JavaConversions._
 import scala.concurrent.Future
+import scala.reflect.runtime.universe._
 
 /**
  * An election is a typed, purely function state machine with an immutable history
