@@ -20,7 +20,7 @@ extends BoardJSONFormatter
   println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF ElectionCreateSubscriber")
   subscribeToCreate()
   def subscribeToCreate() {
-    val acc = new SubscribeRequest("election", "create", "http://localhost:9800/accumulate")
+    val acc = new SubscribeRequest("election", "#", "http://localhost:9800/accumulate")
     val futureResponse: Future[WSResponse] = 
     ws.url(s"${BoardConfig.agoraboard.url}/bulletin_subscribe")
     .withHeaders(

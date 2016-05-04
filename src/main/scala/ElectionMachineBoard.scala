@@ -115,25 +115,18 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
     system.terminate()
   }
   
-  /*def startShares[W <: Nat: ToInt](election: Election[W, Shares[_0]]) : Future[Election[W, Shares[_0]]] = {   
+  def startShares[W <: Nat: ToInt](election: Election[W, Shares[_0]], uid: String) : Future[Election[W, Shares[_0]]] = {   
     val futureResponse: Future[WSResponse] = 
     ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
     .withHeaders(
       "Content-Type" -> "application/json",
       "Accept" -> "application/json")
-    .post(Json.toJson(SharesToPostRequest(election)))
-    
+    .post(Json.toJson(SharesToPostRequest(election, uid)))
+   
     futureResponse map { case response =>
-     response.json.validate[BoardAttributes] match { 
-       case attr: JsSuccess[BoardAttributes] =>
-         println("Success! \n" + response.json)
-         // The post message index will be the unique id of the election
-         election
-       case JsError(e) =>
-         throw new Error(s"$e")
-     }
+     election
     }
-  }*/
+  }
 }
 
 object BaseImpl extends DefaultElectionImpl {}
@@ -154,14 +147,13 @@ trait ElectionMachine extends ElectionTrait
 
   // now ready to receive shares
   def startShares[W <: Nat : ToInt](in: Election[W, Created]) : Future[Election[W, Shares[_0]]] = {
-    BaseImpl.startShares(in) map { election =>
-      //BoardPoster.startShares(election)
-      election
+    BaseImpl.startShares(in) flatMap { election =>
+      BoardPoster.startShares(election, in.state.uid)
     }
   }
 
   // verify and add a share
-  def addShare[W <: Nat : ToInt, T <: Nat](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]] = {
+  def addShare[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]] = {
     BaseImpl.addShare(in, share, proverId) map { election => 
       //println(s"RR $election")
       election
@@ -202,7 +194,7 @@ trait ElectionMachine extends ElectionTrait
   }
 
   // add a mix by a mixer trustee
-  def addMix[W <: Nat : ToInt, T <: Nat](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Mixing[Succ[T]]]] = {
+  def addMix[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Mixing[Succ[T]]]] = {
     BaseImpl.addMix(in, mix, proverId)
   }
 
@@ -217,7 +209,7 @@ trait ElectionMachine extends ElectionTrait
   }
 
   // verify and add a partial decryption
-  def addDecryption[W <: Nat : ToInt, T <: Nat](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Decryptions[Succ[T]]]] = {
+  def addDecryption[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Decryptions[Succ[T]]]] = {
     BaseImpl.addDecryption(in, decryption, proverId)
   }
 

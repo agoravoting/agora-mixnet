@@ -12,7 +12,7 @@ case class JsCryptoSettings(group: String, generator: String)
 case class JsElectionState(id: String, cSettings: JsCryptoSettings)
 case class JsCreated(id: String, cSettings: JsCryptoSettings, uid: String)
 case class JsShares(level: Int, shares: (String, String))
-case class JsElection(level: Int, state: JsCreated )
+case class JsElection(level: Int, state: JsCreated)
 case class JsMessage(messageType: String, message: JsValue)
 
 trait ElectionJsonFormatter {
@@ -115,5 +115,20 @@ trait ElectionMachineJSONConverter
     val message = Json.stringify(Json.toJson(jsElection))
     println("GG Post message: " + message)
     PostRequest(message, UserAttributes("election", "create", None, None))
+  }
+  
+  def SharesToPostRequest[W <: Nat: ToInt, T <: Nat: ToInt](input : Election[W, Shares[T]], uid: String) : PostRequest = {
+    val t = ToInt[T].apply()
+    val list = input.state.shares.unsized
+    val shares = if(list.length > 0) {
+      list.last
+    } else {
+      ("", "")
+    }
+    val jsShares = JsShares(t, shares)
+    val jsMessage = JsMessage("Shares", Json.toJson(jsShares))
+    val message = Json.stringify(Json.toJson(jsMessage))
+    println("GG SharesToPostRequest: " + message)
+    PostRequest(message, UserAttributes("election", uid, None, None))
   }
 }

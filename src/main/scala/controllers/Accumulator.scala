@@ -86,10 +86,10 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: T
   def create() : Future[Election[W, Created]] = 
     pull[Created](geTypeNoArgs[Election[W, Created]])
   
-  def startShares() : Future[Election[W, Shares[_0]]] =
+  def startShares() : Future[Election[W, Shares[_0]]] = 
     pull[Shares[_0]](geTypeNoArgs[Election[W, Shares[_0]]])
   
-  def addShare[T <: Nat]()(implicit tag2: TypeTag[T]) : Future[Election[W, Shares[T]]] =
+  def addShare[T <: Nat : ToInt]()(implicit tag2: TypeTag[T]) : Future[Election[W, Shares[T]]] =
     pull[Shares[T]](geTypeNoArgs[Election[W, Shares[T]]])
     
   def combineShares() : Future[Election[W, Combined]]  = 
@@ -110,7 +110,7 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: T
   def startMixing() : Future[Election[W, Mixing[_0]]]  = 
     pull[Mixing[_0]](geTypeNoArgs[Election[W, Mixing[_0]]])
   
-  def addMix[T <: Nat]()(implicit tag2: TypeTag[T]): Future[Election[W, Mixing[Succ[T]]]]  = 
+  def addMix[T <: Nat : ToInt]()(implicit tag2: TypeTag[T]): Future[Election[W, Mixing[Succ[T]]]]  = 
     pull[Mixing[Succ[T]]](geTypeNoArgs[Election[W, Mixing[Succ[T]]]])
   
   def stopMixing() : Future[Election[W, Mixed]]  = 
@@ -119,7 +119,7 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: T
   def startDecryptions() : Future[Election[W, Decryptions[_0]]]  = 
     pull[Decryptions[_0]](geTypeNoArgs[Election[W, Decryptions[_0]]])
   
-  def addDecryption[T <: Nat]()(implicit tag2: TypeTag[T]): Future[Election[W, Decryptions[Succ[T]]]]  = 
+  def addDecryption[T <: Nat : ToInt]()(implicit tag2: TypeTag[T]): Future[Election[W, Decryptions[Succ[T]]]]  = 
     pull[ Decryptions[Succ[T]]](geTypeNoArgs[Election[W, Decryptions[Succ[T]]]])
   
   def combineDecryptions() : Future[Election[W, Decrypted]]  = 
@@ -134,16 +134,17 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
   private val subscriber = new ElectionSubscriber[W](uid)
   
   def startShares(in: Election[W, Created]) : Election[W, Shares[_0]] = {
-      println("Now waiting for shares")
+      println("GG ElectionStateMaintainer::startShares")
       new Election[W, Shares[_0]](Shares[_0](List[(String, String)]().sized(0).get, in.state))
   }
   
-  def addShare[T <: Nat : ToInt](in: Election[W, Shares[T]], keyShare: String, proverId: String) : Election[W, Shares[Succ[T]]] = {
-    println(s"Adding share...")
+  def addShare[T <: Nat : ToInt](in: Election[W, Shares[T]], proverId: String, keyShare: String) : Election[W, Shares[Succ[T]]] = {
+    println(s"GG ElectionStateMaintainer::addShare")
     new Election[W, Shares[Succ[T]]](Shares[Succ[T]](in.state.shares :+ (proverId, keyShare), in.state))
   }
   
   def pushShares(jsShares: JsShares) {
+    println("GG ElectionStateMaintainer:pushShares")
     val maxLevel = ToInt[W].apply()
     if(jsShares.level == 0) {
       val futureCreate = subscriber.create()
@@ -160,7 +161,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
           val futureShare = subscriber.startShares()
           futureShare onComplete { 
             case Success(share) =>
-              val election = addShare(share, jsShares.shares._2, jsShares.shares._1)
+              val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, geType(election))
             case Failure(e) => 
               println(s"Future error: ${e}")
@@ -169,7 +170,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
           val futureShare = subscriber.addShare[_1]()
           futureShare onComplete { 
             case Success(share) =>
-              val election = addShare(share, jsShares.shares._2, jsShares.shares._1)
+              val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, geType(election))
             case Failure(e) => 
               println(s"Future error: ${e}")
@@ -178,7 +179,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
           val futureShare = subscriber.addShare[_1]()
           futureShare onComplete { 
             case Success(share) =>
-              val election = addShare(share, jsShares.shares._2, jsShares.shares._1)
+              val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, geType(election))
             case Failure(e) => 
               println(s"Future error: ${e}")
@@ -208,7 +209,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
          post.user_attributes.group == "create") {
         jsMsg.validate[JsElection] match {
           case jSeqPost: JsSuccess[JsElection] =>
-            pushCreate(jSeqPost.get)            
+            pushCreate(jSeqPost.get)
           case e: JsError => 
             println(s"\ElectionStateMaintainer JsError error: ${e} message ${post.message}")
         }
@@ -218,7 +219,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
           case a: JsSuccess[JsMessage] =>
             val jsMessage = a.get
             jsMessage.messageType match {
-              case "JsShares" =>
+              case "Shares" =>
                 jsMessage.message.validate[JsShares] match {
                   case b: JsSuccess[JsShares] =>
                     pushShares(b.get)
@@ -231,7 +232,6 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
           case e: JsError => 
             println(s"ElectionStateMaintainer error: ${e} message ${post.message}")
         }
-        val futureShare = subscriber.addShare[_1]()
       } else {
             println("ElectionStateMaintainer else")
       }

@@ -109,6 +109,7 @@ object ElectionTest extends App {
     }
   }
   val createdPromise = Promise[Election[_, Created]]()
+  val startSharesPromise = Promise[Election[_, Shares[_0]]]()
   uidPromise.future map { uid =>
     val subscriber = BoardReader.getSubscriber(uid)
     subscriber.create() onComplete { 
@@ -119,6 +120,14 @@ object ElectionTest extends App {
         println(s"GGG $e")
         createdPromise.failure(e)
     }
+    subscriber.startShares() onComplete { 
+      case Success(dd) =>
+        println("GGG subscriber gives startShares!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        startSharesPromise.success(dd)
+      case Failure(e) =>
+        println(s"GGG $e")
+        startSharesPromise.failure(e)
+    }
   }
   // the election is now ready to receive key shares
   val readyForShares = createdPromise.future flatMap { start =>
@@ -126,11 +135,12 @@ object ElectionTest extends App {
   }
 
   // each keymaker creates the shares and their proofs, these are added to the election
-  val twoShares =  readyForShares flatMap { readyForShares =>
-      val oneShare = Election.addShare(readyForShares, k1.createKeyShare(readyForShares), k1.id)
-      oneShare flatMap { oneShare => 
-        Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
-      }
+  val twoShares =  startSharesPromise.future flatMap { readyForShares2 =>
+    val readyForShares = readyForShares2.asInstanceOf[Election[_2, Shares[_0]]]
+    val oneShare = Election.addShare(readyForShares, k1.createKeyShare(readyForShares), k1.id)
+    oneShare flatMap { oneShare => 
+      Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
+    }
   }
 
   // combine the shares from the keymaker trustees, this produces the election public key
