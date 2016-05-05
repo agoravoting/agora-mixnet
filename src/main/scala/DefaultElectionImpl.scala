@@ -87,7 +87,7 @@ trait DefaultElectionImpl extends ElectionTrait
   def startVotes[W <: Nat : ToInt](in: Election[W, Combined]) : Future[Election[W, Votes]] = {
     Future {
       println("Now waiting for votes")
-      new Election[W, Votes](Votes(List[String](), in.state))
+      new Election[W, Votes](Votes(List[String](), 0, in.state))
     }
   }
 
@@ -103,7 +103,7 @@ trait DefaultElectionImpl extends ElectionTrait
       elGamal.getEncryptionSpace.getElementFromString(vote)
       */
 
-      new Election[W, Votes](Votes(vote :: in.state.votes, in.state))
+      new Election[W, Votes](Votes(vote :: in.state.votes, in.state.addVoteIndex + 1, in.state))
     }
   }
 
@@ -119,7 +119,7 @@ trait DefaultElectionImpl extends ElectionTrait
       votes.map(elGamal.getEncryptionSpace.getElementFromString(_))
       */
 
-      new Election[W, Votes](Votes(votes ::: in.state.votes, in.state))
+      new Election[W, Votes](Votes(votes ::: in.state.votes, in.state.addVoteIndex + 1, in.state))
     }
   }
 

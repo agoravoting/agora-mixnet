@@ -164,6 +164,35 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
     }
     promise.future
   }
+  
+  def addVotes[W <: Nat : ToInt](election: Election[W, Votes], votes: List[String]) : Future[Election[W, Votes]] = {
+    val promise = Promise[Election[W, Votes]]()
+    Future {
+      if(0 > election.state.addVoteIndex) {
+        promise.failure(new Error(s"Error: addVoteIndex < 0 : ${election.state.addVoteIndex}"))
+      } else if(0 == election.state.addVoteIndex && 0 < votes.length) {
+        promise.failure(new Error("Error: addVoteIndex is 0 but it has nonzero votes"))
+      } else if (election.state.addVoteIndex > 0 && 0 == votes.length ) {
+        promise.failure(new Error("Error: addVoteIndex is not zero but it has zero votes"))
+      } else {
+        val futureResponse: Future[WSResponse] = 
+        ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+        .withHeaders(
+          "Content-Type" -> "application/json",
+          "Accept" -> "application/json")
+        .post(Json.toJson(VotesToPostRequest(election, votes)))
+       
+        futureResponse onFailure { case err =>
+          promise.failure(err)
+        }
+        
+        futureResponse onSuccess { case response =>
+         promise.success(election)
+        }
+      }
+    }
+    promise.future
+  }
 }
 
 object BaseImpl extends DefaultElectionImpl {}
@@ -205,17 +234,23 @@ trait ElectionMachine extends ElectionTrait
 
   // start the voting period
   def startVotes[W <: Nat : ToInt](in: Election[W, Combined]) : Future[Election[W, Votes]] = {
-    BaseImpl.startVotes(in)
+    BaseImpl.startVotes(in) flatMap { election =>
+      BoardPoster.addVotes(election, List[String]())
+    }
   }
 
   // votes are cast here
   def addVote[W <: Nat : ToInt](in: Election[W, Votes], vote: String) : Future[Election[W, Votes]] = {
-    BaseImpl.addVote(in, vote)
+    BaseImpl.addVote(in, vote) flatMap { election =>
+      BoardPoster.addVotes(election, List[String](vote))
+    }
   }
 
   // votes are cast here
   def addVotes[W <: Nat : ToInt](in: Election[W, Votes], votes: List[String]) : Future[Election[W, Votes]] = {
-    BaseImpl.addVotes(in, votes)
+    BaseImpl.addVotes(in, votes) flatMap { election =>
+      BoardPoster.addVotes(election, votes)
+    }
   }
 
   // stop election period

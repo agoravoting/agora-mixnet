@@ -13,6 +13,7 @@ case class JsElectionState(id: String, cSettings: JsCryptoSettings)
 case class JsCreated(id: String, cSettings: JsCryptoSettings)
 case class JsShares(level: Int, shares: (String, String))
 case class JsCombined(publicKey: String)
+case class JsVotes(votes: List[String], addVoteIndex: Int)
 case class JsElection(level: Int, state: JsCreated)
 case class JsMessage(messageType: String, message: JsValue)
 
@@ -96,6 +97,16 @@ trait ElectionJsonFormatter {
 
   implicit val validateJsCombinedWrite: Writes[JsCombined] = 
       (JsPath \ "publicKey").write[String].contramap { a: JsCombined => a.publicKey }
+  
+  implicit def validateJsVotesReads: Reads[JsVotes] = (
+    (JsPath \ "votes").read[List[String]] and
+    (JsPath \ "addVoteIndex").read[Int] 
+  )(JsVotes.apply _)
+  
+  implicit val validateJsVotesWrites: Writes[JsVotes] = (
+    (JsPath \ "votes").write[List[String]] and
+    (JsPath \ "addVoteIndex").write[Int]
+  )(unlift(JsVotes.unapply))
 }
 
 trait ElectionMachineJSONConverter
@@ -140,6 +151,14 @@ trait ElectionMachineJSONConverter
     val jsMessage = JsMessage("Combined", Json.toJson(jsCombined))
     val message = Json.stringify(Json.toJson(jsMessage))
     println("GG CombinedToPostRequest: " + message)
+    PostRequest(message, UserAttributes("election", election.state.uid, None, None))
+  }
+  
+  def VotesToPostRequest[W <: Nat : ToInt](election: Election[W, Votes], votes: List[String]) : PostRequest = {
+    val jsVotes = JsVotes(votes, election.state.addVoteIndex)
+    val jsMessage = JsMessage("Votes", Json.toJson(jsVotes))
+    val message = Json.stringify(Json.toJson(jsMessage))
+    println("GG VotesToPostRequest: " + message)
     PostRequest(message, UserAttributes("election", election.state.uid, None, None))
   }
 }

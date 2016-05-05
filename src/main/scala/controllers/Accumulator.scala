@@ -53,7 +53,7 @@ trait GetType {
   }
   
   def getElectionTypeVotes[W <: Nat : ToInt] (election: Election[W, Votes]) : String = {
-    s"app.Election[shapeless.nat._${toInt[W]},app.Votes[${election.state.votes.length}]]"
+    s"app.Election[shapeless.nat._${toInt[W]},app.Votes[${election.state.addVoteIndex}]]"
   }
   
   def getElectionVotes[W <: Nat : ToInt](numVotes: Int) : String = {
@@ -212,6 +212,41 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
     new Election[W, Combined](Combined(publicKey, in.state))
   }
   
+  def startVotes(in: Election[W, Combined]) : Election[W, Votes] = {
+    println(s"GG ElectionStateMaintainer::startVotes")
+    new Election[W, Votes](Votes(List[String](), 0, in.state))
+  }
+  
+  def addVotes(in: Election[W, Votes], votes : List[String]) : Election[W, Votes] = {
+    println(s"GG ElectionStateMaintainer::addVotes")
+    new Election[W, Votes](Votes(votes ::: in.state.votes, in.state.addVoteIndex + 1, in.state))
+  }
+  
+  def pushVotes(jsVotes: JsVotes) {
+    println("GG ElectionStateMaintainer::pushVotes")
+    if(0 == jsVotes.addVoteIndex) {
+      val futureCombined = subscriber.combineShares()
+      futureCombined onComplete {
+        case Success(combined) => 
+          val election = startVotes(combined)
+          subscriber.push(election, getElectionTypeVotes(election))
+        case Failure(err) =>
+          println(s"Future error: ${err}")
+      }
+    } else if(0 < jsVotes.addVoteIndex) {
+      val futureVotes = subscriber.addVotes(jsVotes.addVoteIndex - 1)
+      futureVotes onComplete {
+        case Success(votes) => 
+          val election = addVotes(votes, jsVotes.votes)
+          subscriber.push(election, getElectionTypeVotes(election))
+        case Failure(err) =>
+          println(s"Future error: ${err}")
+      }
+    } else if(0 > jsVotes.addVoteIndex) {
+      println(s"ERROR on pushVotes: addVoteIndex is negative but it must be non-negative: ${jsVotes.addVoteIndex}")
+    }
+  }
+  
   def pushCombined(jsCombined: JsCombined) {
     println("GG ElectionStateMaintainer::pushCombined")
     val futureShare = subscriber.addShare[W]()
@@ -222,7 +257,6 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
       case Failure(err) =>
         println(s"Future error: ${err}")
     }
-    
   }
   
   def pushShares(jsShares: JsShares) {
@@ -366,6 +400,13 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
                 jsMessage.message.validate[JsCombined] match {
                   case b: JsSuccess[JsCombined] =>
                     pushCombined(b.get)
+                  case e: JsError =>
+                    println(s"JsError error: ${e} message ${post.message}")
+                }
+              case "Votes" =>
+                jsMessage.message.validate[JsVotes] match {
+                  case b: JsSuccess[JsVotes] =>
+                    pushVotes(b.get)
                   case e: JsError =>
                     println(s"JsError error: ${e} message ${post.message}")
                 }
