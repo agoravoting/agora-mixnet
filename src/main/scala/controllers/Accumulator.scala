@@ -20,7 +20,7 @@ import play.api.libs.json._
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import java.math.BigInteger
 import scala.concurrent.{Future, Promise}
-import scala.reflect.runtime.universe._
+//import scala.reflect.runtime.universe._
 import scala.util.{Try, Success, Failure}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.Queue
@@ -101,7 +101,7 @@ trait GetType {
   }
 }
 
-class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: TypeTag[W]) extends GetType {
+class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
   println("GG ElectionSubscriber:constructor")
   private var map = Map[String, Any]()
   
@@ -153,7 +153,7 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: T
   def startShares() : Future[Election[W, Shares[_0]]] = 
     pull[Shares[_0]](getElectionShares[W, _0])
   
-  def addShare[T <: Nat : ToInt]()(implicit tag2: TypeTag[T]) : Future[Election[W, Shares[T]]] =
+  def addShare[T <: Nat : ToInt](): Future[Election[W, Shares[T]]] =
     pull[Shares[T]](getElectionShares[W, T])
     
   def combineShares() : Future[Election[W, Combined]]  = 
@@ -174,7 +174,7 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: T
   def startMixing() : Future[Election[W, Mixing[_0]]]  = 
     pull[Mixing[_0]](getElectionMixing[W, _0])
   
-  def addMix[T <: Nat : ToInt]()(implicit tag2: TypeTag[T]): Future[Election[W, Mixing[Succ[T]]]]  = 
+  def addMix[T <: Nat : ToInt](): Future[Election[W, Mixing[Succ[T]]]]  = 
     pull[Mixing[Succ[T]]](getElectionMixing[W, T])
   
   def stopMixing() : Future[Election[W, Mixed]]  = 
@@ -183,14 +183,14 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: T
   def startDecryptions() : Future[Election[W, Decryptions[_0]]]  = 
     pull[Decryptions[_0]](getElectionDecryptions[W, _0])
   
-  def addDecryption[T <: Nat : ToInt]()(implicit tag2: TypeTag[T]): Future[Election[W, Decryptions[Succ[T]]]]  = 
+  def addDecryption[T <: Nat : ToInt](): Future[Election[W, Decryptions[Succ[T]]]]  = 
     pull[ Decryptions[Succ[T]]](getElectionDecryptions[W, T])
   
   def combineDecryptions() : Future[Election[W, Decrypted]]  = 
     pull[Decrypted](getElectionDecrypted[W])
 }
 
-class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3: TypeTag[W])
+class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
   extends ElectionJsonFormatter
   with GetType
 {
@@ -205,6 +205,24 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
   def addShare[T <: Nat : ToInt](in: Election[W, Shares[T]], proverId: String, keyShare: String) : Election[W, Shares[Succ[T]]] = {
     println(s"GG ElectionStateMaintainer::addShare")
     new Election[W, Shares[Succ[T]]](Shares[Succ[T]](in.state.shares :+ (proverId, keyShare), in.state))
+  }
+  
+  def combineShares(in: Election[W, Shares[W]], publicKey: String) : Election[W, Combined] = {
+    println(s"GG ElectionStateMaintainer::combineShares")
+    new Election[W, Combined](Combined(publicKey, in.state))
+  }
+  
+  def pushCombined(jsCombined: JsCombined) {
+    println("GG ElectionStateMaintainer::pushCombined")
+    val futureShare = subscriber.addShare[W]()
+    futureShare onComplete {
+      case Success(share) => 
+        val election = combineShares(share, jsCombined.publicKey)
+        subscriber.push(election, getElectionTypeCombined(election))
+      case Failure(err) =>
+        println(s"Future error: ${err}")
+    }
+    
   }
   
   def pushShares(jsShares: JsShares) {
@@ -344,6 +362,13 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
                   case e: JsError =>
                     println(s"JsError error: ${e} message ${post.message}")
                 }
+              case "Combined" =>
+                jsMessage.message.validate[JsCombined] match {
+                  case b: JsSuccess[JsCombined] =>
+                    pushCombined(b.get)
+                  case e: JsError =>
+                    println(s"JsError error: ${e} message ${post.message}")
+                }
               case _ => ;
                 println(s"ElectionStateMaintainer JsMessage type error: ${jsMessage.messageType}")
             }
@@ -393,13 +418,7 @@ class MaintainerWrapper(level: Int, uid: String) {
 }
 
 trait PostOffice extends ElectionJsonFormatter
-{
-  // NOTE: At least up to Scala 2.11.8, if this hack is not included,  instantiating ElectionStateMaintainer
-  // won't be possible. It has something to do with TypeTag still not being concurrently safe, I think.
-  def typeTagHack[W <: Nat]()(implicit tag3: TypeTag[W]) {
-  }
-  typeTagHack[_1]()
-  
+{  
   // post index counter
   private var index : Long = 0
   private var queue = Queue[Option[Post]]()

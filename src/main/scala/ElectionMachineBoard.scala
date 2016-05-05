@@ -90,24 +90,32 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
   
   val subscriber = new ElectionCreateSubscriber(ws)
     
-  def create[W <: Nat: ToInt](election: Election[W, Created]) : Future[Election[W, Created]] = {    
-    val futureResponse: Future[WSResponse] = 
-    ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
-    .withHeaders(
-      "Content-Type" -> "application/json",
-      "Accept" -> "application/json")
-    .post(Json.toJson(CreatedToPostRequest(election)))
-    
-    futureResponse map { case response =>
-     response.json.validate[BoardAttributes] match { 
-       case attr: JsSuccess[BoardAttributes] =>
-         println("Success! \n" + response.json)
-         // The post message index will be the unique id of the election
-         new Election[W, Created](Created(election.state.id, election.state.cSettings, attr.get.index))
-       case JsError(e) =>
-         throw new Error(s"$e")
-     }
+  def create[W <: Nat: ToInt](election: Election[W, Created]) : Future[Election[W, Created]] = {   
+    val promise = Promise[Election[W, Created]]()
+    Future {
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+      .withHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json")
+      .post(Json.toJson(CreatedToPostRequest(election)))
+      
+      futureResponse onFailure { case err =>
+        promise.failure(err)
+      }
+      
+      futureResponse onSuccess { case response =>
+       response.json.validate[BoardAttributes] match { 
+         case attr: JsSuccess[BoardAttributes] =>
+           println("Success! \n" + response.json)
+           // The post message index will be the unique id of the election
+           promise.success(new Election[W, Created](Created(election.state.id, election.state.cSettings, attr.get.index)))
+         case JsError(e) =>
+           promise.failure(new Error(s"$e"))
+       }
+      }
     }
+    promise.future
   }
   
   def closeSystem() {
@@ -115,17 +123,46 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
     system.terminate()
   }
   
-  def addShare[W <: Nat : ToInt, T <: Nat : ToInt](election: Election[W, Shares[T]]) : Future[Election[W, Shares[T]]] = {   
-    val futureResponse: Future[WSResponse] = 
-    ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
-    .withHeaders(
-      "Content-Type" -> "application/json",
-      "Accept" -> "application/json")
-    .post(Json.toJson(SharesToPostRequest(election)))
-   
-    futureResponse map { case response =>
-     election
+  def addShare[W <: Nat : ToInt, T <: Nat : ToInt](election: Election[W, Shares[T]]) : Future[Election[W, Shares[T]]] =  {
+    val promise = Promise[Election[W, Shares[T]]]()
+    Future {
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+      .withHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json")
+      .post(Json.toJson(SharesToPostRequest(election)))
+     
+      futureResponse onFailure { case err =>
+        promise.failure(err)
+      }
+      
+      futureResponse onSuccess { case response =>
+       promise.success(election)
+      }
     }
+    promise.future
+  }
+  
+  def combineShares[W <: Nat : ToInt](election: Election[W, Combined]) : Future[Election[W, Combined]] = {
+    val promise = Promise[Election[W, Combined]]()
+    Future {
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+      .withHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json")
+      .post(Json.toJson(CombinedToPostRequest(election)))
+     
+      futureResponse onFailure { case err =>
+        promise.failure(err)
+      }
+      
+      futureResponse onSuccess { case response =>
+       promise.success(election)
+      }
+    }
+    promise.future
   }
 }
 
@@ -139,7 +176,7 @@ trait ElectionMachine extends ElectionTrait
 {
   // create an election
   def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = { 
-    controllers.Router.open()   
+    controllers.Router.open()
     BaseImpl.create(id, bits) flatMap { election =>
       BoardPoster.create(election)
     }
@@ -161,9 +198,8 @@ trait ElectionMachine extends ElectionTrait
 
   // combine the shares into a public key, can only happen if we have all the shares
   def combineShares[W <: Nat : ToInt](in: Election[W, Shares[W]]) : Future[Election[W, Combined]] = {
-    BaseImpl.combineShares(in) map { election =>
-      //println(s"RR $election")
-      election
+    BaseImpl.combineShares(in) flatMap { election =>
+      BoardPoster.combineShares(election)
     }
   }
 
