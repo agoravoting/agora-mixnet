@@ -14,11 +14,12 @@ case class JsCreated(id: String, cSettings: JsCryptoSettings)
 case class JsShares(level: Int, shares: (String, String))
 case class JsCombined(publicKey: String)
 case class JsVotes(votes: List[String], addVoteIndex: Int)
+case class JsVotesStopped(lastAddVoteIndex: Int, date: String)
 case class JsElection(level: Int, state: JsCreated)
 case class JsMessage(messageType: String, message: JsValue)
 
 trait ElectionJsonFormatter {
-    
+      
   implicit def tuple2Writes[A, B](implicit aWrites: Writes[A], bWrites: Writes[B]): Writes[Tuple2[A, B]] = new Writes[Tuple2[A, B]] {
     def writes(tuple: Tuple2[A, B]) = JsArray(Seq(aWrites.writes(tuple._1), bWrites.writes(tuple._2)))
   }
@@ -107,6 +108,16 @@ trait ElectionJsonFormatter {
     (JsPath \ "votes").write[List[String]] and
     (JsPath \ "addVoteIndex").write[Int]
   )(unlift(JsVotes.unapply))
+  
+  implicit def validateJsVotesStoppedReads: Reads[JsVotesStopped] = (
+    (JsPath \ "lastAddVoteIndex").read[Int] and
+    (JsPath \ "date").read[String] 
+  )(JsVotesStopped.apply _)
+  
+  implicit val validateJsVotesStoppedWrites: Writes[JsVotesStopped] = (
+    (JsPath \ "lastAddVoteIndex").write[Int] and
+    (JsPath \ "date").write[String]
+  )(unlift(JsVotesStopped.unapply))
 }
 
 trait ElectionMachineJSONConverter
@@ -159,6 +170,14 @@ trait ElectionMachineJSONConverter
     val jsMessage = JsMessage("Votes", Json.toJson(jsVotes))
     val message = Json.stringify(Json.toJson(jsMessage))
     println("GG VotesToPostRequest: " + message)
+    PostRequest(message, UserAttributes("election", election.state.uid, None, None))
+  }
+  
+  def VotesStoppedToPostRequest[W <: Nat : ToInt](election: Election[W, VotesStopped]) : PostRequest = {
+    val jsVotesStopped = JsVotesStopped(election.state.prev.addVoteIndex, election.state.date.toString)
+    val jsMessage = JsMessage("VotesStopped", Json.toJson(jsVotesStopped))
+    val message = Json.stringify(Json.toJson(jsMessage))
+    println("GG VotesStoppedToPostRequest: " + message)
     PostRequest(message, UserAttributes("election", election.state.uid, None, None))
   }
 }

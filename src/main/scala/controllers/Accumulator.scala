@@ -20,12 +20,12 @@ import play.api.libs.json._
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import java.math.BigInteger
 import scala.concurrent.{Future, Promise}
-//import scala.reflect.runtime.universe._
 import scala.util.{Try, Success, Failure}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.Queue
 import java.util.concurrent.atomic.AtomicInteger
 import akka.http.scaladsl.model._
+import com.github.nscala_time.time.Imports._
 
 trait GetType {  
   def getElectionTypeCreated[W <: Nat : ToInt] (election: Election[W, Created]) : String = {
@@ -222,6 +222,34 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
     new Election[W, Votes](Votes(votes ::: in.state.votes, in.state.addVoteIndex + 1, in.state))
   }
   
+  def stopVotes(in: Election[W, Votes], lastAddVoteIndex: Int, date: com.github.nscala_time.time.Imports.DateTime) : Election[W, VotesStopped] = {
+    println(s"GG ElectionStateMaintainer::stopVotes")
+    new Election[W, VotesStopped](VotesStopped(lastAddVoteIndex, in.state, date))
+  }
+  
+  def pushVotesStopped(jsVotesStopped: JsVotesStopped) {
+    println("GG ElectionStateMaintainer::pushVotesStopped")
+    if(jsVotesStopped.lastAddVoteIndex < 0) {
+      println(s"ERROR on pushVotesStopped: lastAddVoteIndex is negative but it must be non-negative: ${jsVotesStopped.lastAddVoteIndex}")
+    } else {
+      Try {
+        com.github.nscala_time.time.Imports.DateTime.parse(jsVotesStopped.date)
+      } match {
+        case Success(date) =>
+          val futureVotes = subscriber.addVotes(jsVotesStopped.lastAddVoteIndex)
+          futureVotes onComplete {
+            case Success(votes) => 
+              val election = stopVotes(votes, jsVotesStopped.lastAddVoteIndex, date)
+              subscriber.push(election, getElectionTypeVotesStopped(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case Failure(err) =>
+          println(s"Try Date ${jsVotesStopped.date.toString} parse error: ${err}")
+      }
+    }
+  }
+  
   def pushVotes(jsVotes: JsVotes) {
     println("GG ElectionStateMaintainer::pushVotes")
     if(0 == jsVotes.addVoteIndex) {
@@ -407,6 +435,13 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
                 jsMessage.message.validate[JsVotes] match {
                   case b: JsSuccess[JsVotes] =>
                     pushVotes(b.get)
+                  case e: JsError =>
+                    println(s"JsError error: ${e} message ${post.message}")
+                }
+              case "VotesStopped" =>
+                jsMessage.message.validate[JsVotesStopped] match {
+                  case b: JsSuccess[JsVotesStopped] =>
+                    pushVotesStopped(b.get)
                   case e: JsError =>
                     println(s"JsError error: ${e} message ${post.message}")
                 }
@@ -596,36 +631,37 @@ object BoardReader
 {  
   def accumulate(bodyStr: String) : Future[HttpResponse] = {
     val promise = Promise[HttpResponse]()
-    println(s"Router accumulate: $bodyStr")
-    val json = Json.parse(bodyStr)
-    json.validate[AccumulateRequest] match {
-      case sr: JsSuccess[AccumulateRequest] =>
-        var jsonError: Option[String] = None
-        val postSeq = sr.get.contextResponses flatMap {  x => 
-          x.contextElement.attributes flatMap { y =>
-            y.value.validate[Post] match {
-              case post: JsSuccess[Post] =>
-                Some(post.get)
-              case e: JsError =>
-                val str = "Accumulate has a None: this is not " +
-                        s"a valid Post: ${y.value}! error: $json"
-                println(str)
-                jsonError = Some(str)
-                None
+    Future {
+      val json = Json.parse(bodyStr)
+      json.validate[AccumulateRequest] match {
+        case sr: JsSuccess[AccumulateRequest] =>
+          var jsonError: Option[String] = None
+          val postSeq = sr.get.contextResponses flatMap {  x => 
+            x.contextElement.attributes flatMap { y =>
+              y.value.validate[Post] match {
+                case post: JsSuccess[Post] =>
+                  Some(post.get)
+                case e: JsError =>
+                  val str = "Accumulate has a None: this is not " +
+                          s"a valid Post: ${y.value}! error: $json"
+                  println(str)
+                  jsonError = Some(str)
+                  None
+                }
               }
-            }
-         }
-         jsonError match {
-           case Some(e) =>
-             promise.success(HttpResponse(400, entity = e))
-           case None => 
-             push(postSeq)
-             promise.success(HttpResponse(200, entity = s"{}"))
-         }
-     case e: JsError =>
-       val errorText = s"Bad request: invalid AccumulateRequest json: $bodyStr\nerror: ${e}\n"
-         println(errorText)
-         promise.success(HttpResponse(400, entity = errorText))
+           }
+           jsonError match {
+             case Some(e) =>
+               promise.success(HttpResponse(400, entity = e))
+             case None => 
+               push(postSeq)
+               promise.success(HttpResponse(200, entity = s"{}"))
+           }
+       case e: JsError =>
+         val errorText = s"Bad request: invalid AccumulateRequest json: $bodyStr\nerror: ${e}\n"
+           println(errorText)
+           promise.success(HttpResponse(400, entity = errorText))
+      }
     }
     promise.future
   }

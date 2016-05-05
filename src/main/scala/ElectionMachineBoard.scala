@@ -193,6 +193,27 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
     }
     promise.future
   }
+  
+  def stopVotes[W <: Nat : ToInt](election: Election[W, VotesStopped]) : Future[Election[W, VotesStopped]] = {
+    val promise = Promise[Election[W, VotesStopped]]()
+    Future {
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+      .withHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json")
+      .post(Json.toJson(VotesStoppedToPostRequest(election)))
+     
+      futureResponse onFailure { case err =>
+        promise.failure(err)
+      }
+      
+      futureResponse onSuccess { case response =>
+       promise.success(election)
+      }
+    }
+    promise.future
+  }
 }
 
 object BaseImpl extends DefaultElectionImpl {}
@@ -255,7 +276,9 @@ trait ElectionMachine extends ElectionTrait
 
   // stop election period
   def stopVotes[W <: Nat : ToInt](in: Election[W, Votes]) : Future[Election[W, VotesStopped]] = {
-    BaseImpl.stopVotes(in)
+    BaseImpl.stopVotes(in) flatMap { election =>
+      BoardPoster.stopVotes(election)
+    }
   }
 
   // start mixing

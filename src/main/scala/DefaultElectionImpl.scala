@@ -127,7 +127,7 @@ trait DefaultElectionImpl extends ElectionTrait
   def stopVotes[W <: Nat : ToInt](in: Election[W, Votes]) : Future[Election[W, VotesStopped]] = {
     Future {
       println("No more votes")
-      new Election[W, VotesStopped](VotesStopped(in.state))
+      new Election[W, VotesStopped](VotesStopped(in.state.addVoteIndex , in.state))
     }
   }
 

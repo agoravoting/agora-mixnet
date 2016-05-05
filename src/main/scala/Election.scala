@@ -42,7 +42,7 @@ case class Created(override val id: String, override val cSettings: CryptoSettin
 case class Shares[T <: Nat : ToInt](val shares: Sized[List[(String, String)], T], prev: ElectionState) extends ElectionStateShares(prev, shares.toList) with HasHistory
 case class Combined(override val publicKey: String, prev: ElectionStateShares) extends ElectionStatePk(prev, publicKey) with HasHistory
 case class Votes(votes: List[String], addVoteIndex: Int, prev: ElectionStatePk) extends ElectionStatePk(prev, prev.publicKey) with HasHistory
-case class VotesStopped(prev: Votes, date: DateTime = DateTime.now) extends ElectionStateVotes(prev, prev.votes) with HasHistory
+case class VotesStopped(lastAddVoteIndex: Int, prev: Votes, date: DateTime = DateTime.now) extends ElectionStateVotes(prev, prev.votes) with HasHistory
 case class Mixing[T <: Nat : ToInt](mixes: Sized[List[ShuffleResultDTO], T], prev: ElectionStateVotes) extends ElectionStateVotes(prev, prev.votes) with HasHistory
 case class Mixed(prev: Mixing[_ <: Nat]) extends ElectionStateVotes(prev, prev.votes) with HasHistory
 case class Decryptions[T <: Nat : ToInt](decryptions: Sized[List[PartialDecryptionDTO], T], prev: ElectionStateVotes) extends ElectionStateVotes(prev, prev.votes) with HasHistory
