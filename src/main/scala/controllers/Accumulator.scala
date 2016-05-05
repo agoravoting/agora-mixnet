@@ -27,13 +27,77 @@ import scala.collection.mutable.Queue
 import java.util.concurrent.atomic.AtomicInteger
 import akka.http.scaladsl.model._
 
-trait GetType {
-  def geType[S : TypeTag](x: S) : String = {
-    typeOf[S].toString
+trait GetType {  
+  def getElectionTypeCreated[W <: Nat : ToInt] (election: Election[W, Created]) : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Created]"
   }
   
-  def geTypeNoArgs[S : TypeTag]() : String = {
-    typeOf[S].toString
+  def getElectionCreated[W <: Nat : ToInt]() : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Created]"
+  }
+  
+  def getElectionTypeShares[W <: Nat : ToInt, T <: Nat : ToInt] (election: Election[W, Shares[T]]) : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Shares[shapeless.nat._${toInt[T]}]]"
+  }
+  
+  def getElectionShares[W <: Nat : ToInt, T <: Nat : ToInt]() : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Shares[shapeless.nat._${toInt[T]}]]"
+  }
+  
+  def getElectionTypeCombined[W <: Nat : ToInt] (election: Election[W, Combined]) : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Combined]"
+  }
+  
+  def getElectionCombined[W <: Nat : ToInt]() : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Combined]"
+  }
+  
+  def getElectionTypeVotes[W <: Nat : ToInt] (election: Election[W, Votes]) : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Votes[${election.state.votes.length}]]"
+  }
+  
+  def getElectionVotes[W <: Nat : ToInt](numVotes: Int) : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Votes[${numVotes}]]"
+  }
+  
+  def getElectionTypeVotesStopped[W <: Nat : ToInt] (election: Election[W, VotesStopped]) : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.VotesStopped]"
+  }
+  
+  def getElectionVotesStopped[W <: Nat : ToInt]() : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.VotesStopped]"
+  }
+  
+  def getElectionTypeMixing[W <: Nat : ToInt, T <: Nat : ToInt] (election: Election[W, Mixing[T]]) : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Mixing[shapeless.nat._${toInt[T]}]]"
+  }
+  
+  def getElectionMixing[W <: Nat : ToInt, T <: Nat : ToInt]() : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Mixing[shapeless.nat._${toInt[T]}]]"
+  }
+  
+  def getElectionTypeMixed[W <: Nat : ToInt] (election: Election[W, Mixed]) : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Mixed]"
+  }
+  
+  def getElectionMixed[W <: Nat : ToInt]() : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Mixed]"
+  }
+  
+  def getElectionTypeDecryptions[W <: Nat : ToInt, T <: Nat : ToInt] (election: Election[W, Decryptions[T]]) : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Decryptions[shapeless.nat._${toInt[T]}]]"
+  }
+  
+  def getElectionDecryptions[W <: Nat : ToInt, T <: Nat : ToInt]() : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Decryptions[shapeless.nat._${toInt[T]}]]"
+  }
+  
+  def getElectionTypeDecrypted[W <: Nat : ToInt] (election: Election[W, Decrypted]) : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Decrypted]"
+  }
+  
+  def getElectionDecrypted[W <: Nat : ToInt]() : String = {
+    s"app.Election[shapeless.nat._${toInt[W]},app.Decrypted]"
   }
 }
 
@@ -54,7 +118,7 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: T
   }
   
   def push[B <: ElectionState](election : Election[W, B], electionType: String) = {
-    println(s"GG ElectionSubscriber:push")
+    println("GG ElectionSubscriber:push electionType " + electionType)
     val promise = Promise[Election[W, B]]()
     val any = getOrAdd(electionType, promise)
     Try {
@@ -69,7 +133,7 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: T
   }
   
   private def pull[B <: ElectionState](electionType: String): Future[Election[W, B]] = {
-    println(s"GG ElectionSubscriber:pull")
+    println("GG ElectionSubscriber:pull electionType " + electionType)
     val promise = Promise[Election[W, B]]()
     val any = getOrAdd(electionType, promise)
     Try {
@@ -84,46 +148,46 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String)(implicit val tag: T
   }
   
   def create() : Future[Election[W, Created]] = 
-    pull[Created](geTypeNoArgs[Election[W, Created]])
+    pull[Created](getElectionCreated[W])
   
   def startShares() : Future[Election[W, Shares[_0]]] = 
-    pull[Shares[_0]](geTypeNoArgs[Election[W, Shares[_0]]])
+    pull[Shares[_0]](getElectionShares[W, _0])
   
   def addShare[T <: Nat : ToInt]()(implicit tag2: TypeTag[T]) : Future[Election[W, Shares[T]]] =
-    pull[Shares[T]](geTypeNoArgs[Election[W, Shares[T]]])
+    pull[Shares[T]](getElectionShares[W, T])
     
   def combineShares() : Future[Election[W, Combined]]  = 
-    pull[Combined](geTypeNoArgs[Election[W, Combined]])
+    pull[Combined](getElectionCombined[W])
     
   def startVotes() : Future[Election[W, Votes]] =
-    pull[Votes](geTypeNoArgs[Election[W, Votes]])
+    pull[Votes](getElectionVotes[W](0))
     
-  def addVote() : Future[Election[W, Votes]]  = 
-    pull[Votes](geTypeNoArgs[Election[W, Votes]])
+  def addVote(numVotes: Int) : Future[Election[W, Votes]]  = 
+    pull[Votes](getElectionVotes[W](numVotes))
   
-  def addVotes() : Future[Election[W, Votes]]  = 
-    pull[Votes](geTypeNoArgs[Election[W, Votes]])
+  def addVotes(numVotes: Int) : Future[Election[W, Votes]]  = 
+    pull[Votes](getElectionVotes[W](numVotes))
   
   def stopVotes() : Future[Election[W, VotesStopped]]  = 
-    pull[VotesStopped](geTypeNoArgs[Election[W, VotesStopped]])
+    pull[VotesStopped](getElectionVotesStopped[W])
   
   def startMixing() : Future[Election[W, Mixing[_0]]]  = 
-    pull[Mixing[_0]](geTypeNoArgs[Election[W, Mixing[_0]]])
+    pull[Mixing[_0]](getElectionMixing[W, _0])
   
   def addMix[T <: Nat : ToInt]()(implicit tag2: TypeTag[T]): Future[Election[W, Mixing[Succ[T]]]]  = 
-    pull[Mixing[Succ[T]]](geTypeNoArgs[Election[W, Mixing[Succ[T]]]])
+    pull[Mixing[Succ[T]]](getElectionMixing[W, T])
   
   def stopMixing() : Future[Election[W, Mixed]]  = 
-    pull[Mixed](geTypeNoArgs[Election[W, Mixed]])
+    pull[Mixed](getElectionMixed[W])
   
   def startDecryptions() : Future[Election[W, Decryptions[_0]]]  = 
-    pull[Decryptions[_0]](geTypeNoArgs[Election[W, Decryptions[_0]]])
+    pull[Decryptions[_0]](getElectionDecryptions[W, _0])
   
   def addDecryption[T <: Nat : ToInt]()(implicit tag2: TypeTag[T]): Future[Election[W, Decryptions[Succ[T]]]]  = 
-    pull[ Decryptions[Succ[T]]](geTypeNoArgs[Election[W, Decryptions[Succ[T]]]])
+    pull[ Decryptions[Succ[T]]](getElectionDecryptions[W, T])
   
   def combineDecryptions() : Future[Election[W, Decrypted]]  = 
-    pull[Decrypted](geTypeNoArgs[Election[W, Decrypted]])
+    pull[Decrypted](getElectionDecrypted[W])
 }
 
 class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3: TypeTag[W])
@@ -151,7 +215,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
       futureCreate onComplete {
         case Success(cc) =>
           val election = startShares(cc)
-          subscriber.push(election, geType(election))
+          subscriber.push(election, getElectionTypeShares(election))
         case Failure(e) =>
           println(s"Future error: ${e}")
       }
@@ -162,7 +226,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
           futureShare onComplete { 
             case Success(share) =>
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
-              subscriber.push(election, geType(election))
+              subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
               println(s"Future error: ${e}")
           }
@@ -171,16 +235,70 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
           futureShare onComplete { 
             case Success(share) =>
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
-              subscriber.push(election, geType(election))
+              subscriber.push(election, getElectionTypeShares(election))
+            case Failure(e) => 
+              println(s"Future error: ${e}")
+          }
+        case 3 => 
+          val futureShare = subscriber.addShare[_2]()
+          futureShare onComplete { 
+            case Success(share) =>
+              val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
+              subscriber.push(election, getElectionTypeShares(election))
+            case Failure(e) => 
+              println(s"Future error: ${e}")
+          }
+        case 4 => 
+          val futureShare = subscriber.addShare[_3]()
+          futureShare onComplete { 
+            case Success(share) =>
+              val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
+              subscriber.push(election, getElectionTypeShares(election))
+            case Failure(e) => 
+              println(s"Future error: ${e}")
+          }
+        case 5 => 
+          val futureShare = subscriber.addShare[_4]()
+          futureShare onComplete { 
+            case Success(share) =>
+              val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
+              subscriber.push(election, getElectionTypeShares(election))
+            case Failure(e) => 
+              println(s"Future error: ${e}")
+          }
+        case 6 => 
+          val futureShare = subscriber.addShare[_5]()
+          futureShare onComplete { 
+            case Success(share) =>
+              val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
+              subscriber.push(election, getElectionTypeShares(election))
+            case Failure(e) => 
+              println(s"Future error: ${e}")
+          }
+        case 7 => 
+          val futureShare = subscriber.addShare[_6]()
+          futureShare onComplete { 
+            case Success(share) =>
+              val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
+              subscriber.push(election, getElectionTypeShares(election))
+            case Failure(e) => 
+              println(s"Future error: ${e}")
+          }
+        case 8 => 
+          val futureShare = subscriber.addShare[_7]()
+          futureShare onComplete { 
+            case Success(share) =>
+              val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
+              subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
               println(s"Future error: ${e}")
           }
         case _ => 
-          val futureShare = subscriber.addShare[_1]()
+          val futureShare = subscriber.addShare[_8]()
           futureShare onComplete { 
             case Success(share) =>
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
-              subscriber.push(election, geType(election))
+              subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
               println(s"Future error: ${e}")
           }
@@ -190,13 +308,13 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
     }
   }
   
-  def pushCreate(jsElection: JsElection) {
+  def pushCreate(jsElection: JsElection, uid: String) {
     val group = GStarModSafePrime.getInstance(new BigInteger(jsElection.state.cSettings.group))
     val cSettings = CryptoSettings(group, group.getDefaultGenerator())
     if (jsElection.level == ToInt[W].apply()) {
       val election = 
-        new Election[W, Created](Created(jsElection.state.id, cSettings, jsElection.state.uid))
-      subscriber.push(election, geType(election))
+        new Election[W, Created](Created(jsElection.state.id, cSettings, uid))
+      subscriber.push(election, getElectionTypeCreated(election))
     } else {
       println("Error, mismatched levels")
     }
@@ -209,7 +327,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)(implicit tag3:
          post.user_attributes.group == "create") {
         jsMsg.validate[JsElection] match {
           case jSeqPost: JsSuccess[JsElection] =>
-            pushCreate(jSeqPost.get)
+            pushCreate(jSeqPost.get, post.board_attributes.index)
           case e: JsError => 
             println(s"\ElectionStateMaintainer JsError error: ${e} message ${post.message}")
         }

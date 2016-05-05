@@ -10,7 +10,7 @@ import models._
 
 case class JsCryptoSettings(group: String, generator: String)
 case class JsElectionState(id: String, cSettings: JsCryptoSettings)
-case class JsCreated(id: String, cSettings: JsCryptoSettings, uid: String)
+case class JsCreated(id: String, cSettings: JsCryptoSettings)
 case class JsShares(level: Int, shares: (String, String))
 case class JsElection(level: Int, state: JsCreated)
 case class JsMessage(messageType: String, message: JsValue)
@@ -47,8 +47,7 @@ trait ElectionJsonFormatter {
   
   implicit val jsJsCreatedWrites: Writes[JsCreated] = (
     (JsPath \ "id").write[String] and
-    (JsPath \ "cSettings").write[JsCryptoSettings] and
-    (JsPath \ "uid").write[String]
+    (JsPath \ "cSettings").write[JsCryptoSettings]
   )(unlift(JsCreated.unapply))
   
   implicit val jsElectionStateWrites: Writes[JsElectionState] = (
@@ -71,11 +70,9 @@ trait ElectionJsonFormatter {
     (JsPath \ "cSettings").read[JsCryptoSettings]
   )(JsElectionState.apply _)
   
-  
   implicit val jsJsCreatedReads: Reads[JsCreated] = (
     (JsPath \ "id").read[String] and
-    (JsPath \ "cSettings").read[JsCryptoSettings] and
-    (JsPath \ "uid").read[String]
+    (JsPath \ "cSettings").read[JsCryptoSettings]
   )(JsCreated.apply _)
   
   implicit def jsJsElectionReads: Reads[JsElection] = (
@@ -106,8 +103,7 @@ trait ElectionMachineJSONConverter
         JsCryptoSettings(
           input.state.cSettings.group.getModulus().toString(), 
           input.state.cSettings.generator.convertToString()
-        ),
-        input.state.uid
+        )
     ))
     /*val b64 = new Base64Message(Json.toJson(jsElection))
     // for some reason Fiware doesn't like the '=' character on a String (or \")
@@ -117,7 +113,7 @@ trait ElectionMachineJSONConverter
     PostRequest(message, UserAttributes("election", "create", None, None))
   }
   
-  def SharesToPostRequest[W <: Nat: ToInt, T <: Nat: ToInt](input : Election[W, Shares[T]], uid: String) : PostRequest = {
+  def SharesToPostRequest[W <: Nat: ToInt, T <: Nat: ToInt](input : Election[W, Shares[T]]) : PostRequest = {
     val t = ToInt[T].apply()
     val list = input.state.shares.unsized
     val shares = if(list.length > 0) {
@@ -129,6 +125,6 @@ trait ElectionMachineJSONConverter
     val jsMessage = JsMessage("Shares", Json.toJson(jsShares))
     val message = Json.stringify(Json.toJson(jsMessage))
     println("GG SharesToPostRequest: " + message)
-    PostRequest(message, UserAttributes("election", uid, None, None))
+    PostRequest(message, UserAttributes("election", input.state.uid, None, None))
   }
 }

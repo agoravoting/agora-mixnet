@@ -35,9 +35,6 @@ trait DefaultElectionImpl extends ElectionTrait
   def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = {
     Future {
       println("Going to start a new Election!")
-      
-      ToInt[W]
-
       val group = GStarModSafePrime.getFirstInstance(bits)
   // import ch.bfh.unicrypt.math.algebra.additive.parameters.ECZModPrimeParameters
   // import ch.bfh.unicrypt.math.algebra.additive.classes.ECZModPrime

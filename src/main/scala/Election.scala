@@ -38,7 +38,7 @@ class Election[+W <: Nat : ToInt, +S <: ElectionState] (val state: S) {
  * These types represent the state of the election and associated information
  *
  */
-case class Created(override val id: String, override val cSettings: CryptoSettings, val uid: String) extends ElectionState(id, cSettings)
+case class Created(override val id: String, override val cSettings: CryptoSettings, override val uid: String) extends ElectionState(id, cSettings, uid)
 case class Shares[T <: Nat : ToInt](val shares: Sized[List[(String, String)], T], prev: ElectionState) extends ElectionStateShares(prev, shares.toList) with HasHistory
 case class Combined(override val publicKey: String, prev: ElectionStateShares) extends ElectionStatePk(prev, publicKey) with HasHistory
 case class Votes(votes: List[String], prev: ElectionStatePk) extends ElectionStatePk(prev, prev.publicKey) with HasHistory
@@ -93,7 +93,7 @@ trait HasHistory {
 /**
  * Convenience election states used to carry information in the election history forward
  */
-abstract class ElectionState(val id: String, val cSettings: CryptoSettings)
-abstract class ElectionStateShares(es: ElectionState, val allShares: List[(String, String)]) extends ElectionState(es.id, es.cSettings)
+abstract class ElectionState(val id: String, val cSettings: CryptoSettings,val uid: String)
+abstract class ElectionStateShares(es: ElectionState, val allShares: List[(String, String)]) extends ElectionState(es.id, es.cSettings, es.uid)
 abstract class ElectionStatePk(ess: ElectionStateShares, val publicKey: String) extends ElectionStateShares(ess, ess.allShares)
 abstract class ElectionStateVotes(espk: ElectionStatePk, val votes:List[String]) extends ElectionStatePk(espk, espk.publicKey)

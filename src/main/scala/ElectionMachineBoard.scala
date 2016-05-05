@@ -115,13 +115,13 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
     system.terminate()
   }
   
-  def startShares[W <: Nat: ToInt](election: Election[W, Shares[_0]], uid: String) : Future[Election[W, Shares[_0]]] = {   
+  def addShare[W <: Nat : ToInt, T <: Nat : ToInt](election: Election[W, Shares[T]]) : Future[Election[W, Shares[T]]] = {   
     val futureResponse: Future[WSResponse] = 
     ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
     .withHeaders(
       "Content-Type" -> "application/json",
       "Accept" -> "application/json")
-    .post(Json.toJson(SharesToPostRequest(election, uid)))
+    .post(Json.toJson(SharesToPostRequest(election)))
    
     futureResponse map { case response =>
      election
@@ -148,15 +148,14 @@ trait ElectionMachine extends ElectionTrait
   // now ready to receive shares
   def startShares[W <: Nat : ToInt](in: Election[W, Created]) : Future[Election[W, Shares[_0]]] = {
     BaseImpl.startShares(in) flatMap { election =>
-      BoardPoster.startShares(election, in.state.uid)
+      BoardPoster.addShare(election)
     }
   }
 
   // verify and add a share
   def addShare[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]] = {
-    BaseImpl.addShare(in, share, proverId) map { election => 
-      //println(s"RR $election")
-      election
+    BaseImpl.addShare(in, share, proverId) flatMap { election => 
+      BoardPoster.addShare(election)
     }
   }
 
