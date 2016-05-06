@@ -242,6 +242,136 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
     new Election[W, Mixed](Mixed(in.state))
   }
   
+  def startDecryptions(in: Election[W, Mixed]) : Election[W, Decryptions[_0]] = {
+    println(s"GG ElectionStateMaintainer::startDecryptions")
+    new Election[W, Decryptions[_0]](Decryptions[_0](List[PartialDecryptionDTO]().sized(0).get, in.state))
+  }
+  
+  def addDecryption[T <: Nat : ToInt](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO) : Election[W, Decryptions[Succ[T]]] = {
+    println(s"GG ElectionStateMaintainer::addDecryption")
+    new Election[W, Decryptions[Succ[T]]](Decryptions[Succ[T]](in.state.decryptions :+ decryption, in.state))
+  }
+  
+  def combineDecryptions(in: Election[W, Decryptions[W]], decrypted: Seq[String]) : Election[W, Decrypted] = {
+    println(s"GG ElectionStateMaintainer::combineDecryptions")
+    new Election[W, Decrypted](Decrypted(decrypted, in.state))
+  }
+  
+  def pushDecrypted(jsDecrypted: JsDecrypted) = {
+    println("GG ElectionStateMaintainer::pushDecrypted")
+    val futureDecryption = subscriber.addDecryption[W]()
+    futureDecryption onComplete {
+      case Success(decryption) =>
+        val election = combineDecryptions(decryption, jsDecrypted.decrypted)
+        subscriber.push(election, getElectionTypeDecrypted(election))
+      case Failure(err) =>
+        println(s"Future error: ${err}")
+    }
+  }
+  
+  def pushDecryptions(jsDecryptions: JsDecryptions) = {
+    println("GG ElectionStateMaintainer::pushDecryptions")
+    if(jsDecryptions.level < 0 || jsDecryptions.level > 9) {
+      println(s"Error, mismatched level (should be 1 to 9): ${jsDecryptions.level}")
+    } else {
+      jsDecryptions.level match {
+        case 1 =>
+          val futureDecryption = subscriber.addDecryption[_0]()
+          futureDecryption onComplete {
+            case Success(decryption) =>
+              val election = addDecryption(decryption, jsDecryptions.decryption)
+              subscriber.push(election, getElectionTypeDecryptions(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 2 =>
+          val futureDecryption = subscriber.addDecryption[_1]()
+          futureDecryption onComplete {
+            case Success(decryption) =>
+              val election = addDecryption(decryption, jsDecryptions.decryption)
+              subscriber.push(election, getElectionTypeDecryptions(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 3 =>
+          val futureDecryption = subscriber.addDecryption[_2]()
+          futureDecryption onComplete {
+            case Success(decryption) =>
+              val election = addDecryption(decryption, jsDecryptions.decryption)
+              subscriber.push(election, getElectionTypeDecryptions(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 4 =>
+          val futureDecryption = subscriber.addDecryption[_3]()
+          futureDecryption onComplete {
+            case Success(decryption) =>
+              val election = addDecryption(decryption, jsDecryptions.decryption)
+              subscriber.push(election, getElectionTypeDecryptions(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 5 =>
+          val futureDecryption = subscriber.addDecryption[_4]()
+          futureDecryption onComplete {
+            case Success(decryption) =>
+              val election = addDecryption(decryption, jsDecryptions.decryption)
+              subscriber.push(election, getElectionTypeDecryptions(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 6 =>
+          val futureDecryption = subscriber.addDecryption[_5]()
+          futureDecryption onComplete {
+            case Success(decryption) =>
+              val election = addDecryption(decryption, jsDecryptions.decryption)
+              subscriber.push(election, getElectionTypeDecryptions(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 7 =>
+          val futureDecryption = subscriber.addDecryption[_6]()
+          futureDecryption onComplete {
+            case Success(decryption) =>
+              val election = addDecryption(decryption, jsDecryptions.decryption)
+              subscriber.push(election, getElectionTypeDecryptions(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 8 =>
+          val futureDecryption = subscriber.addDecryption[_7]()
+          futureDecryption onComplete {
+            case Success(decryption) =>
+              val election = addDecryption(decryption, jsDecryptions.decryption)
+              subscriber.push(election, getElectionTypeDecryptions(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case _ =>
+          val futureDecryption = subscriber.addDecryption[_8]()
+          futureDecryption onComplete {
+            case Success(decryption) =>
+              val election = addDecryption(decryption, jsDecryptions.decryption)
+              subscriber.push(election, getElectionTypeDecryptions(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+      }
+    }
+  }
+  
+  def pushStartDecryptions() {
+    println("GG ElectionStateMaintainer::pushStartDecryptions")
+    val futureStopMixing = subscriber.stopMixing()
+    futureStopMixing onComplete {
+      case Success(stop) =>
+        val election = startDecryptions(stop)
+        subscriber.push(election, getElectionTypeDecryptions(election))
+      case Failure(err) =>
+        println(s"Future error: ${err}")
+    }
+  }
+  
   def pushStopMixing() {
     println("GG ElectionStateMaintainer::pushStopMixing")
     val futureMix = subscriber.addMix[W]()
@@ -593,6 +723,26 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
                   pushStopMixing()
                 } else {
                   println(s"Error: StopMixing : message is not null: message ${post.message}")
+                }
+              case "StartDecryptions" =>
+                if(JsNull == jsMessage.message) {
+                  pushStartDecryptions()
+                } else {
+                  println(s"Error: StartDecryptions : message is not null: message ${post.message}")
+                }
+              case "Decryptions" =>
+                jsMessage.message.validate[JsDecryptions] match {
+                  case b: JsSuccess[JsDecryptions] =>
+                    pushDecryptions(b.get)
+                  case e: JsError =>
+                    println(s"JsError error: ${e} message ${post.message}")
+                }
+              case "Decrypted" =>
+                jsMessage.message.validate[JsDecrypted] match {
+                  case b: JsSuccess[JsDecrypted] =>
+                    pushDecrypted(b.get)
+                  case e: JsError =>
+                    println(s"JsError error: ${e} message ${post.message}")
                 }
               case _ => ;
                 println(s"ElectionStateMaintainer JsMessage type error: ${jsMessage.messageType}")

@@ -16,6 +16,8 @@ case class JsCombined(publicKey: String)
 case class JsVotes(votes: List[String], addVoteIndex: Int)
 case class JsVotesStopped(lastAddVoteIndex: Int, date: String)
 case class JsMixing(level: Int, mixes: ShuffleResultDTO)
+case class JsDecryptions(level: Int, decryption: PartialDecryptionDTO)
+case class JsDecrypted(decrypted: Seq[String])
 case class JsElection(level: Int, state: JsCreated)
 case class JsMessage(messageType: String, message: JsValue)
 
@@ -204,6 +206,22 @@ trait ElectionJsonFormatter {
     (JsPath \ "level").write[Int] and
     (JsPath \ "mixes").write[ShuffleResultDTO]
   )(unlift(JsMixing.unapply))
+  
+  implicit def validateJsDecryptionsReads: Reads[JsDecryptions] = (
+    (JsPath \ "level").read[Int] and
+    (JsPath \ "decryption").read[PartialDecryptionDTO] 
+  )(JsDecryptions.apply _)
+  
+  implicit val validateJsDecryptionsWrites: Writes[JsDecryptions] = (
+    (JsPath \ "level").write[Int] and
+    (JsPath \ "decryption").write[PartialDecryptionDTO]
+  )(unlift(JsDecryptions.unapply))  
+  
+  implicit val validateJsDecryptedRead: Reads[JsDecrypted] = 
+      (JsPath \ "decrypted").read[Seq[String]].map{ decrypted => JsDecrypted(decrypted)}
+
+  implicit val validateJsDecryptedWrite: Writes[JsDecrypted] = 
+      (JsPath \ "decrypted").write[Seq[String]].contramap { a: JsDecrypted => a.decrypted }
 }
 
 trait ElectionMachineJSONConverter
@@ -286,6 +304,29 @@ trait ElectionMachineJSONConverter
     val jsMessage = JsMessage("Mixed", JsNull)
     val message = Json.stringify(Json.toJson(jsMessage))
     println("GG MixedToPostRequest: " + message)
+    PostRequest(message, UserAttributes("election", election.state.uid, None, None))
+  }
+  
+  def StartDecryptionsToPostRequest[W <: Nat : ToInt](election: Election[W, Decryptions[_0]]) : PostRequest = {
+    val jsMessage = JsMessage("StartDecryptions", JsNull)
+    val message = Json.stringify(Json.toJson(jsMessage))
+    println("GG StartDecryptionsToPostRequest: " + message)
+    PostRequest(message, UserAttributes("election", election.state.uid, None, None))
+  }
+  
+  def AddDecryptionToPostRequest[W <: Nat : ToInt, T <: Nat : ToInt](election: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO) : PostRequest = {
+    val jsDecryptions = JsDecryptions(ToInt[T].apply(), decryption)
+    val jsMessage = JsMessage("Decryptions", Json.toJson(jsDecryptions))
+    val message = Json.stringify(Json.toJson(jsMessage))
+    println("GG AddDecryptionToPostRequest: " + message)
+    PostRequest(message, UserAttributes("election", election.state.uid, None, None))
+  }
+  
+  def DecryptedToPostRequest[W <: Nat : ToInt](election: Election[W, Decrypted]) : PostRequest = {
+    val jsDecrypted = JsDecrypted(election.state.decrypted)
+    val jsMessage = JsMessage("Decrypted", Json.toJson(jsDecrypted))
+    val message = Json.stringify(Json.toJson(jsMessage))
+    println("GG DecryptedToPostRequest: " + message)
     PostRequest(message, UserAttributes("election", election.state.uid, None, None))
   }
 }

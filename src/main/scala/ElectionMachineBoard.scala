@@ -278,6 +278,72 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
     }
     promise.future
   }
+  
+  
+  def startDecryptions[W <: Nat : ToInt](election: Election[W, Decryptions[_0]]) : Future[Election[W, Decryptions[_0]]] = {
+    val promise = Promise[Election[W, Decryptions[_0]]]()
+    Future {
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+      .withHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json")
+      .post(Json.toJson(StartDecryptionsToPostRequest(election)))
+     
+      futureResponse onFailure { case err =>
+        promise.failure(err)
+      }
+      
+      futureResponse onSuccess { case response =>
+       promise.success(election)
+      }
+    }
+    promise.future
+  }
+
+  def combineDecryptions[W <: Nat : ToInt](election: Election[W, Decrypted]) : Future[Election[W, Decrypted]] = {
+    val promise = Promise[Election[W, Decrypted]]()
+    Future {
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+      .withHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json")
+      .post(Json.toJson(DecryptedToPostRequest(election)))
+     
+      futureResponse onFailure { case err =>
+        promise.failure(err)
+      }
+      
+      futureResponse onSuccess { case response =>
+       promise.success(election)
+      }
+    }
+    promise.future
+  }
+  
+  
+
+  def addDecryption[W <: Nat : ToInt, T <: Nat : ToInt](election: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO) : Future[Election[W, Decryptions[T]]] = {
+    val promise = Promise[Election[W, Decryptions[T]]]()
+    Future {
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+      .withHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json")
+      .post(Json.toJson(AddDecryptionToPostRequest(election, decryption)))
+     
+      futureResponse onFailure { case err =>
+        promise.failure(err)
+      }
+      
+      futureResponse onSuccess { case response =>
+       promise.success(election)
+      }
+    }
+    promise.future
+  }
 }
 
 object BaseImpl extends DefaultElectionImpl {}
@@ -368,17 +434,23 @@ trait ElectionMachine extends ElectionTrait
 
   // start receiving partial decryptions
   def startDecryptions[W <: Nat : ToInt](in: Election[W, Mixed]) : Future[Election[W, Decryptions[_0]]] = {
-    BaseImpl.startDecryptions(in)
+    BaseImpl.startDecryptions(in) flatMap { election =>
+      BoardPoster.startDecryptions(election)
+    }
   }
 
   // verify and add a partial decryption
   def addDecryption[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Decryptions[T]], decryption: PartialDecryptionDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Decryptions[Succ[T]]]] = {
-    BaseImpl.addDecryption(in, decryption, proverId)
+    BaseImpl.addDecryption(in, decryption, proverId) flatMap { election =>
+      BoardPoster.addDecryption(election, decryption)
+    }
   }
 
   // combine partial decryptions, can only happen if we have all of them
   def combineDecryptions[W <: Nat : ToInt](in: Election[W, Decryptions[W]]) : Future[Election[W, Decrypted]] = {
-    BaseImpl.combineDecryptions(in) map { election =>
+    BaseImpl.combineDecryptions(in) flatMap { election =>
+      BoardPoster.combineDecryptions(election)
+    } map { election =>
       BoardPoster.closeSystem()
       controllers.Router.close()
       election
