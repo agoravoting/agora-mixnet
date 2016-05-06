@@ -174,8 +174,8 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
   def startMixing() : Future[Election[W, Mixing[_0]]]  = 
     pull[Mixing[_0]](getElectionMixing[W, _0])
   
-  def addMix[T <: Nat : ToInt](): Future[Election[W, Mixing[Succ[T]]]]  = 
-    pull[Mixing[Succ[T]]](getElectionMixing[W, T])
+  def addMix[T <: Nat : ToInt](): Future[Election[W, Mixing[T]]]  = 
+    pull[Mixing[T]](getElectionMixing[W, T])
   
   def stopMixing() : Future[Election[W, Mixed]]  = 
     pull[Mixed](getElectionMixed[W])
@@ -183,8 +183,8 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
   def startDecryptions() : Future[Election[W, Decryptions[_0]]]  = 
     pull[Decryptions[_0]](getElectionDecryptions[W, _0])
   
-  def addDecryption[T <: Nat : ToInt](): Future[Election[W, Decryptions[Succ[T]]]]  = 
-    pull[ Decryptions[Succ[T]]](getElectionDecryptions[W, T])
+  def addDecryption[T <: Nat : ToInt](): Future[Election[W, Decryptions[T]]]  = 
+    pull[ Decryptions[T]](getElectionDecryptions[W, T])
   
   def combineDecryptions() : Future[Election[W, Decrypted]]  = 
     pull[Decrypted](getElectionDecrypted[W])
@@ -225,6 +225,136 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
   def stopVotes(in: Election[W, Votes], lastAddVoteIndex: Int, date: com.github.nscala_time.time.Imports.DateTime) : Election[W, VotesStopped] = {
     println(s"GG ElectionStateMaintainer::stopVotes")
     new Election[W, VotesStopped](VotesStopped(lastAddVoteIndex, in.state, date))
+  }
+  
+  def startMixing(in: Election[W, VotesStopped]) : Election[W, Mixing[_0]] = {
+    println(s"GG ElectionStateMaintainer::startMixing")
+    new Election[W, Mixing[_0]](Mixing[_0](List[ShuffleResultDTO]().sized(0).get, in.state))
+  }
+  
+  def addMix[T <: Nat : ToInt](in: Election[W, Mixing[T]], mix: ShuffleResultDTO) : Election[W, Mixing[Succ[T]]] = {
+    println(s"GG ElectionStateMaintainer::addMix")
+    new Election[W, Mixing[Succ[T]]](Mixing[Succ[T]](in.state.mixes :+ mix, in.state))
+  }
+  
+  def stopMixing(in: Election[W, Mixing[W]]) : Election[W, Mixed] = {
+    println(s"GG ElectionStateMaintainer::stopMixing")
+    new Election[W, Mixed](Mixed(in.state))
+  }
+  
+  def pushStopMixing() {
+    println("GG ElectionStateMaintainer::pushStopMixing")
+    val futureMix = subscriber.addMix[W]()
+    futureMix onComplete {
+      case Success(mix) =>
+        val election = stopMixing(mix)
+        subscriber.push(election, getElectionTypeMixed(election))
+      case Failure(err) =>
+        println(s"Future error: ${err}")
+    }
+  }
+  
+  def pushMixing(jsMixing: JsMixing) {
+    println("GG ElectionStateMaintainer::pushMixing")
+    if(jsMixing.level < 1 || jsMixing.level > 9) {
+      println(s"Error, mismatched level (should be 1 to 9): ${jsMixing.level}")
+    } else {
+      jsMixing.level match {
+        case 1 =>
+          val futureMix = subscriber.addMix[_0]()
+          futureMix onComplete {
+            case Success(mix) => 
+              val election = addMix(mix, jsMixing.mixes)
+              subscriber.push(election, getElectionTypeMixing(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 2 =>
+          val futureMix = subscriber.addMix[_1]()
+          futureMix onComplete {
+            case Success(mix) => 
+              val election = addMix(mix, jsMixing.mixes)
+              subscriber.push(election, getElectionTypeMixing(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 3 =>
+          val futureMix = subscriber.addMix[_2]()
+          futureMix onComplete {
+            case Success(mix) => 
+              val election = addMix(mix, jsMixing.mixes)
+              subscriber.push(election, getElectionTypeMixing(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 4 =>
+          val futureMix = subscriber.addMix[_3]()
+          futureMix onComplete {
+            case Success(mix) => 
+              val election = addMix(mix, jsMixing.mixes)
+              subscriber.push(election, getElectionTypeMixing(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 5 =>
+          val futureMix = subscriber.addMix[_4]()
+          futureMix onComplete {
+            case Success(mix) => 
+              val election = addMix(mix, jsMixing.mixes)
+              subscriber.push(election, getElectionTypeMixing(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 6 =>
+          val futureMix = subscriber.addMix[_5]()
+          futureMix onComplete {
+            case Success(mix) => 
+              val election = addMix(mix, jsMixing.mixes)
+              subscriber.push(election, getElectionTypeMixing(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 7 =>
+          val futureMix = subscriber.addMix[_6]()
+          futureMix onComplete {
+            case Success(mix) => 
+              val election = addMix(mix, jsMixing.mixes)
+              subscriber.push(election, getElectionTypeMixing(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case 8 =>
+          val futureMix = subscriber.addMix[_7]()
+          futureMix onComplete {
+            case Success(mix) => 
+              val election = addMix(mix, jsMixing.mixes)
+              subscriber.push(election, getElectionTypeMixing(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+        case _ =>
+          val futureMix = subscriber.addMix[_8]()
+          futureMix onComplete {
+            case Success(mix) => 
+              val election = addMix(mix, jsMixing.mixes)
+              subscriber.push(election, getElectionTypeMixing(election))
+            case Failure(err) =>
+              println(s"Future error: ${err}")
+          }
+      }
+    }
+  }
+  
+  def pushStartMixing() {
+    println("GG ElectionStateMaintainer::pushStartMixing")
+    val futureStopVotes = subscriber.stopVotes()
+    futureStopVotes onComplete {
+      case Success(stopped) => 
+        val election = startMixing(stopped)
+        subscriber.push(election, getElectionTypeMixing(election))
+      case Failure(err) =>
+        println(s"Future error: ${err}")
+    }
   }
   
   def pushVotesStopped(jsVotesStopped: JsVotesStopped) {
@@ -445,6 +575,25 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
                   case e: JsError =>
                     println(s"JsError error: ${e} message ${post.message}")
                 }
+              case "StartMixing" =>
+                if(JsNull == jsMessage.message) {
+                  pushStartMixing()
+                } else {
+                  println(s"Error: StartMixing : message is not null: message ${post.message}")
+                }
+              case "Mixing" =>
+                jsMessage.message.validate[JsMixing] match {
+                  case b: JsSuccess[JsMixing] =>
+                    pushMixing(b.get)
+                  case e: JsError =>
+                    println(s"JsError error: ${e} message ${post.message}")
+                }
+              case "Mixed" =>
+                if(JsNull == jsMessage.message) {
+                  pushStopMixing()
+                } else {
+                  println(s"Error: StopMixing : message is not null: message ${post.message}")
+                }
               case _ => ;
                 println(s"ElectionStateMaintainer JsMessage type error: ${jsMessage.messageType}")
             }
@@ -542,8 +691,6 @@ trait PostOffice extends ElectionJsonFormatter
               case Some(electionWrapper) =>
                 println(s"Error: duplicated Election Id: ${electionId}")
               case None =>
-                /*val messageB64 = post.message.replace('.', '=')
-                val message = new String(Base64.getDecoder.decode(messageB64), StandardCharsets.UTF_8)*/
                 val jsMsg = Json.parse(post.message)
                 jsMsg.validate[JsElection] match {
                   case jSeqPost: JsSuccess[JsElection] =>

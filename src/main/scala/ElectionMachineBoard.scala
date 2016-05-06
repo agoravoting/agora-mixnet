@@ -214,6 +214,70 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
     }
     promise.future
   }
+  
+  def startMixing[W <: Nat : ToInt](election: Election[W, Mixing[_0]]) : Future[Election[W, Mixing[_0]]] = {
+    val promise = Promise[Election[W, Mixing[_0]]]()
+    Future {
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+      .withHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json")
+      .post(Json.toJson(StartMixingToPostRequest(election)))
+     
+      futureResponse onFailure { case err =>
+        promise.failure(err)
+      }
+      
+      futureResponse onSuccess { case response =>
+       promise.success(election)
+      }
+    }
+    promise.future
+  }
+  
+  def addMix[W <: Nat : ToInt, T <: Nat : ToInt](election: Election[W, Mixing[T]], mix: ShuffleResultDTO) : Future[Election[W, Mixing[T]]] = {
+    val promise = Promise[Election[W, Mixing[T]]]()
+    Future {
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+      .withHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json")
+      .post(Json.toJson(MixingToPostRequest(election, mix)))
+     
+      futureResponse onFailure { case err =>
+        promise.failure(err)
+      }
+      
+      futureResponse onSuccess { case response =>
+       promise.success(election)
+      }
+    }
+    promise.future
+  }
+  
+  
+  def stopMixing[W <: Nat : ToInt](election: Election[W, Mixed]) : Future[Election[W, Mixed]] = {
+    val promise = Promise[Election[W, Mixed]]()
+    Future {
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_post")
+      .withHeaders(
+        "Content-Type" -> "application/json",
+        "Accept" -> "application/json")
+      .post(Json.toJson(MixedToPostRequest(election)))
+     
+      futureResponse onFailure { case err =>
+        promise.failure(err)
+      }
+      
+      futureResponse onSuccess { case response =>
+       promise.success(election)
+      }
+    }
+    promise.future
+  }
 }
 
 object BaseImpl extends DefaultElectionImpl {}
@@ -283,17 +347,23 @@ trait ElectionMachine extends ElectionTrait
 
   // start mixing
   def startMixing[W <: Nat : ToInt](in: Election[W, VotesStopped]) : Future[Election[W, Mixing[_0]]] = {
-    BaseImpl.startMixing(in)
+    BaseImpl.startMixing(in) flatMap { election =>
+      BoardPoster.startMixing(election)
+    }
   }
 
   // add a mix by a mixer trustee
   def addMix[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Mixing[T]], mix: ShuffleResultDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Mixing[Succ[T]]]] = {
-    BaseImpl.addMix(in, mix, proverId)
+    BaseImpl.addMix(in, mix, proverId) flatMap { election =>
+      BoardPoster.addMix(election, mix)
+    }
   }
 
   // stop receiving mixes, can only happen if we have all the mixes
   def stopMixing[W <: Nat : ToInt](in: Election[W, Mixing[W]]) : Future[Election[W, Mixed]] = {
-    BaseImpl.stopMixing(in)
+    BaseImpl.stopMixing(in) flatMap { election =>
+      BoardPoster.stopMixing(election)
+    }
   }
 
   // start receiving partial decryptions
