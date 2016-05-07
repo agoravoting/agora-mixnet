@@ -134,17 +134,20 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
   
   private def pull[B <: ElectionState](electionType: String): Future[Election[W, B]] = {
     println("GG ElectionSubscriber:pull electionType " + electionType)
-    val promise = Promise[Election[W, B]]()
-    val any = getOrAdd(electionType, promise)
-    Try {
-      any.asInstanceOf[Promise[Election[W, B]]]
-    } match {
-      case Success(p) =>
-        p.future
-      case Failure(e) =>
-        promise.failure(e)
-        promise.future
+    val realPromise = Promise[Election[W, B]]()
+    Future {
+      val promise = Promise[Election[W, B]]()
+      val any = getOrAdd(electionType, promise)
+      Try {
+        any.asInstanceOf[Promise[Election[W, B]]]
+      } match {
+        case Success(p) =>
+          realPromise.completeWith(p.future)
+        case Failure(e) =>
+          realPromise.failure(e)
+      }
     }
+    realPromise.future
   }
   
   def create() : Future[Election[W, Created]] = 

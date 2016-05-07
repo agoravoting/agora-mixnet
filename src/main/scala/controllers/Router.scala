@@ -27,22 +27,29 @@ object Router
 
   val serverSource = Http(system).bind(interface = "localhost", port = 9800)
   
-  def getString(entity: HttpEntity) : Future[String] = {
-    entity.toStrict(5.seconds) map { st =>
-      st.data.decodeString("UTF-8")
+  def getString(entity: HttpEntity) : Future[String] =  {
+    val promise = Promise[String]()
+    Future {
+      val future = entity.toStrict(5.seconds) map { st =>
+        st.data.decodeString("UTF-8")
+      }
+      promise.completeWith(future)
     }
+    promise.future
   }
   
   val requestHandler: HttpRequest => Future[HttpResponse] = {
     case HttpRequest(POST, Uri.Path("/accumulate"), _, entity, _) =>
       val promise = Promise[HttpResponse]()
-      getString(entity) onComplete {
-       case Success(bodyStr) =>
-         println(s"Router accumulate: $bodyStr")
-         promise.completeWith(BoardReader.accumulate(bodyStr))         
-       case Failure(e) =>
-         promise.success(HttpResponse(400, entity = s"Error $e"))
-      }  
+      Future {
+        getString(entity) onComplete {
+         case Success(bodyStr) =>
+           println(s"Router accumulate: $bodyStr")
+           promise.completeWith(BoardReader.accumulate(bodyStr))         
+         case Failure(e) =>
+           promise.success(HttpResponse(400, entity = s"Error $e"))
+        }  
+      }
       promise.future
     case _: HttpRequest =>
       Future { HttpResponse(404, entity = "Unknown resource!") }

@@ -242,7 +242,7 @@ trait ElectionMachineJSONConverter
     // for some reason Fiware doesn't like the '=' character on a String (or \")
     val message = b64.toString().replace('=', '.')*/
     val message = Json.stringify(Json.toJson(jsElection))
-    println("GG Post message: " + message)
+    println("GG Post message: ")
     PostRequest(message, UserAttributes("election", "create", None, None))
   }
   
@@ -273,7 +273,7 @@ trait ElectionMachineJSONConverter
     val jsVotes = JsVotes(votes, election.state.addVoteIndex)
     val jsMessage = JsMessage("Votes", Json.toJson(jsVotes))
     val message = Json.stringify(Json.toJson(jsMessage))
-    println("GG VotesToPostRequest: " + message)
+    println("GG VotesToPostRequest: " )
     PostRequest(message, UserAttributes("election", election.state.uid, None, None))
   }
   
@@ -288,7 +288,7 @@ trait ElectionMachineJSONConverter
   def StartMixingToPostRequest[W <: Nat : ToInt](election: Election[W, Mixing[_0]]) : PostRequest = {
     val jsMessage = JsMessage("StartMixing", JsNull)
     val message = Json.stringify(Json.toJson(jsMessage))
-    println("GG StartMixingToPostRequest: " + message)
+    println("GG StartMixingToPostRequest: ")
     PostRequest(message, UserAttributes("election", election.state.uid, None, None))
   }
   
@@ -296,21 +296,21 @@ trait ElectionMachineJSONConverter
     val jsMixing = JsMixing(ToInt[T].apply(), mixes)
     val jsMessage = JsMessage("Mixing", Json.toJson(jsMixing))
     val message = Json.stringify(Json.toJson(jsMessage))
-    println("GG MixingToPostRequest: " + message)
+    println("GG MixingToPostRequest: ")
     PostRequest(message, UserAttributes("election", election.state.uid, None, None))
   }
   
   def MixedToPostRequest[W <: Nat : ToInt](election: Election[W, Mixed]) : PostRequest = {
     val jsMessage = JsMessage("Mixed", JsNull)
     val message = Json.stringify(Json.toJson(jsMessage))
-    println("GG MixedToPostRequest: " + message)
+    println("GG MixedToPostRequest: ")
     PostRequest(message, UserAttributes("election", election.state.uid, None, None))
   }
   
   def StartDecryptionsToPostRequest[W <: Nat : ToInt](election: Election[W, Decryptions[_0]]) : PostRequest = {
     val jsMessage = JsMessage("StartDecryptions", JsNull)
     val message = Json.stringify(Json.toJson(jsMessage))
-    println("GG StartDecryptionsToPostRequest: " + message)
+    println("GG StartDecryptionsToPostRequest: ")
     PostRequest(message, UserAttributes("election", election.state.uid, None, None))
   }
   
@@ -318,7 +318,7 @@ trait ElectionMachineJSONConverter
     val jsDecryptions = JsDecryptions(ToInt[T].apply(), decryption)
     val jsMessage = JsMessage("Decryptions", Json.toJson(jsDecryptions))
     val message = Json.stringify(Json.toJson(jsMessage))
-    println("GG AddDecryptionToPostRequest: " + message)
+    println("GG AddDecryptionToPostRequest: ")
     PostRequest(message, UserAttributes("election", election.state.uid, None, None))
   }
   
@@ -326,7 +326,7 @@ trait ElectionMachineJSONConverter
     val jsDecrypted = JsDecrypted(election.state.decrypted)
     val jsMessage = JsMessage("Decrypted", Json.toJson(jsDecrypted))
     val message = Json.stringify(Json.toJson(jsMessage))
-    println("GG DecryptedToPostRequest: " + message)
+    println("GG DecryptedToPostRequest: ")
     PostRequest(message, UserAttributes("election", election.state.uid, None, None))
   }
 }
