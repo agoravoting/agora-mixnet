@@ -23,6 +23,7 @@ import mpservice.MPBridge
 import scala.collection.JavaConversions._
 import scala.concurrent.Future
 import scala.reflect.runtime.universe._
+import controllers._
 
 /**
  * An election is a typed, purely function state machine with an immutable history
@@ -71,7 +72,12 @@ trait ElectionTrait {
 }
 
 object Election extends ElectionMachine
-{ }
+{
+  def init() = {
+    Router.init()
+    BoardPoster.init()
+  }
+}
 
 
 /*

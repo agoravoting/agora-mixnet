@@ -852,7 +852,7 @@ trait PostOffice extends ElectionJsonFormatter
                     electionMap += (electionId -> maintainer)
                     callbackQueue.synchronized {
                       callbackQueue foreach { func =>
-                        func(electionIdStr)
+                        Future { func(electionIdStr) }
                       }
                     }
                   case e: JsError => 

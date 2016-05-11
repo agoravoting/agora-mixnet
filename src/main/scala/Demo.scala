@@ -6,6 +6,7 @@ import LT._
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.ConfigFactory
 import scala.concurrent._
+import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
@@ -21,6 +22,89 @@ import app._
 import controllers._
 
 import scala.util.{Success, Failure}
+
+object FiwareDemo extends App {
+  println("Hola Mundo")
+  
+  val config = ConfigFactory.load()
+  val useGmp = config.getBoolean("mpservice.use-gmp")
+  val useExtractor = config.getBoolean("mpservice.use-extractor")
+  MPBridgeS.init(useGmp, useExtractor)
+  // actually used in Util.getE
+  val bypass = config.getBoolean("bypass-membership-check")
+  println(s"* bypass-membership-check: $bypass")
+  // actually used in AbstractCyclicGroup constructor
+  val generatorsParallel = config.getBoolean("use-generators-parallel")
+  println(s"* use-generators-parallel: $generatorsParallel")
+  // actually used in Util.getIndependentGenerators constructor
+  val generatorsParallelLevel = config.getInt("generators-parallelism-level")
+  println(s"* generators-parallelism-level: $generatorsParallelLevel")
+  
+  Election.init()
+  
+  args.toList.lift(0) match {
+    case None =>
+      throw new Error("Error, missing input arguments: the first argument should be director or authority")
+    case Some(arg1) =>
+      arg1 match {
+        case "director" =>
+          println("director")
+          val totalVotes = args.toList.lift(1).getOrElse("5").toInt
+          val totalAuthorities = args.toList.lift(2).getOrElse("0").toInt
+          val director = totalAuthorities match {
+            case 2 =>
+              new ElectionDirector[_2](totalVotes)
+            case 3 =>
+              new ElectionDirector[_3](totalVotes)
+            case 4 =>
+              new ElectionDirector[_4](totalVotes)
+            case 5 =>
+              new ElectionDirector[_5](totalVotes)
+            case 6 =>
+              new ElectionDirector[_6](totalVotes)
+            case 7 =>
+              new ElectionDirector[_7](totalVotes)
+            case 8 =>
+              new ElectionDirector[_8](totalVotes)
+            case 9 =>
+              new ElectionDirector[_9](totalVotes)
+            case _ =>
+              throw new Error("Error, the number of authorities must be 2 to 9")
+          }
+          director.newElection() map { uid =>
+            println("Election uid obtained: "+ uid)            
+          }
+          waitAll()
+          
+        case "authority" =>
+          println("authority")
+          val totalAuthorities = args.toList.lift(1).getOrElse("0").toInt
+          val authorityIndex = args.toList.lift(2).getOrElse("0").toInt
+          if( totalAuthorities != 2) {
+            throw new Error("Error, the number of authorities can be any number, between 2 and 2")
+          }
+          if(authorityIndex < 0 && authorityIndex >= totalAuthorities) {
+            throw new Error("Error, wrong authority index")
+          }
+          
+          val authority = authorityIndex match {
+            case 0 => 
+              new ElectionAuthority[_2, _0]()
+            case 1 =>
+              new ElectionAuthority[_2, _1]()
+            case _ =>
+              throw new Error("this probably will never happen, but the authority index is not 0 or 1")
+          }
+          waitAll()
+      }
+  }
+  
+  def waitAll() {
+    println("Waiting")
+    val promise = Promise[Any]()
+    Await.ready(promise.future, Duration.Inf)
+  }
+}
 
 /**
  * An election process DEMO
@@ -80,11 +164,11 @@ object ElectionTest extends App {
   // actually used in Util.getIndependentGenerators constructor
   val generatorsParallelLevel = config.getInt("generators-parallelism-level")
   println(s"* generators-parallelism-level: $generatorsParallelLevel")
-  val agoraBoardUrl = config.getString("agoraboard.url")
-  println(s"* agoraBoardUrll: $agoraBoardUrl")
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
 
+  Election.init()
+  
   // create the keymakers
   // these are responsible for distributed key generation and joint decryption
   val k1 = new KeyMakerTrustee("keymaker one")
@@ -112,7 +196,7 @@ object ElectionTest extends App {
   val startSharesPromise = Promise[Election[_, Shares[_0]]]()
   uidPromise.future map { uid =>
     val subscriber = BoardReader.getSubscriber(uid)
-    subscriber.create() onComplete { 
+    subscriber.create() onComplete {
       case Success(dd) =>
         println("GGG subscriber gives created!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         createdPromise.success(dd)
@@ -120,7 +204,7 @@ object ElectionTest extends App {
         println(s"GGG $e")
         createdPromise.failure(e)
     }
-    subscriber.startShares() onComplete { 
+    subscriber.startShares() onComplete {
       case Success(dd) =>
         println("GGG subscriber gives startShares!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         startSharesPromise.success(dd)
@@ -170,11 +254,10 @@ object ElectionTest extends App {
   // we are only timing the mixing phase
   var mixingStart = System.currentTimeMillis()
 
-  // FIXME remove this
-  MPBridge.total = 0;
-
   // stop the voting period
-  val stopVotes = electionGettingVotes flatMap { electionGettingVotes => 
+  val stopVotes = electionGettingVotes flatMap { electionGettingVotes =>
+    // FIXME remove this
+    MPBridge.total = 0;
     mixingStart = System.currentTimeMillis()
     Election.stopVotes(electionGettingVotes)
   }
@@ -196,7 +279,7 @@ object ElectionTest extends App {
       } flatMap { mixOne =>
         // each mixing trustee extracts the needed information from the election
         // and performs the shuffle and proofs
-        m2.shuffleVotes(mixOne, predata2, proof2).map { shuffle =>
+        m2.shuffleVotes(mixOne, predata2, proof2) map { shuffle =>
           // the proof is verified and the shuffle is then added to the election, advancing its state
           Election.addMix(mixOne, shuffle, m2.id)
         }
@@ -233,7 +316,7 @@ object ElectionTest extends App {
 
       decryptions.map { case (pd1, pd2) =>
         val partialOne = Election.addDecryption(startDecryptions, pd1, k1.id)
-        val partialTwo = partialOne flatMap {partialOne => 
+        val partialTwo = partialOne flatMap { partialOne => 
           Election.addDecryption(partialOne, pd2, k2.id)
         }
 

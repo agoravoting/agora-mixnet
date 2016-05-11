@@ -10,6 +10,7 @@ import play.api.libs.ws._
 import play.api.Logger
 import models._
 import services._
+import controllers._
 
  
 class ElectionCreateSubscriber @Inject
@@ -18,9 +19,13 @@ class ElectionCreateSubscriber @Inject
 extends BoardJSONFormatter
 {
   println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF ElectionCreateSubscriber")
-  subscribeToCreate()
-  def subscribeToCreate() {
-    val acc = new SubscribeRequest("election", "#", "http://localhost:9800/accumulate")
+  
+  Router.getPort() map { port =>
+    subscribeToCreate(port)
+  }
+  
+  def subscribeToCreate(port: Int) {
+    val acc = new SubscribeRequest("election", "#", s"http://localhost:${port}/accumulate")
     val futureResponse: Future[WSResponse] = 
     ws.url(s"${BoardConfig.agoraboard.url}/bulletin_subscribe")
     .withHeaders(

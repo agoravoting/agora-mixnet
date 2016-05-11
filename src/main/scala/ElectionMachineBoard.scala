@@ -89,8 +89,11 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
   implicit val ws = controller.getWS()
   
   val subscriber = new ElectionCreateSubscriber(ws)
+  
+  def init() = {
+  }
     
-  def create[W <: Nat: ToInt](election: Election[W, Created]) : Future[Election[W, Created]] = {   
+  def create[W <: Nat: ToInt](election: Election[W, Created]) : Future[Election[W, Created]] = {
     val promise = Promise[Election[W, Created]]()
     Future {
       val futureResponse: Future[WSResponse] = 
@@ -363,7 +366,6 @@ trait ElectionMachine extends ElectionTrait
   def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = { 
     val promise = Promise[Election[W, Created]]()
     Future {
-      controllers.Router.open()
       BaseImpl.create(id, bits) onComplete {
         case Success(election) =>
           promise.success(election)
