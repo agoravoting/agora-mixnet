@@ -17,6 +17,7 @@ import models._
 import java.util.Base64
 import java.nio.charset.StandardCharsets
 import play.api.libs.json._
+import play.api.libs.ws._
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import java.math.BigInteger
 import scala.concurrent.{Future, Promise}
@@ -26,6 +27,7 @@ import scala.collection.mutable.Queue
 import java.util.concurrent.atomic.AtomicInteger
 import akka.http.scaladsl.model._
 import com.github.nscala_time.time.Imports._
+import services.BoardConfig
 
 trait GetType {  
   def getElectionTypeCreated[W <: Nat : ToInt] (election: Election[W, Created]) : String = {
@@ -928,35 +930,116 @@ object BoardReader
   with PostOffice
   with FiwareJSONFormatter
   with BoardJSONFormatter
-{  
+{
+  
+  var subscriptionId = ""
+  private val futureSubscriptionId = getSubscriptionId(BoardPoster.getWSClient )
+  
+  futureSubscriptionId onComplete {
+    case Success(id) =>
+      subscriptionId = id
+    case Failure(err) => 
+      throw err
+  }
+  
+  
+  def init() {
+  }
+  
+  def unsubscribe(id: String, ws: WSClient) = {
+    println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF unsubscribe")
+    Router.getPort() map { port =>
+      val unsubsReq = UnsubscribeRequest(id, s"http://localhost:${port}/accumulate")
+      println(Json.stringify(Json.toJson(unsubsReq)))
+      val futureResponse: Future[WSResponse] = 
+      ws.url(s"${BoardConfig.agoraboard.url}/bulletin_unsubscribe")
+          .withHeaders(
+            "Content-Type" -> "application/json",
+            "Accept" -> "application/json")
+          .post(Json.toJson(unsubsReq))
+      futureResponse onComplete {
+        case Success(noErr) =>
+          println("Unsubscribe SUCCESS " + noErr)
+        case Failure(err) =>
+          println("Unsubscribe ERROR " + err)
+      }
+    }
+  }
+  
+  def getSubscriptionId(ws: WSClient) : Future[String] =  {
+    val promise = Promise[String]
+    Future {
+      println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF getSubscriptionId")
+      Router.getPort() onComplete { 
+        case Success(port) =>
+          val acc = SubscribeRequest("election", "#", s"http://localhost:${port}/accumulate")
+          val futureResponse: Future[WSResponse] = 
+          ws.url(s"${BoardConfig.agoraboard.url}/bulletin_subscribe")
+          .withHeaders(
+            "Content-Type" -> "application/json",
+            "Accept" -> "application/json")
+          .post(Json.toJson(acc))
+          
+          futureResponse onComplete {
+            case Success(response) =>
+              promise.success(response.body)
+              println(s"ElectionCreateSubscriber Success: ${response.body}")
+            case Failure(err) =>
+              promise.failure(err)
+              println(s"ElectionCreateSubscriber Failure: $err")
+          }
+        case Failure(err) =>
+          promise.failure(err)
+      }
+    }
+    promise.future
+  }
+  
   def accumulate(bodyStr: String) : Future[HttpResponse] = {
     val promise = Promise[HttpResponse]()
     Future {
       val json = Json.parse(bodyStr)
       json.validate[AccumulateRequest] match {
         case sr: JsSuccess[AccumulateRequest] =>
-          var jsonError: Option[String] = None
-          val postSeq = sr.get.contextResponses flatMap {  x => 
-            x.contextElement.attributes flatMap { y =>
-              y.value.validate[Post] match {
-                case post: JsSuccess[Post] =>
-                  Some(post.get)
-                case e: JsError =>
-                  val str = "Accumulate has a None: this is not " +
-                          s"a valid Post: ${y.value}! error: $json"
-                  println(str)
-                  jsonError = Some(str)
-                  None
+          val accRequest = sr.get
+          if (accRequest.subscriptionId == subscriptionId) {
+            var jsonError: Option[String] = None
+            val postSeq = accRequest.contextResponses flatMap {  x => 
+              x.contextElement.attributes flatMap { y =>
+                y.value.validate[Post] match {
+                  case post: JsSuccess[Post] =>
+                    Some(post.get)
+                  case e: JsError =>
+                    val str = "Accumulate has a None: this is not " +
+                            s"a valid Post: ${y.value}! error: $json"
+                    println(str)
+                    jsonError = Some(str)
+                    None
+                  }
                 }
+             }
+             jsonError match {
+               case Some(e) =>
+                 promise.success(HttpResponse(400, entity = e))
+               case None => 
+                 push(postSeq)
+                 promise.success(HttpResponse(200, entity = s"{}"))
+             }
+          } else {
+            if(futureSubscriptionId.isCompleted) {
+              // Error, we are receiving subscription messages from a wrong subscription id
+              promise.success(HttpResponse(400))
+              // Remove subscription for that subscription id
+              unsubscribe(accRequest.subscriptionId, BoardPoster.getWSClient)
+            } else {
+              futureSubscriptionId onComplete {
+                case Success(id) =>
+                  promise.completeWith(accumulate(bodyStr))
+                case Failure(err) => 
+                  promise.failure(err)
               }
-           }
-           jsonError match {
-             case Some(e) =>
-               promise.success(HttpResponse(400, entity = e))
-             case None => 
-               push(postSeq)
-               promise.success(HttpResponse(200, entity = s"{}"))
-           }
+            }
+          }
        case e: JsError =>
          val errorText = s"Bad request: invalid AccumulateRequest json: $bodyStr\nerror: ${e}\n"
            println(errorText)

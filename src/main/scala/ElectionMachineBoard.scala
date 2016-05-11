@@ -54,6 +54,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 import services._
 import models._
+import controllers._
 
 class MyController @Inject()
 (implicit val mat: Materializer) 
@@ -83,16 +84,13 @@ class MyController @Inject()
 
 object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
 {
-  implicit val system = ActorSystem("BoardPoster")
-  implicit val materializer = ActorMaterializer()
-  val controller = new MyController()
-  implicit val ws = controller.getWS()
+  implicit private val system = ActorSystem("BoardPoster")
+  implicit private val materializer = ActorMaterializer()
+  private val controller = new MyController()
+  implicit private val ws = controller.getWS()
   
-  val subscriber = new ElectionCreateSubscriber(ws)
-  
-  def init() = {
-  }
-    
+  def getWSClient() : WSClient = ws
+      
   def create[W <: Nat: ToInt](election: Election[W, Created]) : Future[Election[W, Created]] = {
     val promise = Promise[Election[W, Created]]()
     Future {

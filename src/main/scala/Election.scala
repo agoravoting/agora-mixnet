@@ -74,8 +74,7 @@ trait ElectionTrait {
 object Election extends ElectionMachine
 {
   def init() = {
-    Router.init()
-    BoardPoster.init()
+    BoardReader.init()
   }
 }
 

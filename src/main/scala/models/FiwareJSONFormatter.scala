@@ -19,6 +19,7 @@ case class GetErrorCode(code: String, reasonPhrase: String)
 case class FailedGetPost(errorCode: GetErrorCode)
 
 case class AccumulateRequest(subscriptionId: String, originator: String, contextResponses: Seq[ContextResponse])
+case class UnsubscribeRequest(subscriptionId: String, reference: String)
 
 trait FiwareJSONFormatter {
   
@@ -120,4 +121,13 @@ trait FiwareJSONFormatter {
   implicit val validateSuccessfulGetPostWrites: Writes[SuccessfulGetPost] = 
       (JsPath \ "contextResponses").write[Seq[ContextResponse]].contramap((f: SuccessfulGetPost) => f.contextResponses)
   
+  implicit val validateUnsubscribeRequestWrite: Writes[UnsubscribeRequest] = (
+      (JsPath \ "subscriptionId").write[String] and
+      (JsPath \ "reference").write[String]
+  )(unlift(UnsubscribeRequest.unapply))
+
+  implicit val validateUnsubscribeRequestRead: Reads[UnsubscribeRequest] = (
+      (JsPath \ "subscriptionId").read[String] and
+      (JsPath \ "reference").read[String]
+  )(UnsubscribeRequest.apply _)
 }

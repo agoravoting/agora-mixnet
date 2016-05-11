@@ -23,6 +23,10 @@ import controllers._
 
 import scala.util.{Success, Failure}
 
+object CreateKeys extends App {
+  
+}
+
 object FiwareDemo extends App {
   println("Hola Mundo")
   

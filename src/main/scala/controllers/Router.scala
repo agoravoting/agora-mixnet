@@ -68,7 +68,7 @@ object Router
   }
   
   portNumber.future onSuccess { case port =>
-    println("port is " + port)    
+    println("port is " + port)
   }
   
   def bindIt(port: Int, requestHandler: HttpRequest => Future[HttpResponse]): Future[Http.ServerBinding] = {
