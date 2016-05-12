@@ -123,7 +123,6 @@ class ElectionDirector[N <: Nat : ToInt](val totalVotes: Int) {
       val start = Election.create[N]("my election", 2048)
       start onComplete {
         case Success(election) =>
-          promise.success(election.state.uid)
           val subscriberCreatePromise = blocking { getOrAddCreateNotification(election.state.uid, Promise[Unit]()) }
           subscriberCreatePromise.future onComplete {
             case Success(d) =>

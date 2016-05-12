@@ -104,7 +104,7 @@ trait GetType {
 }
 
 class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
-  println("GG ElectionSubscriber:constructor")
+  println("GG ElectionSubscriber::constructor")
   private var map = Map[String, Any]()
   
   private def getOrAdd(key: String, value: Any) : Any = {
@@ -120,7 +120,7 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
   }
   
   def push[B <: ElectionState](election : Election[W, B], electionType: String) = {
-    println("GG ElectionSubscriber:push electionType " + electionType)
+    println("GG ElectionSubscriber::push electionType " + electionType)
     val promise = Promise[Election[W, B]]()
     val any = getOrAdd(electionType, promise)
     Try {
@@ -129,13 +129,13 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
       if (p.isCompleted) {
         println("Error: trying to complete an already completed future")
       } else {
-        p.success(election)  
+        p.success(election)
       }
     }
   }
   
   private def pull[B <: ElectionState](electionType: String): Future[Election[W, B]] = {
-    println("GG ElectionSubscriber:pull electionType " + electionType)
+    println("GG ElectionSubscriber::pull electionType " + electionType)
     val realPromise = Promise[Election[W, B]]()
     Future {
       val promise = Promise[Election[W, B]]()
@@ -199,7 +199,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
   extends ElectionJsonFormatter
   with GetType
 {
-  println("GG ElectionStateMaintainer:constructor")
+  println("GG ElectionStateMaintainer::constructor")
   private val subscriber = new ElectionSubscriber[W](uid)
   
   def startShares(in: Election[W, Created]) : Election[W, Shares[_0]] = {
@@ -946,7 +946,7 @@ object BoardReader
   def init() {
   }
   
-  def unsubscribe(id: String, ws: WSClient) = {
+  private def unsubscribe(id: String, ws: WSClient) = {
     println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF unsubscribe")
     Router.getPort() map { port =>
       val unsubsReq = UnsubscribeRequest(id, s"http://localhost:${port}/accumulate")
