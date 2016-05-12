@@ -28,6 +28,10 @@ object Router
   
   private var portNumber = Promise[Int]()
   
+  portNumber.future onSuccess { case port =>
+    println("port is " + port)
+  }
+  
   def getString(entity: HttpEntity) : Future[String] =  {
     val promise = Promise[String]()
     Future {
@@ -56,22 +60,28 @@ object Router
       Future { HttpResponse(404, entity = "Unknown resource!") }
   }
   
-  bindIt(9800, requestHandler) onFailure { case err => 
-    bindIt(9801, requestHandler) onFailure { case err =>
-      bindIt(9802, requestHandler) onFailure { case err =>
-        bindIt(9803, requestHandler) onFailure { case err =>
-          portNumber.failure(err)
-          println(err, "FF     Failed to bind to {}:{}!", "localhost", 9803)
+  tryBindPortRange(9800, requestHandler,100)
+  
+  
+  def tryBindPortRange(port: Int, requestHandler: HttpRequest => Future[HttpResponse], counter: Int) {
+    println("countdown counter: " + counter)
+    if(counter >= 0) {
+      bindPort(port, requestHandler) onFailure { case err =>
+        if(counter > 0) {
+          Future {
+            tryBindPortRange(port + 1, requestHandler, counter - 1)
+          }
+        } else {
+          if(!portNumber.isCompleted) {
+            println(err, "FF     Failed to bind to {}:{}!", "localhost", port)
+            portNumber.failure(err)
+          }
         }
       }
     }
   }
   
-  portNumber.future onSuccess { case port =>
-    println("port is " + port)
-  }
-  
-  def bindIt(port: Int, requestHandler: HttpRequest => Future[HttpResponse]): Future[Http.ServerBinding] = {
+  def bindPort(port: Int, requestHandler: HttpRequest => Future[HttpResponse]): Future[Http.ServerBinding] = {
     var serverSource = Http(system).bind(interface = "localhost", port = port)
     serverSource.to(Sink.foreach { connection => // foreach materializes the source
       // ... and then actually handle the connection
