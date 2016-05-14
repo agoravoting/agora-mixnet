@@ -188,6 +188,11 @@ object ElectionTest extends App {
   // we are 2048 bits for the size of the group modulus
   val start = Election.create[_2]("my election", 2048)
   
+  start map { start =>
+    println("asi que hemos llegado a esto")
+    
+  }
+  
   // get subscriber when we have the uid
   // then subscribe to the election creation
   var uidPromise = Promise[String]()

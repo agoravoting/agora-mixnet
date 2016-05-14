@@ -14,6 +14,8 @@ import scala.concurrent.duration._
 import scala.util._
 import akka.stream.scaladsl.Source
 
+import akka.http.scaladsl.server._
+import akka.http.scaladsl.server.Directives._
 import play.api.libs.json._
 import play.api.mvc.Results._
 import play.api.libs.functional.syntax._
@@ -23,8 +25,29 @@ import app._
 object Router
 {
   implicit val system = ActorSystem()
-  implicit val executor = system.dispatcher
+  implicit val executor = system.dispatchers.lookup("my-blocking-dispatcher")//system.dispatcher
   implicit val materializer = ActorMaterializer()
+  
+  
+  val route : Route =
+    path("accumulate") {
+      post {
+        ctx =>
+          ctx.complete {
+            val promise = Promise[HttpResponse]()
+            Future {
+              getString(ctx.request.entity) onComplete {
+                case Success(bodyStr) =>
+                  println(s"Router accumulate: $bodyStr")
+                  promise.completeWith(BoardReader.accumulate(bodyStr))
+                case Failure(e) =>
+                  promise.success(HttpResponse(400, entity = s"Error $e"))
+              }  
+            }
+            promise.future
+          }
+      }
+    }
   
   private var portNumber = Promise[Int]()
   
@@ -43,7 +66,7 @@ object Router
     promise.future
   }
   
-  val requestHandler: HttpRequest => Future[HttpResponse] = {
+  /*val requestHandler: HttpRequest => Future[HttpResponse] = {
     case HttpRequest(POST, Uri.Path("/accumulate"), _, entity, _) =>
       val promise = Promise[HttpResponse]()
       Future {
@@ -59,17 +82,17 @@ object Router
     case _: HttpRequest =>
       Future { HttpResponse(404, entity = "Unknown resource!") }
   }
+  */
+  tryBindPortRange(9800, route,100)
   
-  tryBindPortRange(9800, requestHandler,100)
   
-  
-  def tryBindPortRange(port: Int, requestHandler: HttpRequest => Future[HttpResponse], counter: Int) {
+  def tryBindPortRange(port: Int, myRoute : Route, counter: Int) {
     println("countdown counter: " + counter)
     if(counter >= 0) {
-      bindPort(port, requestHandler) onFailure { case err =>
+      bindPort(port, myRoute) onFailure { case err =>
         if(counter > 0) {
           Future {
-            tryBindPortRange(port + 1, requestHandler, counter - 1)
+            tryBindPortRange(port + 1, myRoute, counter - 1)
           }
         } else {
           if(!portNumber.isCompleted) {
@@ -81,14 +104,24 @@ object Router
     }
   }
   
-  def bindPort(port: Int, requestHandler: HttpRequest => Future[HttpResponse]): Future[Http.ServerBinding] = {
-    var serverSource = Http(system).bind(interface = "localhost", port = port)
+  def bindPort(port: Int, myRoute : Route): Future[Http.ServerBinding] = {
+    /*var serverSource = Http(system).bind(interface = "localhost", port = port)
     serverSource.to(Sink.foreach { connection => // foreach materializes the source
       // ... and then actually handle the connection
        connection handleWithAsyncHandler requestHandler
     }).run() map { future =>
       portNumber.success(port)
       future
+    }*/
+    Http(system)
+    .bindAndHandle(
+        handler = myRoute, 
+        interface = "localhost", 
+        port = port) map 
+    { 
+      future =>
+        portNumber.success(port)
+        future
     }
   }
   
