@@ -29,7 +29,7 @@ object Router
   implicit val materializer = ActorMaterializer()
   
   
-  val route : Route =
+  val route : Route = {
     path("accumulate") {
       post {
         ctx =>
@@ -47,7 +47,18 @@ object Router
             promise.future
           }
       }
+    } ~
+    path("api" / "election" / LongNumber) { electionId =>
+      pathEnd {
+        get { ctx =>
+          ctx.complete {
+            println(s"Router /api/election/$electionId")
+            BoardReader.getElectionInfo(electionId)
+          }
+        }
+      }
     }
+  }
   
   private var portNumber = Promise[Int]()
   
@@ -66,26 +77,8 @@ object Router
     promise.future
   }
   
-  /*val requestHandler: HttpRequest => Future[HttpResponse] = {
-    case HttpRequest(POST, Uri.Path("/accumulate"), _, entity, _) =>
-      val promise = Promise[HttpResponse]()
-      Future {
-        getString(entity) onComplete {
-         case Success(bodyStr) =>
-           println(s"Router accumulate: $bodyStr")
-           promise.completeWith(BoardReader.accumulate(bodyStr))
-         case Failure(e) =>
-           promise.success(HttpResponse(400, entity = s"Error $e"))
-        }  
-      }
-      promise.future
-    case _: HttpRequest =>
-      Future { HttpResponse(404, entity = "Unknown resource!") }
-  }
-  */
   tryBindPortRange(9800, route,100)
-  
-  
+    
   def tryBindPortRange(port: Int, myRoute : Route, counter: Int) {
     println("countdown counter: " + counter)
     if(counter >= 0) {
@@ -105,14 +98,6 @@ object Router
   }
   
   def bindPort(port: Int, myRoute : Route): Future[Http.ServerBinding] = {
-    /*var serverSource = Http(system).bind(interface = "localhost", port = port)
-    serverSource.to(Sink.foreach { connection => // foreach materializes the source
-      // ... and then actually handle the connection
-       connection handleWithAsyncHandler requestHandler
-    }).run() map { future =>
-      portNumber.success(port)
-      future
-    }*/
     Http(system)
     .bindAndHandle(
         handler = myRoute, 
@@ -133,7 +118,6 @@ object Router
   }
   
   def close() {
-    //ws.close()
     system.terminate()
   }
 }

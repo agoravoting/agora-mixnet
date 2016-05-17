@@ -25,9 +25,11 @@ import scala.util.{Try, Success, Failure}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.Queue
 import java.util.concurrent.atomic.AtomicInteger
+import java.sql.Timestamp
 import akka.http.scaladsl.model._
 import com.github.nscala_time.time.Imports._
 import services.BoardConfig
+import utils.Response
 
 trait GetType {  
   def getElectionTypeCreated[W <: Nat : ToInt] (election: Election[W, Created]) : String = {
@@ -195,12 +197,150 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
     pull[Decrypted](getElectionDecrypted[W])
 }
 
+object ElectionDTOData {
+  val REGISTERED = "registered"
+  val CREATED = "created"
+  val CREATE_ERROR = "create_error"
+  val STARTED = "started"
+  val STOPPED = "stopped"
+  val TALLY_OK = "tally_ok"
+  val TALLY_ERROR = "tally_error"
+  val RESULTS_OK = "results_ok"
+  val DOING_TALLY = "doing_tally"
+  val RESULTS_PUB = "results_pub"
+}
+
+class ElectionDTOData(val id: Long, val numAuth: Int) {
+  
+  private var state = initDTO()
+  def apply() = state
+  
+  private def genAuthArray(): Array[String] = {
+    var authArray : Array[String] = Array()
+    if(numAuth > 1) {
+      for(index <- 2 to numAuth) {
+        authArray = authArray :+ ("auth" + index)
+      }
+    }
+    authArray
+  }
+  
+  private def initDTO(): ElectionDTO = {
+    val startDate = new Timestamp(2015, 1, 27, 16, 0, 0, 1)
+    ElectionDTO(
+        id,
+        ElectionConfig(
+            id,
+            "simple",
+            "auth1",
+            genAuthArray(),
+            "Election title",
+            "Election description",
+            Array(
+                Question(
+                    "Question 0",
+                    "accordion",
+                    1,
+                    1,
+                    1,
+                    "Question title",
+                    true,
+                    "plurality-at-large",
+                    "over-total-valid-votes",
+                    Array(
+                      Answer(
+                          0,
+                          "",
+                          "",
+                          0,
+                          Array(),
+                          "voting option A"
+                      ),
+                      Answer(
+                          1,
+                          "",
+                          "",
+                          1,
+                          Array(),
+                          "voting option B"
+                      )
+                    )
+                )
+            ),
+            startDate,
+            startDate,
+            ElectionPresentation(
+                "",
+                "default",
+                Array(),
+                "",
+                None
+            ),
+            false,
+            None
+        ),
+        ElectionDTOData.REGISTERED,
+        startDate,
+        startDate,
+        None,
+        None,
+        None,
+        false
+    )
+  }
+  
+  def setState(newState: String) {
+    state = 
+      ElectionDTO(
+          state.id,
+          state.configuration,
+          newState,
+          state.startDate,
+          state.endDate,
+          state.pks,
+          state.results,
+          state.resultsUpdated,
+          state.real
+      )
+  }
+  
+  def setPublicKeys[W <: Nat : ToInt](combined: Election[W, Combined]) {
+    val jsPk : JsValue = 
+      Json.arr(Json.obj( 
+          "q" -> combined.state.cSettings.group.getOrder().toString(),
+          "p" -> combined.state.cSettings.group.getModulus().toString(),
+          "y" -> combined.state.publicKey,
+          "g" -> combined.state.cSettings.generator.getValue().toString()
+      ))
+      
+    state = 
+      ElectionDTO(
+          state.id,
+          state.configuration,
+          state.state,
+          state.startDate,
+          state.endDate,
+          Some(jsPk.toString()),
+          state.results,
+          state.resultsUpdated,
+          state.real
+      )
+  }
+}
+
 class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
   extends ElectionJsonFormatter
   with GetType
+  with ErrorProcessing
 {
   println("GG ElectionStateMaintainer::constructor")
   private val subscriber = new ElectionSubscriber[W](uid)
+  private val dto = new ElectionDTOData(uid.toLong, toInt[W])
+  
+  
+  def getElectionInfo() : ElectionDTO = {
+    dto()
+  }
   
   def startShares(in: Election[W, Created]) : Election[W, Shares[_0]] = {
       println("GG ElectionStateMaintainer::startShares")
@@ -270,7 +410,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
         val election = combineDecryptions(decryption, jsDecrypted.decrypted)
         subscriber.push(election, getElectionTypeDecrypted(election))
       case Failure(err) =>
-        println(s"Future error: ${err}")
+        println(s"Future error: ${getMessageFromThrowable(err)}")
     }
   }
   
@@ -287,7 +427,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addDecryption(decryption, jsDecryptions.decryption)
               subscriber.push(election, getElectionTypeDecryptions(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 2 =>
           val futureDecryption = subscriber.addDecryption[_1]()
@@ -296,7 +436,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addDecryption(decryption, jsDecryptions.decryption)
               subscriber.push(election, getElectionTypeDecryptions(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 3 =>
           val futureDecryption = subscriber.addDecryption[_2]()
@@ -305,7 +445,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addDecryption(decryption, jsDecryptions.decryption)
               subscriber.push(election, getElectionTypeDecryptions(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 4 =>
           val futureDecryption = subscriber.addDecryption[_3]()
@@ -314,7 +454,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addDecryption(decryption, jsDecryptions.decryption)
               subscriber.push(election, getElectionTypeDecryptions(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 5 =>
           val futureDecryption = subscriber.addDecryption[_4]()
@@ -323,7 +463,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addDecryption(decryption, jsDecryptions.decryption)
               subscriber.push(election, getElectionTypeDecryptions(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 6 =>
           val futureDecryption = subscriber.addDecryption[_5]()
@@ -332,7 +472,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addDecryption(decryption, jsDecryptions.decryption)
               subscriber.push(election, getElectionTypeDecryptions(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 7 =>
           val futureDecryption = subscriber.addDecryption[_6]()
@@ -341,7 +481,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addDecryption(decryption, jsDecryptions.decryption)
               subscriber.push(election, getElectionTypeDecryptions(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 8 =>
           val futureDecryption = subscriber.addDecryption[_7]()
@@ -350,7 +490,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addDecryption(decryption, jsDecryptions.decryption)
               subscriber.push(election, getElectionTypeDecryptions(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case _ =>
           val futureDecryption = subscriber.addDecryption[_8]()
@@ -359,7 +499,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addDecryption(decryption, jsDecryptions.decryption)
               subscriber.push(election, getElectionTypeDecryptions(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
       }
     }
@@ -373,7 +513,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
         val election = startDecryptions(stop)
         subscriber.push(election, getElectionTypeDecryptions(election))
       case Failure(err) =>
-        println(s"Future error: ${err}")
+        println(s"Future error: ${getMessageFromThrowable(err)}")
     }
   }
   
@@ -385,7 +525,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
         val election = stopMixing(mix)
         subscriber.push(election, getElectionTypeMixed(election))
       case Failure(err) =>
-        println(s"Future error: ${err}")
+        println(s"Future error: ${getMessageFromThrowable(err)}")
     }
   }
   
@@ -402,7 +542,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addMix(mix, jsMixing.mixes)
               subscriber.push(election, getElectionTypeMixing(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 2 =>
           val futureMix = subscriber.addMix[_1]()
@@ -411,7 +551,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addMix(mix, jsMixing.mixes)
               subscriber.push(election, getElectionTypeMixing(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 3 =>
           val futureMix = subscriber.addMix[_2]()
@@ -420,7 +560,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addMix(mix, jsMixing.mixes)
               subscriber.push(election, getElectionTypeMixing(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 4 =>
           val futureMix = subscriber.addMix[_3]()
@@ -429,7 +569,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addMix(mix, jsMixing.mixes)
               subscriber.push(election, getElectionTypeMixing(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 5 =>
           val futureMix = subscriber.addMix[_4]()
@@ -438,7 +578,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addMix(mix, jsMixing.mixes)
               subscriber.push(election, getElectionTypeMixing(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 6 =>
           val futureMix = subscriber.addMix[_5]()
@@ -447,7 +587,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addMix(mix, jsMixing.mixes)
               subscriber.push(election, getElectionTypeMixing(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 7 =>
           val futureMix = subscriber.addMix[_6]()
@@ -456,7 +596,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addMix(mix, jsMixing.mixes)
               subscriber.push(election, getElectionTypeMixing(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case 8 =>
           val futureMix = subscriber.addMix[_7]()
@@ -465,7 +605,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addMix(mix, jsMixing.mixes)
               subscriber.push(election, getElectionTypeMixing(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case _ =>
           val futureMix = subscriber.addMix[_8]()
@@ -474,7 +614,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addMix(mix, jsMixing.mixes)
               subscriber.push(election, getElectionTypeMixing(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
       }
     }
@@ -488,7 +628,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
         val election = startMixing(stopped)
         subscriber.push(election, getElectionTypeMixing(election))
       case Failure(err) =>
-        println(s"Future error: ${err}")
+        println(s"Future error: ${getMessageFromThrowable(err)}")
     }
   }
   
@@ -507,10 +647,10 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = stopVotes(votes, jsVotesStopped.lastAddVoteIndex, date)
               subscriber.push(election, getElectionTypeVotesStopped(election))
             case Failure(err) =>
-              println(s"Future error: ${err}")
+              println(s"Future error: ${getMessageFromThrowable(err)}")
           }
         case Failure(err) =>
-          println(s"Try Date ${jsVotesStopped.date.toString} parse error: ${err}")
+          println(s"Try Date ${jsVotesStopped.date.toString} parse error: ${getMessageFromThrowable(err)}")
       }
     }
   }
@@ -524,7 +664,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
           val election = startVotes(combined)
           subscriber.push(election, getElectionTypeVotes(election))
         case Failure(err) =>
-          println(s"Future error: ${err}")
+          println(s"Future error: ${getMessageFromThrowable(err)}")
       }
     } else if(0 < jsVotes.addVoteIndex) {
       val futureVotes = subscriber.addVotes(jsVotes.addVoteIndex - 1)
@@ -533,7 +673,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
           val election = addVotes(votes, jsVotes.votes)
           subscriber.push(election, getElectionTypeVotes(election))
         case Failure(err) =>
-          println(s"Future error: ${err}")
+          println(s"Future error: ${getMessageFromThrowable(err)}")
       }
     } else if(0 > jsVotes.addVoteIndex) {
       println(s"ERROR on pushVotes: addVoteIndex is negative but it must be non-negative: ${jsVotes.addVoteIndex}")
@@ -547,8 +687,9 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
       case Success(share) => 
         val election = combineShares(share, jsCombined.publicKey)
         subscriber.push(election, getElectionTypeCombined(election))
+        dto.setPublicKeys(election)
       case Failure(err) =>
-        println(s"Future error: ${err}")
+        println(s"Future error: ${getMessageFromThrowable(err)}")
     }
   }
   
@@ -562,7 +703,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
           val election = startShares(cc)
           subscriber.push(election, getElectionTypeShares(election))
         case Failure(e) =>
-          println(s"Future error: ${e}")
+          println(s"Future error: ${getMessageFromThrowable(e)}")
       }
     } else if (jsShares.level > 0 && jsShares.level <= maxLevel) {
       jsShares.level match {
@@ -573,7 +714,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
-              println(s"Future error: ${e}")
+              println(s"Future error: ${getMessageFromThrowable(e)}")
           }
         case 2 => 
           val futureShare = subscriber.addShare[_1]()
@@ -582,7 +723,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
-              println(s"Future error: ${e}")
+              println(s"Future error: ${getMessageFromThrowable(e)}")
           }
         case 3 => 
           val futureShare = subscriber.addShare[_2]()
@@ -591,7 +732,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
-              println(s"Future error: ${e}")
+              println(s"Future error: ${getMessageFromThrowable(e)}")
           }
         case 4 => 
           val futureShare = subscriber.addShare[_3]()
@@ -600,7 +741,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
-              println(s"Future error: ${e}")
+              println(s"Future error: ${getMessageFromThrowable(e)}")
           }
         case 5 => 
           val futureShare = subscriber.addShare[_4]()
@@ -609,7 +750,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
-              println(s"Future error: ${e}")
+              println(s"Future error: ${getMessageFromThrowable(e)}")
           }
         case 6 => 
           val futureShare = subscriber.addShare[_5]()
@@ -618,7 +759,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
-              println(s"Future error: ${e}")
+              println(s"Future error: ${getMessageFromThrowable(e)}")
           }
         case 7 => 
           val futureShare = subscriber.addShare[_6]()
@@ -627,7 +768,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
-              println(s"Future error: ${e}")
+              println(s"Future error: ${getMessageFromThrowable(e)}")
           }
         case 8 => 
           val futureShare = subscriber.addShare[_7]()
@@ -636,7 +777,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
-              println(s"Future error: ${e}")
+              println(s"Future error: ${getMessageFromThrowable(e)}")
           }
         case _ => 
           val futureShare = subscriber.addShare[_8]()
@@ -645,7 +786,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               val election = addShare(share, jsShares.shares._1, jsShares.shares._2)
               subscriber.push(election, getElectionTypeShares(election))
             case Failure(e) => 
-              println(s"Future error: ${e}")
+              println(s"Future error: ${getMessageFromThrowable(e)}")
           }
       }
     } else {
@@ -673,6 +814,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
         jsMsg.validate[JsElection] match {
           case jSeqPost: JsSuccess[JsElection] =>
             pushCreate(jSeqPost.get, post.board_attributes.index)
+            dto.setState(ElectionDTOData.REGISTERED)
           case e: JsError => 
             println(s"\ElectionStateMaintainer JsError error: ${e} message ${post.message}")
         }
@@ -692,7 +834,8 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
               case "Combined" =>
                 jsMessage.message.validate[JsCombined] match {
                   case b: JsSuccess[JsCombined] =>
-                    pushCombined(b.get)
+                    val combined = b.get
+                    pushCombined(combined)
                   case e: JsError =>
                     println(s"JsError error: ${e} message ${post.message}")
                 }
@@ -700,6 +843,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
                 jsMessage.message.validate[JsVotes] match {
                   case b: JsSuccess[JsVotes] =>
                     pushVotes(b.get)
+                    dto.setState(ElectionDTOData.STARTED)
                   case e: JsError =>
                     println(s"JsError error: ${e} message ${post.message}")
                 }
@@ -707,12 +851,14 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
                 jsMessage.message.validate[JsVotesStopped] match {
                   case b: JsSuccess[JsVotesStopped] =>
                     pushVotesStopped(b.get)
+                    dto.setState(ElectionDTOData.STOPPED)
                   case e: JsError =>
                     println(s"JsError error: ${e} message ${post.message}")
                 }
               case "StartMixing" =>
                 if(JsNull == jsMessage.message) {
                   pushStartMixing()
+                    dto.setState(ElectionDTOData.DOING_TALLY)
                 } else {
                   println(s"Error: StartMixing : message is not null: message ${post.message}")
                 }
@@ -746,6 +892,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
                 jsMessage.message.validate[JsDecrypted] match {
                   case b: JsSuccess[JsDecrypted] =>
                     pushDecrypted(b.get)
+                    dto.setState(ElectionDTOData.RESULTS_OK)
                   case e: JsError =>
                     println(s"JsError error: ${e} message ${post.message}")
                 }
@@ -795,9 +942,13 @@ class MaintainerWrapper(level: Int, uid: String) {
   def getSubscriber() = {
     maintainer.getSubscriber()
   }
+  
+  def getElectionInfo() = {
+    maintainer.getElectionInfo()
+  }
 }
 
-trait PostOffice extends ElectionJsonFormatter
+trait PostOffice extends ElectionJsonFormatter with Response
 {  
   // post index counter
   private var index : Long = 0
@@ -806,6 +957,20 @@ trait PostOffice extends ElectionJsonFormatter
   private var electionMap = Map[Long, MaintainerWrapper]()
   // list of callbacks to be called when a new election is created
   private var callbackQueue = Queue[String => Unit]()
+    
+  def getElectionInfo(electionId: Long) : Future[HttpResponse] = {
+    val promise = Promise[HttpResponse]()
+    Future {
+      electionMap.get(electionId) match {
+        case Some(electionWrapper) =>
+           promise.success(HttpResponse(status = 200, entity = Json.stringify(response( electionWrapper.getElectionInfo() )) ))
+         
+        case None =>
+          promise.success(HttpResponse(status = 400, entity = Json.stringify(error(s"Election $electionId not found", ErrorCodes.EO_ERROR)) ))
+      }
+    }
+    promise.future
+  }
   
   def add(post: Post) {
     queue.synchronized {
@@ -910,10 +1075,10 @@ trait PostOffice extends ElectionJsonFormatter
           case Some(electionWrapper) => 
             electionWrapper.getSubscriber()
           case None =>
-            throw new Error(s"Error subscribing: Election Id not found in db: ${electionId}")
+            throw new scala.Error(s"Error subscribing: Election Id not found in db: ${electionId}")
         }
       case Failure(e) =>
-        throw new Error(s"Error subscribing: Election id is not a number: {uid}")
+        throw new scala.Error(s"Error subscribing: Election id is not a number: {uid}")
     }
   }
   
@@ -930,8 +1095,9 @@ object BoardReader
   with PostOffice
   with FiwareJSONFormatter
   with BoardJSONFormatter
+  with ErrorProcessing
 {
-  
+
   var subscriptionId = ""
   private val futureSubscriptionId = getSubscriptionId(BoardPoster.getWSClient )
   
@@ -961,7 +1127,7 @@ object BoardReader
         case Success(noErr) =>
           println("Unsubscribe SUCCESS " + noErr)
         case Failure(err) =>
-          println("Unsubscribe ERROR " + err)
+          println("Unsubscribe ERROR " + getMessageFromThrowable(err))
       }
     }
   }
@@ -985,8 +1151,8 @@ object BoardReader
               promise.success(response.body)
               println(s"ElectionCreateSubscriber Success: ${response.body}")
             case Failure(err) =>
+              println(s"ElectionCreateSubscriber Failure: ${getMessageFromThrowable(err)}")
               promise.failure(err)
-              println(s"ElectionCreateSubscriber Failure: $err")
           }
         case Failure(err) =>
           promise.failure(err)
@@ -1053,7 +1219,6 @@ object BoardReader
     seqPost foreach { post => 
       add(post)
     }
-  }
-  
+  } 
   
 }

@@ -120,8 +120,10 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
   }
   
   def closeSystem() {
+    println("terminating....!")
     ws.close()
     system.terminate()
+    controllers.Router.close()
   }
   
   def addShare[W <: Nat : ToInt, T <: Nat : ToInt](election: Election[W, Shares[T]]) : Future[Election[W, Shares[T]]] =  {
@@ -563,13 +565,7 @@ trait ElectionMachine extends ElectionTrait
       BaseImpl.combineDecryptions(in) onComplete {
         case Success(election) =>
           promise.success(election)
-          BoardPoster.combineDecryptions(election) map { election =>
-            Future {
-              Thread.sleep(5000)
-              BoardPoster.closeSystem()
-              controllers.Router.close()
-            }
-          }
+          BoardPoster.combineDecryptions(election)
         case Failure(err) =>
           promise.failure(err)
       }
