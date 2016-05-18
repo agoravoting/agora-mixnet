@@ -305,6 +305,7 @@ class ElectionDTOData(val id: Long, val numAuth: Int) {
   }
   
   def setPublicKeys[W <: Nat : ToInt](combined: Election[W, Combined]) {
+    
     val jsPk : JsValue = 
       Json.arr(Json.obj( 
           "q" -> combined.state.cSettings.group.getOrder().toString(),

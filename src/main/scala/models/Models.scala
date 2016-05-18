@@ -29,4 +29,3 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
 /** used to return an election with config in structured form */
 case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,
   endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean)
-  
