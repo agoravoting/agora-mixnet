@@ -22,7 +22,9 @@ import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import java.math.BigInteger
 import scala.concurrent.{Future, Promise}
 import scala.util.{Try, Success, Failure}
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 import scala.collection.mutable.Queue
 import java.util.concurrent.atomic.AtomicInteger
 import java.sql.Timestamp
@@ -106,6 +108,9 @@ trait GetType {
 }
 
 class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
   println("GG ElectionSubscriber::constructor")
   private var map = Map[String, Any]()
   
@@ -334,6 +339,9 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
   with GetType
   with ErrorProcessing
 {
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
   println("GG ElectionStateMaintainer::constructor")
   private val subscriber = new ElectionSubscriber[W](uid)
   private val dto = new ElectionDTOData(uid.toLong, toInt[W])
@@ -951,6 +959,9 @@ class MaintainerWrapper(level: Int, uid: String) {
 
 trait PostOffice extends ElectionJsonFormatter with Response
 {  
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
   // post index counter
   private var index : Long = 0
   private var queue = Queue[Option[Post]]()

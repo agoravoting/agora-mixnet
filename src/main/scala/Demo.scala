@@ -7,7 +7,9 @@ import com.github.nscala_time.time.Imports._
 import com.typesafe.config.ConfigFactory
 import scala.concurrent._
 import scala.concurrent.duration.Duration
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
@@ -23,12 +25,7 @@ import controllers._
 
 import scala.util.{Success, Failure}
 
-object CreateKeys extends App {
-  
-}
-
 object FiwareDemo extends App {
-  println("Hola Mundo")
   
   val config = ConfigFactory.load()
   val useGmp = config.getBoolean("mpservice.use-gmp")
@@ -43,6 +40,9 @@ object FiwareDemo extends App {
   // actually used in Util.getIndependentGenerators constructor
   val generatorsParallelLevel = config.getInt("generators-parallelism-level")
   println(s"* generators-parallelism-level: $generatorsParallelLevel")
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
   
   Election.init()
   
@@ -170,6 +170,9 @@ object ElectionTest extends App {
   println(s"* generators-parallelism-level: $generatorsParallelLevel")
 
   val totalVotes = args.toList.lift(0).getOrElse("100").toInt
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
 
   Election.init()
   
@@ -240,23 +243,23 @@ object ElectionTest extends App {
   val plaintexts = Seq.fill(totalVotes)(scala.util.Random.nextInt(1000))
   
   val electionGettingVotes = combined flatMap { combined => 
-    val startVotes = Election.startVotes(combined)
+    /*val startVotes = */Election.startVotes(combined)
     
     // since we are storing information in election as if it were a bulletin board, all
     // the data is stored in a wire-compatible format, that is strings/jsons whatever
     // we reconstruct the public key as if it had been read from such a format
-    val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
+    /*val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
     // encrypt the votes with the public key of the election
     val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
     
     startVotes flatMap { startVotes => 
       // doing this in one step to avoid memory explosion
       Election.addVotes(startVotes, votes.map(_.convertToString).toList)
-    }
+    }*/
   }
 
   // we are only timing the mixing phase
-  var mixingStart = System.currentTimeMillis()
+  /*var mixingStart = System.currentTimeMillis()
 
   // stop the voting period
   val stopVotes = electionGettingVotes flatMap { electionGettingVotes =>
@@ -353,8 +356,8 @@ object ElectionTest extends App {
           println("*************************************************************")
 
           MPBridgeS.shutdown
-          Thread.sleep(5000)
-          BoardPoster.closeSystem()
+          //Thread.sleep(5000)
+          //BoardPoster.closeSystem()
         }        
       }
     }
@@ -363,7 +366,7 @@ object ElectionTest extends App {
   all.onFailure { case e =>
     e.printStackTrace
     MPBridgeS.shutdown
-  }
+  }*/
 }
 
 /**
@@ -375,6 +378,9 @@ object ElectionTest extends App {
  */
 object ElectionTest3 extends App {
   val totalVotes = args.toList.headOption.getOrElse("100").toInt
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
 
   val k1 = new KeyMakerTrustee("keymaker one")
   val k2 = new KeyMakerTrustee("keymaker two")
@@ -485,6 +491,9 @@ object ElectionTestSerial extends App {
   val config = ConfigFactory.load()
   val useGmp = config.getBoolean("mpservice.use-gmp")
   val useExtractor = config.getBoolean("mpservice.use-extractor")
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")//system.dispatcher
+  implicit val materializer = ActorMaterializer()
   MPBridgeS.init(useGmp, useExtractor)
 
   // create the keymakers

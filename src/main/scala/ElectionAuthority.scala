@@ -1,7 +1,9 @@
 package app
 
 import scala.util.{Try, Success, Failure}
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 import scala.concurrent.{blocking, Future, Promise}
 import shapeless._
 import nat._
@@ -15,6 +17,9 @@ import LT._
 
 // N should be the predecessor of the number you want, I've been unable to use Pred[N] so I use Succ[N]
 class ElectionAuthority[W <: Nat : ToInt , N <: Nat : ToInt ]() (implicit r : N < W){
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
   BoardReader.addElectionCreationListener{ uid =>
    processElection(uid)
   }

@@ -51,7 +51,7 @@ import akka.util.ByteString
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
 import services._
 import models._
 import controllers._
@@ -86,6 +86,7 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
 {
   implicit private val system = ActorSystem("BoardPoster")
   implicit private val materializer = ActorMaterializer()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
   private val controller = new MyController()
   implicit private val ws = controller.getWS()
   
@@ -362,6 +363,9 @@ object BaseImpl extends DefaultElectionImpl {}
  */
 trait ElectionMachine extends ElectionTrait
 {
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
   // create an election
   def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = { 
     val promise = Promise[Election[W, Created]]()

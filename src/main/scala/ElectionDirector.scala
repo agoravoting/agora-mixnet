@@ -1,7 +1,9 @@
 package app
 
 import scala.util.{Try, Success, Failure}
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 import scala.concurrent.{blocking, Future, Promise}
 import shapeless._
 import nat._
@@ -10,6 +12,9 @@ import controllers._
 import mpservice._
 
 class ElectionDirector[N <: Nat : ToInt](val totalVotes: Int) {  
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
   BoardReader.addElectionCreationListener{ uid =>
    val subscriberCreatePromise = blocking { getOrAddCreateNotification(uid, Promise[Unit]()) }
    subscriberCreatePromise.success({})

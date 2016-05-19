@@ -22,7 +22,9 @@ import mpservice.MPBridge
 
 import scala.collection.JavaConversions._
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 
 /**
  * The state machine transitions
@@ -31,6 +33,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 trait DefaultElectionImpl extends ElectionTrait
 {
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
   // create an election 
   def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = {
     Future {
