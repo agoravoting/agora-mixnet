@@ -101,7 +101,7 @@ object Router
     Http(system)
     .bindAndHandle(
         handler = myRoute, 
-        interface = "localhost", 
+        interface = "0:0:0:0:0:0:0:0",
         port = port) map 
     { 
       future =>
