@@ -21,11 +21,12 @@ import play.api.mvc.Results._
 import play.api.libs.functional.syntax._
 import models._
 import app._
+import services.BoardConfig
 
 object Router
 {
   implicit val system = ActorSystem()
-  implicit val executor = system.dispatchers.lookup("my-blocking-dispatcher")//system.dispatcher
+  implicit val executor = system.dispatchers.lookup("my-blocking-dispatcher")
   implicit val materializer = ActorMaterializer()
   
   
@@ -77,7 +78,7 @@ object Router
     promise.future
   }
   
-  tryBindPortRange(9858, route,100)
+  tryBindPortRange(BoardConfig.server.startPort, route,BoardConfig.server.portRange)
     
   def tryBindPortRange(port: Int, myRoute : Route, counter: Int) {
     println("countdown counter: " + counter)
@@ -101,7 +102,7 @@ object Router
     Http(system)
     .bindAndHandle(
         handler = myRoute, 
-        interface = "0:0:0:0:0:0:0:0",
+        interface = BoardConfig.server.interface,
         port = port) map 
     { 
       future =>

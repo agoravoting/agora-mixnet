@@ -5,6 +5,8 @@ import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import java.math.BigInteger
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 
 /**
  * Minimal tests of crypto for key generation, shuffling and joint decryption
@@ -48,33 +50,38 @@ object CryptoTest extends App {
   }
 
   def testDkgAndJointDecryption() = {
-    val (share, key) = KM.createShare("1", Csettings)
-    addShare(share, "1", Csettings, key)
-    val (share2, key2) = KM.createShare("2", Csettings)
-    addShare(share2, "2", Csettings, key2)
-    println(s"Shares $shares")
-    val publicKey = combineShares(shares, Csettings)
-
-    val ciphertexts = Util.getRandomVotes(10, Csettings.generator, publicKey)
-
-    // a^-x1
-    val elementsOne = KM.partialDecrypt(ciphertexts, privates(0), "0", Csettings)
-    var ok = Verifier.verifyPartialDecryption(elementsOne, ciphertexts, Csettings, "0", shares(0))
-    if(!ok) throw new Exception()
-    // a^-x2
-    val elementsTwo = KM.partialDecrypt(ciphertexts, privates(1), "1", Csettings)
-    ok = Verifier.verifyPartialDecryption(elementsTwo, ciphertexts, Csettings, "1", shares(1))
-    if(!ok) throw new Exception()
-
-    println(s"partial decrypts one ****\n$elementsOne")
-    println(s"partial decrypts two ****\n $elementsTwo")
-    // a^-x = a^-x1 * a^-x2 ...
-    val combined = (elementsOne.partialDecryptions.map(Csettings.group.getElementFrom(_))
-      zip elementsTwo.partialDecryptions.map(Csettings.group.getElementFrom(_))).map(c => c._1.apply(c._2))
-    println(s"a^-x ****\n$combined")
-    // a^-x * b = m
-    val decrypted = (ciphertexts zip combined).map(c => c._1.getSecond().apply(c._2))
-    println(s"Decrypted $decrypted")
+    implicit val system = ActorSystem()
+    implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+    implicit val materializer = ActorMaterializer()
+    KM.createShare("1", Csettings) flatMap { case (share, key) => 
+      addShare(share, "1", Csettings, key)
+      KM.createShare("2", Csettings)
+    } map { case (share2, key2) => 
+      addShare(share2, "2", Csettings, key2)
+      println(s"Shares $shares")
+      val publicKey = combineShares(shares, Csettings)
+  
+      val ciphertexts = Util.getRandomVotes(10, Csettings.generator, publicKey)
+  
+      // a^-x1
+      val elementsOne = KM.partialDecrypt(ciphertexts, privates(0), "0", Csettings)
+      var ok = Verifier.verifyPartialDecryption(elementsOne, ciphertexts, Csettings, "0", shares(0))
+      if(!ok) throw new Exception()
+      // a^-x2
+      val elementsTwo = KM.partialDecrypt(ciphertexts, privates(1), "1", Csettings)
+      ok = Verifier.verifyPartialDecryption(elementsTwo, ciphertexts, Csettings, "1", shares(1))
+      if(!ok) throw new Exception()
+  
+      println(s"partial decrypts one ****\n$elementsOne")
+      println(s"partial decrypts two ****\n $elementsTwo")
+      // a^-x = a^-x1 * a^-x2 ...
+      val combined = (elementsOne.partialDecryptions.map(Csettings.group.getElementFrom(_))
+        zip elementsTwo.partialDecryptions.map(Csettings.group.getElementFrom(_))).map(c => c._1.apply(c._2))
+      println(s"a^-x ****\n$combined")
+      // a^-x * b = m
+      val decrypted = (ciphertexts zip combined).map(c => c._1.getSecond().apply(c._2))
+      println(s"Decrypted $decrypted")
+    }     
   }
 
   def testJnaGmp() = {

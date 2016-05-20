@@ -228,10 +228,13 @@ object ElectionTest extends App {
   // each keymaker creates the shares and their proofs, these are added to the election
   val twoShares =  startSharesPromise.future flatMap { readyForShares2 =>
     val readyForShares = readyForShares2.asInstanceOf[Election[_2, Shares[_0]]]
-    val oneShare = Election.addShare(readyForShares, k1.createKeyShare(readyForShares), k1.id)
-    oneShare flatMap { oneShare => 
-      Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
-    }
+    k1.createKeyShare(readyForShares) flatMap { keyShare =>
+      Election.addShare(readyForShares, keyShare, k1.id)
+    } flatMap { oneShare =>
+      k2.createKeyShare(readyForShares) flatMap { keyShare =>
+        Election.addShare(oneShare, keyShare, k2.id)
+      }
+    } 
   }
 
   // combine the shares from the keymaker trustees, this produces the election public key
@@ -397,17 +400,18 @@ object ElectionTest3 extends App {
     start => Election.startShares(start)
   }  
   
-  val threeShares = readyForShares flatMap {
-    readyForShares => 
-      val oneShare = Election.addShare(readyForShares, k1.createKeyShare(readyForShares), k1.id)
-      oneShare flatMap {
-        oneShare => 
-          val twoShares = Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
-          twoShares flatMap {
-            twoShares =>  Election.addShare(twoShares, k3.createKeyShare(readyForShares), k3.id)
-          }
+  val threeShares = readyForShares flatMap { readyForShares => 
+    k1.createKeyShare(readyForShares) flatMap { keyShare =>
+      Election.addShare(readyForShares, keyShare, k1.id)
+    } flatMap { oneShare =>
+      k2.createKeyShare(readyForShares) flatMap { keyShare =>
+        Election.addShare(oneShare, keyShare, k2.id)
       }
-      
+    } flatMap { twoShares =>
+      k3.createKeyShare(readyForShares) flatMap { keyShare =>
+        Election.addShare(twoShares, keyShare, k3.id)
+      }
+    }      
   }
 
   val combined = threeShares flatMap {
@@ -518,9 +522,12 @@ object ElectionTestSerial extends App {
 
   // each keymaker creates the shares and their proofs, these are added to the election
   val twoShares = readyForShares flatMap { readyForShares =>
-    val oneShare = Election.addShare(readyForShares, k1.createKeyShare(readyForShares), k1.id)
-    oneShare flatMap { oneShare =>
-      Election.addShare(oneShare, k2.createKeyShare(readyForShares), k2.id)
+    k1.createKeyShare(readyForShares) flatMap { keyShare =>
+      Election.addShare(readyForShares, keyShare, k1.id)
+    } flatMap { oneShare =>
+      k2.createKeyShare(readyForShares) flatMap { keyShare =>
+        Election.addShare(oneShare, keyShare, k2.id)
+      }
     }
   }
 
@@ -644,6 +651,9 @@ object ElectionTestSerial extends App {
 /**************************** other tests ****************************/
 
 object DecryptionTest extends App {
+    implicit val system = ActorSystem()
+    implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+    implicit val materializer = ActorMaterializer()
 
   val group = GStarModSafePrime.getFirstInstance(2048)
   val generator = group.getDefaultGenerator()
@@ -653,34 +663,47 @@ object DecryptionTest extends App {
   object d1 extends KeyMaker
   object d2 extends KeyMaker
 
-  val (e1,pk1) = d1.createShare("d1", cSettings)
-  val (e2,pk2) = d2.createShare("d2", cSettings)
+  /*val (e1,pk1) = d1.createShare("d1", cSettings)
+  val (e2,pk2) = d2.createShare("d2", cSettings)*/
+  
+  var keyShare1Opt : Option[(EncryptionKeyShareDTO, String)] = None
 
-  val e1k = Util.getPublicKeyFromString(e1.keyShare, cSettings.generator)
-  val e2k = Util.getPublicKeyFromString(e2.keyShare, cSettings.generator)
+  val e1k = d1.createShare("d1", cSettings) map { case (e1,pk1) =>
+    keyShare1Opt = Some((e1,pk1))
+    Util.getPublicKeyFromString(e1.keyShare, cSettings.generator)
+  }
+  val e2k = d2.createShare("d2", cSettings) map { case (e2,pk2) =>
+    Util.getPublicKeyFromString(e2.keyShare, cSettings.generator)
+  }
 
-  val publicKey = e1k.apply(e2k)
-
-  val pk1e = cSettings.group.getZModOrder().getElementFrom(pk1)
-
-  val plaintexts = Seq.fill(300)(scala.util.Random.nextInt(10))
-  // encrypt the votes with the public key of the election
-  val votes = Util.encryptVotes(plaintexts, cSettings, publicKey)
-  println("decrypting..")
-
-  MPBridge.total = 0;
-
-  MPBridge.y()
-  val decryption = d1.partialDecrypt(votes, pk1e, "d1", cSettings)
-  MPBridge.z()
-
-  MPBridge.y()
-  val share = elGamal.getMessageSpace.getElementFrom(e1.keyShare)
-
-  val ok = Verifier.verifyPartialDecryption(decryption, votes, cSettings, "d1", share)
-  MPBridge.z()
-
-  MPBridgeS.shutdown
+  e1k map { e1k =>
+    e2k map { e2k =>
+      keyShare1Opt map { case (e1,pk1) =>
+        val publicKey = e1k.apply(e2k)
+        
+        val pk1e = cSettings.group.getZModOrder().getElementFrom(pk1)
+      
+        val plaintexts = Seq.fill(300)(scala.util.Random.nextInt(10))
+        // encrypt the votes with the public key of the election
+        val votes = Util.encryptVotes(plaintexts, cSettings, publicKey)
+        println("decrypting..")
+      
+        MPBridge.total = 0;
+      
+        MPBridge.y()
+        val decryption = d1.partialDecrypt(votes, pk1e, "d1", cSettings)
+        MPBridge.z()
+      
+        MPBridge.y()
+        val share = elGamal.getMessageSpace.getElementFrom(e1.keyShare)
+      
+        val ok = Verifier.verifyPartialDecryption(decryption, votes, cSettings, "d1", share)
+        MPBridge.z()
+      
+        MPBridgeS.shutdown
+      }
+    }
+  }
 }
 
 object Issue1 extends App with ProofSettings {

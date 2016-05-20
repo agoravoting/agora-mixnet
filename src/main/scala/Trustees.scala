@@ -35,7 +35,9 @@ import mpservice.MPBridge
 import scala.collection.JavaConversions._
 import scala.concurrent._
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 
 case class PreShuffleData(mixer: ReEncryptionMixer, psi: PermutationElement, elGamal: ElGamalEncryptionScheme,
   challengeGenerator: SigmaChallengeGenerator, ecg: ChallengeGenerator, permutationCommitmentRandomizations: Tuple,
@@ -47,12 +49,17 @@ case class PreShuffleData(mixer: ReEncryptionMixer, psi: PermutationElement, elG
  * Mixes in the KeyMaker trait (below) as well as managing an identity and private shares
  */
 class KeyMakerTrustee(val id: String, privateShares: MutableMap[String, String] = MutableMap()) extends KeyMaker {
-  def createKeyShare(e: Election[_, Shares[_]]) = {
+  def createKeyShare(e: Election[_, Shares[_]]) : Future[EncryptionKeyShareDTO] = {
     println("KeyMaker creating share..")
+    
+    createShare(id, e.state.cSettings) map { case (encryptionKeyShareDTO, privateKey)  =>
+      privateShares += (e.state.id -> privateKey)
+      encryptionKeyShareDTO
+    }
 
-    val (encryptionKeyShareDTO, privateKey) = createShare(id, e.state.cSettings)
+    /*val (encryptionKeyShareDTO, privateKey) = createShare(id, e.state.cSettings)
     privateShares += (e.state.id -> privateKey)
-    encryptionKeyShareDTO
+    encryptionKeyShareDTO*/
   }
 
   def partialDecryption(e: Election[_, Decryptions[_]]) = {
@@ -126,37 +133,42 @@ class MixerTrustee(val id: String) extends Mixer {
  */
 trait KeyMaker extends ProofSettings {
 
-  def createShare(proverId: String, Csettings: CryptoSettings) = {
-
-    val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
-
-    val kpg = elGamal.getKeyPairGenerator()
-    val keyPair = kpg.generateKeyPair()
-    val privateKey = keyPair.getFirst()
-    val publicKey = keyPair.getSecond()
-
-    val function = kpg.getPublicKeyGenerationFunction()
-    val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
-
-    val challengeGenerator: SigmaChallengeGenerator  = FiatShamirSigmaChallengeGenerator.getInstance(
-      Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
-
-    val pg: PlainPreimageProofSystem = PlainPreimageProofSystem.getInstance(challengeGenerator, function)
-
-    val proof: Triple = pg.generate(privateKey, publicKey)
-
-    val success = pg.verify(proof, publicKey)
-
-    if (!success) {
-      throw new Exception("Failed verifying proof")
-    } else {
-      println("createShare: verified share ok")
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
+  
+  def createShare(proverId: String, Csettings: CryptoSettings) : Future[(EncryptionKeyShareDTO, String)]= {
+    Future {
+      val elGamal = ElGamalEncryptionScheme.getInstance(Csettings.generator)
+  
+      val kpg = elGamal.getKeyPairGenerator()
+      val keyPair = kpg.generateKeyPair()
+      val privateKey = keyPair.getFirst()
+      val publicKey = keyPair.getSecond()
+  
+      val function = kpg.getPublicKeyGenerationFunction()
+      val otherInput: StringElement = StringMonoid.getInstance(Alphabet.UNICODE_BMP).getElement(proverId)
+  
+      val challengeGenerator: SigmaChallengeGenerator  = FiatShamirSigmaChallengeGenerator.getInstance(
+        Csettings.group.getZModOrder(), otherInput, convertMethod, hashMethod, converter)
+  
+      val pg: PlainPreimageProofSystem = PlainPreimageProofSystem.getInstance(challengeGenerator, function)
+  
+      val proof: Triple = blocking { pg.generate(privateKey, publicKey) }
+  
+      val success = pg.verify(proof, publicKey)
+  
+      if (!success) {
+        throw new Exception("Failed verifying proof")
+      } else {
+        println("createShare: verified share ok")
+      }
+  
+      val sigmaProofDTO = SigmaProofDTO(pg.getCommitment(proof).convertToString(), pg.getChallenge(proof).convertToString(), pg.getResponse(proof).convertToString())
+  
+      // we return the share dto and the generated private key
+      (EncryptionKeyShareDTO(sigmaProofDTO, publicKey.convertToBigInteger().toString), privateKey.convertToBigInteger().toString)
     }
-
-    val sigmaProofDTO = SigmaProofDTO(pg.getCommitment(proof).convertToString(), pg.getChallenge(proof).convertToString(), pg.getResponse(proof).convertToString())
-
-    // we return the share dto and the generated private key
-    (EncryptionKeyShareDTO(sigmaProofDTO, publicKey.convertToBigInteger().toString), privateKey.convertToBigInteger().toString)
   }
 
   def partialDecrypt(votes: Seq[Tuple], privateKey: Element[_], proverId: String, Csettings: CryptoSettings) = {
@@ -233,6 +245,9 @@ trait KeyMaker extends ProofSettings {
  * Creation of shuffles and proofs (Terelius Wikstrom according to Locher-Haenni pdf)
  */
 trait Mixer extends ProofSettings {
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
+  implicit val materializer = ActorMaterializer()
 
   // corresponds to the offline phase of the proof of shuffle (permutation for known number of votes)
   def preShuffle(voteCount: Int, publicKey: Element[_], Csettings: CryptoSettings, proverId: String) = {

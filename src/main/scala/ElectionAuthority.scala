@@ -37,7 +37,9 @@ class ElectionAuthority[W <: Nat : ToInt , N <: Nat : ToInt ]() (implicit r : N 
     
     addShare flatMap { addShare =>
       val addShareInstance = addShare.asInstanceOf[Election[W, Shares[N]]]
-      Election.addShare(addShareInstance, kn.createKeyShare(addShareInstance), kn.id)
+      kn.createKeyShare(addShareInstance) flatMap { keyShare =>
+        Election.addShare(addShareInstance, keyShare, kn.id)
+      }
     }
     
       // we compose futures, first mix then second mix
