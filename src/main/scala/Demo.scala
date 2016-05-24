@@ -7,7 +7,6 @@ import com.github.nscala_time.time.Imports._
 import com.typesafe.config.ConfigFactory
 import scala.concurrent._
 import scala.concurrent.duration.Duration
-//import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 
@@ -76,7 +75,16 @@ object FiwareDemo extends App {
               throw new Error("Error, the number of authorities must be 2 to 9")
           }
           director.newElection() map { uid =>
-            println("Election uid obtained: "+ uid)            
+            println("Election uid obtained: "+ uid)    
+          }
+          director.newElection() map { uid =>
+            println("Election uid obtained: "+ uid)    
+          }
+          director.newElection() map { uid =>
+            println("Election uid obtained: "+ uid)    
+          }
+          director.newElection() map { uid =>
+            println("Election uid obtained: "+ uid)    
           }
           waitAll()
           
@@ -234,7 +242,7 @@ object ElectionTest extends App {
       k2.createKeyShare(readyForShares) flatMap { keyShare =>
         Election.addShare(oneShare, keyShare, k2.id)
       }
-    } 
+    }
   }
 
   // combine the shares from the keymaker trustees, this produces the election public key
@@ -246,23 +254,23 @@ object ElectionTest extends App {
   val plaintexts = Seq.fill(totalVotes)(scala.util.Random.nextInt(1000))
   
   val electionGettingVotes = combined flatMap { combined => 
-    /*val startVotes = */Election.startVotes(combined)
+    val startVotes = Election.startVotes(combined)
     
     // since we are storing information in election as if it were a bulletin board, all
     // the data is stored in a wire-compatible format, that is strings/jsons whatever
     // we reconstruct the public key as if it had been read from such a format
-    /*val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
+    val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
     // encrypt the votes with the public key of the election
     val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
     
     startVotes flatMap { startVotes => 
       // doing this in one step to avoid memory explosion
       Election.addVotes(startVotes, votes.map(_.convertToString).toList)
-    }*/
+    }
   }
 
   // we are only timing the mixing phase
-  /*var mixingStart = System.currentTimeMillis()
+  var mixingStart = System.currentTimeMillis()
 
   // stop the voting period
   val stopVotes = electionGettingVotes flatMap { electionGettingVotes =>
@@ -369,7 +377,7 @@ object ElectionTest extends App {
   all.onFailure { case e =>
     e.printStackTrace
     MPBridgeS.shutdown
-  }*/
+  }
 }
 
 /**

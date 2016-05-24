@@ -1,111 +1,45 @@
 package app
 
 import scala.util.{Try, Success, Failure}
-//import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 import scala.concurrent.{blocking, Future, Promise}
+import akka.http.scaladsl.server._
+import akka.http.scaladsl.model._
+import play.api.libs.json._
 import shapeless._
 import nat._
 import ops.nat._
 import controllers._
 import mpservice._
+import utils._
+import models.ErrorProcessing
 
-class ElectionDirector[N <: Nat : ToInt](val totalVotes: Int) {  
+class ElectionDirector[N <: Nat : ToInt](val totalVotes: Int)  
+extends Response  
+with HttpEntityToString 
+with ElectionJsonFormatter
+with ErrorProcessing
+{
   implicit val system = ActorSystem()
   implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
   implicit val materializer = ActorMaterializer()
-  BoardReader.addElectionCreationListener{ uid =>
+  
+  // a map from the uid to a future which is completed when an election with such uid is created
+  private val creationNotificationsMap = scala.collection.mutable.Map[String, Promise[Unit]]()
+  
+  private val votingElectionsMap = scala.collection.mutable.Map[String, Election[N, Votes]]()
+  private val finishedElectionsMap = scala.collection.mutable.Map[String, Election[N, Decrypted]]()
+  
+  BoardReader.addElectionCreationListener { uid =>
+    println("--- listening " + uid)
    val subscriberCreatePromise = blocking { getOrAddCreateNotification(uid, Promise[Unit]()) }
    subscriberCreatePromise.success({})
-   processElection(uid)
+   processStartElection(uid)
   }
   
-  private def processElection(uid: String) = Future {
-    val subscriber = BoardReader.getSubscriber(uid)
-    val create = subscriber.create()
-    create map { start =>
-      Election.startShares(start.asInstanceOf[Election[N, Created]])
-    }
-    val combined = subscriber.addShare[N]() flatMap { nShares =>
-      Election.combineShares(nShares.asInstanceOf[Election[N, Shares[N]]])
-    }
-    
-    // generate dummy votes
-    val plaintexts = Seq.fill(totalVotes)(scala.util.Random.nextInt(1000))
-    
-    val electionGettingVotes = combined flatMap { combined => 
-      val startVotes = Election.startVotes(combined)
-      
-      // since we are storing information in election as if it were a bulletin board, all
-      // the data is stored in a wire-compatible format, that is strings/jsons whatever
-      // we reconstruct the public key as if it had been read from such a format
-      val publicKey = Util.getPublicKeyFromString(combined.state.publicKey, combined.state.cSettings.generator)
-      // encrypt the votes with the public key of the election
-      val votes = Util.encryptVotes(plaintexts, combined.state.cSettings, publicKey)
-      
-      startVotes flatMap { startVotes => 
-        // doing this in one step to avoid memory explosion
-        Election.addVotes(startVotes, votes.map(_.convertToString).toList)
-      }
-    }
-    // we are only timing the mixing phase
-    var mixingStart = System.currentTimeMillis()
-    var mixingEnd = mixingStart
-    // stop the voting period
-    val stopVotes = electionGettingVotes flatMap { electionGettingVotes => 
-      // FIXME remove this
-      MPBridge.total = 0;
-      mixingStart = System.currentTimeMillis()
-      Election.stopVotes(electionGettingVotes)
-    }
-    
-    val startMixing = stopVotes flatMap { stopVotes =>
-      Election.startMixing(stopVotes)
-    }
-    val lastMix = subscriber.addMix[N]()
-    
-    val stopMix = lastMix flatMap { lastMix =>
-      Election.stopMixing(lastMix.asInstanceOf[Election[N, Mixing[N]]])
-    }
-    
-    stopMix flatMap { stopMix =>
-      Election.startDecryptions(stopMix)
-    }
-    
-    val electionDone = subscriber.addDecryption[N]() flatMap { partialN =>
-      Election.combineDecryptions(partialN.asInstanceOf[Election[N, Decryptions[N]]])
-    }
-    
-    electionDone map { electionDone => 
-      // lets check that everything went well
-      // println(s"Plaintexts $plaintexts")
-      // println(s"Decrypted ${electionDone.state.decrypted}")
-      // println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
+  Router.setVoteFunc { addVote }
 
-      val mixTime = (mixingEnd - mixingStart) / 1000.0
-      val totalTime = (System.currentTimeMillis() - mixingStart) / 1000.0
-
-      println("*************************************************************")
-      println(s"finished run with votes = $totalVotes")
-      println(s"mixTime: $mixTime")
-      println(s"totalTime: $totalTime")
-      println(s"sec / vote (mix): ${mixTime / totalVotes}")
-      println(s"sec / vote: ${totalTime / totalVotes}")
-      println(s"total modExps: ${MPBridge.total}")
-      println(s"found modExps: ${MPBridge.found}")
-      println(s"found modExps %: ${MPBridge.found/MPBridge.total.toDouble}")
-      println(s"extracted modExps: ${MPBridge.getExtracted}")
-      println(s"extracted modExps %: ${MPBridge.getExtracted/MPBridge.total.toDouble}")
-      println(s"modExps / vote: ${MPBridge.total.toFloat / totalVotes}")
-      println("*************************************************************")
-
-      MPBridgeS.shutdown
-    }
-  }
-  
-  private var creationNotificationsMap = Map[String, Promise[Unit]]()
-  
   private def getOrAddCreateNotification(key: String, promise: Promise[Unit]) : Promise[Unit] = {
     creationNotificationsMap.synchronized {
       creationNotificationsMap.get(key) match {
@@ -113,10 +47,45 @@ class ElectionDirector[N <: Nat : ToInt](val totalVotes: Int) {
           value
         case None =>
           creationNotificationsMap += (key -> promise)
-          promise
+          promise 
       }
     }
-    
+  }
+  
+  def addVote(ctx: RequestContext, electionId : Long, voterId : String) = {
+    val promise = Promise[HttpResponse]()
+    Future {
+      votingElectionsMap.get(electionId.toString) match {
+        case None =>
+          promise.success(HttpResponse(status = 400, entity = Json.stringify(response(s"Invalid election id $electionId")) ))
+        case Some(election) =>
+          getString(ctx.request.entity) map { strRequest =>
+          val jsInput = Json.parse(strRequest)
+          jsInput.validate[VoteDTO] match {
+            case JsError(errors) =>
+              promise.success(HttpResponse(status = 400, entity = Json.stringify(response(s"Invalid vote json $errors")) ))
+            case JsSuccess(voteDTO, jsPath) =>
+              val pks = PublicKey(
+                          q = BigInt( election.state.cSettings.group.getOrder().toString ),
+                          p = BigInt( election.state.cSettings.group.getModulus().toString ),
+                          y = BigInt( election.state.publicKey ),
+                          g = BigInt( election.state.cSettings.generator.getValue().toString )
+                        )
+              val vote = voteDTO.validate(pks, true, electionId, voterId)
+              Election.addVote(election, vote) map { voted =>
+                promise.success(HttpResponse(status = 200, entity = Json.stringify(response(voted.state.addVoteIndex)) ))
+              }  recover { case err =>
+                promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
+              }
+            }
+          } recover { case err =>
+            promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
+          }
+      }
+    } recover { case err =>
+      promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
+    }
+    promise.future
   }
   
   def newElection() : Future[String] = {
@@ -138,8 +107,121 @@ class ElectionDirector[N <: Nat : ToInt](val totalVotes: Int) {
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err =>
+      promise.tryFailure(err)
     }
     promise.future
   }
   
+  def stopElection(uid: String) = processStopElection(uid)
+  
+  private def processStartElection(uid: String) : Future[Unit] =  {
+    val promise = Promise[Unit]()
+    Future {
+      val subscriber = BoardReader.getSubscriber(uid)
+      val create = subscriber.create()
+      val startShares = create map { start =>
+        Election.startShares(start.asInstanceOf[Election[N, Created]])
+      }
+      
+      val combined = startShares flatMap { r => subscriber.addShare[N]() } flatMap { nShares =>
+        Election.combineShares(nShares.asInstanceOf[Election[N, Shares[N]]])
+      }
+      
+      val startVotes = combined flatMap { combined => 
+        Election.startVotes(combined) 
+      }
+      
+      startVotes map { started =>
+        promise.success({})
+      } recover { case err =>
+        println("== Election Director error " + getMessageFromThrowable(err) )
+        promise.tryFailure(err)
+      }
+    } recover { case err =>
+      promise.tryFailure(err)
+    }
+    promise.future
+  }
+  
+  private def processStopElection(uid: String) : Future[Unit] = {
+    val promise = Promise[Unit]()
+    Future {
+      val electionGettingVotes = votingElectionsMap.synchronized {
+        votingElectionsMap.get(uid) match {
+          case Some(election) => 
+            votingElectionsMap -= uid
+            election
+          case None =>
+            throw new java.lang.Error("Stop Election Error: Election uid not found: " + uid)
+        }
+      }
+      val subscriber = BoardReader.getSubscriber(uid)
+      // we are only timing the mixing phase
+      val mixingStart = System.currentTimeMillis()
+      var mixingEnd = mixingStart
+      // FIXME remove this
+      MPBridge.total = 0;
+      // stop the voting period
+      val stopVotes = Election.stopVotes(electionGettingVotes)
+      
+      val startMixing = stopVotes flatMap { stopVotes =>
+        Election.startMixing(stopVotes)
+      }
+      
+      val lastMix = startMixing  flatMap { r => subscriber.addMix[N]() }
+      
+      val stopMix = lastMix flatMap { lastMix =>
+        Election.stopMixing(lastMix.asInstanceOf[Election[N, Mixing[N]]])
+      }
+      
+      stopMix flatMap { stopMix =>
+        Election.startDecryptions(stopMix)
+      }
+      
+      val electionDone = stopMix flatMap { r => subscriber.addDecryption[N]() } flatMap { partialN =>
+        Election.combineDecryptions(partialN.asInstanceOf[Election[N, Decryptions[N]]])
+      }
+      
+      electionDone map { electionDone => 
+        // lets check that everything went well
+        // println(s"Plaintexts $plaintexts")
+        // println(s"Decrypted ${electionDone.state.decrypted}")
+        // println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
+  
+        val mixTime = (mixingEnd - mixingStart) / 1000.0
+        val totalTime = (System.currentTimeMillis() - mixingStart) / 1000.0
+  
+        println("*************************************************************")
+        println(s"finished run with votes = $totalVotes")
+        println(s"mixTime: $mixTime")
+        println(s"totalTime: $totalTime")
+        println(s"sec / vote (mix): ${mixTime / totalVotes}")
+        println(s"sec / vote: ${totalTime / totalVotes}")
+        println(s"total modExps: ${MPBridge.total}")
+        println(s"found modExps: ${MPBridge.found}")
+        println(s"found modExps %: ${MPBridge.found/MPBridge.total.toDouble}")
+        println(s"extracted modExps: ${MPBridge.getExtracted}")
+        println(s"extracted modExps %: ${MPBridge.getExtracted/MPBridge.total.toDouble}")
+        println(s"modExps / vote: ${MPBridge.total.toFloat / totalVotes}")
+        println("*************************************************************")
+  
+        MPBridgeS.shutdown
+        finishedElectionsMap.synchronized {
+          finishedElectionsMap.get(uid) match {
+            case Some(election) =>
+              throw new java.lang.Error("Error: election already finished")
+            case None =>
+              finishedElectionsMap += (uid -> electionDone) 
+              promise.success({})
+          }
+        }
+      } recover { case err =>
+        promise.tryFailure(err)
+      }
+    } recover { case err =>
+      promise.tryFailure(err)
+    }
+    promise.future
+  }  
 }

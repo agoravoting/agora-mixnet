@@ -22,7 +22,6 @@ import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import java.math.BigInteger
 import scala.concurrent.{Future, Promise}
 import scala.util.{Try, Success, Failure}
-//import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 import scala.collection.mutable.Queue
@@ -31,7 +30,7 @@ import java.sql.Timestamp
 import akka.http.scaladsl.model._
 import com.github.nscala_time.time.Imports._
 import services.BoardConfig
-import utils.Response
+import utils._
 
 trait GetType {  
   def getElectionTypeCreated[W <: Nat : ToInt] (election: Election[W, Created]) : String = {
@@ -112,7 +111,7 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
   implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
   implicit val materializer = ActorMaterializer()
   println("GG ElectionSubscriber::constructor")
-  private var map = Map[String, Any]()
+  private val map = scala.collection.mutable.Map[String, Any]()
   
   private def getOrAdd(key: String, value: Any) : Any = {
     map.synchronized {
@@ -127,7 +126,7 @@ class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
   }
   
   def push[B <: ElectionState](election : Election[W, B], electionType: String) = {
-    println("GG ElectionSubscriber::push electionType " + electionType)
+    println("GG ElectionSubscriber::push electionType " + electionType + " uid " + election.state.uid)
     val promise = Promise[Election[W, B]]()
     val any = getOrAdd(electionType, promise)
     Try {
@@ -312,7 +311,7 @@ class ElectionDTOData(val id: Long, val numAuth: Int) {
   def setPublicKeys[W <: Nat : ToInt](combined: Election[W, Combined]) {
     
     val jsPk : JsValue = 
-      Json.arr(Json.obj( 
+      Json.arr(Json.obj(
           "q" -> combined.state.cSettings.group.getOrder().toString(),
           "p" -> combined.state.cSettings.group.getModulus().toString(),
           "y" -> combined.state.publicKey,
@@ -964,12 +963,12 @@ trait PostOffice extends ElectionJsonFormatter with Response
   implicit val materializer = ActorMaterializer()
   // post index counter
   private var index : Long = 0
-  private var queue = Queue[Option[Post]]()
+  private val queue = scala.collection.mutable.Queue[Option[Post]]()
   // the first parameter is the uid
-  private var electionMap = Map[Long, MaintainerWrapper]()
+  private val electionMap = scala.collection.mutable.Map[Long, MaintainerWrapper]()
   // list of callbacks to be called when a new election is created
-  private var callbackQueue = Queue[String => Unit]()
-    
+  private val callbackQueue = scala.collection.mutable.Queue[String => Unit]()
+
   def getElectionInfo(electionId: Long) : Future[HttpResponse] = {
     val promise = Promise[HttpResponse]()
     Future {
@@ -1008,8 +1007,8 @@ trait PostOffice extends ElectionJsonFormatter with Response
           }
         }
       }
-      remove()
     }
+    remove()
   }
   
   private def send(post: Post) {
@@ -1108,6 +1107,7 @@ object BoardReader
   with FiwareJSONFormatter
   with BoardJSONFormatter
   with ErrorProcessing
+  with HttpEntityToString
 {
 
   var subscriptionId = ""
@@ -1172,57 +1172,62 @@ object BoardReader
     }
     promise.future
   }
-  
-  def accumulate(bodyStr: String) : Future[HttpResponse] = {
+  def accumulate(request: HttpRequest) : Future[HttpResponse] = {
     val promise = Promise[HttpResponse]()
     Future {
-      val json = Json.parse(bodyStr)
-      json.validate[AccumulateRequest] match {
-        case sr: JsSuccess[AccumulateRequest] =>
-          val accRequest = sr.get
-          if (accRequest.subscriptionId == subscriptionId) {
-            var jsonError: Option[String] = None
-            val postSeq = accRequest.contextResponses flatMap {  x => 
-              x.contextElement.attributes flatMap { y =>
-                y.value.validate[Post] match {
-                  case post: JsSuccess[Post] =>
-                    Some(post.get)
-                  case e: JsError =>
-                    val str = "Accumulate has a None: this is not " +
-                            s"a valid Post: ${y.value}! error: $json"
-                    println(str)
-                    jsonError = Some(str)
-                    None
+      getString(request.entity) map { bodyStr =>
+        val json = Json.parse(bodyStr)
+        json.validate[AccumulateRequest] match {
+          case sr: JsSuccess[AccumulateRequest] =>
+            val accRequest = sr.get
+            if (accRequest.subscriptionId == subscriptionId) {
+              var jsonError: Option[String] = None
+              val postSeq = accRequest.contextResponses flatMap {  x => 
+                x.contextElement.attributes flatMap { y =>
+                  y.value.validate[Post] match {
+                    case post: JsSuccess[Post] =>
+                      Some(post.get)
+                    case e: JsError =>
+                      val str = "Accumulate has a None: this is not " +
+                              s"a valid Post: ${y.value}! error: $json"
+                      println(str)
+                      jsonError = Some(str)
+                      None
+                    }
                   }
-                }
-             }
-             jsonError match {
-               case Some(e) =>
-                 promise.success(HttpResponse(400, entity = e))
-               case None => 
-                 push(postSeq)
-                 promise.success(HttpResponse(200, entity = s"{}"))
-             }
-          } else {
-            if(futureSubscriptionId.isCompleted) {
-              // Error, we are receiving subscription messages from a wrong subscription id
-              promise.success(HttpResponse(400))
-              // Remove subscription for that subscription id
-              unsubscribe(accRequest.subscriptionId, BoardPoster.getWSClient)
+               }
+               jsonError match {
+                 case Some(e) =>
+                   promise.success(HttpResponse(400, entity = e))
+                 case None => 
+                   push(postSeq)
+                   promise.success(HttpResponse(200, entity = s"{}"))
+               }
             } else {
-              futureSubscriptionId onComplete {
-                case Success(id) =>
-                  promise.completeWith(accumulate(bodyStr))
-                case Failure(err) => 
-                  promise.failure(err)
+              if(futureSubscriptionId.isCompleted) {
+                // Error, we are receiving subscription messages from a wrong subscription id
+                promise.success(HttpResponse(400))
+                // Remove subscription for that subscription id
+                unsubscribe(accRequest.subscriptionId, BoardPoster.getWSClient)
+              } else {
+                futureSubscriptionId onComplete {
+                  case Success(id) =>
+                    promise.completeWith(accumulate(request))
+                  case Failure(err) => 
+                    promise.failure(err)
+                }
               }
             }
-          }
-       case e: JsError =>
-         val errorText = s"Bad request: invalid AccumulateRequest json: $bodyStr\nerror: ${e}\n"
-           println(errorText)
-           promise.success(HttpResponse(400, entity = errorText))
+         case e: JsError =>
+           val errorText = s"Bad request: invalid AccumulateRequest json: $bodyStr\nerror: ${e}\n"
+             println(errorText)
+             promise.success(HttpResponse(400, entity = errorText))
+        }
+      } recover { case err =>
+        promise.trySuccess(HttpResponse(400, entity = getMessageFromThrowable(err)))
       }
+    } recover { case err =>
+      promise.trySuccess(HttpResponse(400, entity = getMessageFromThrowable(err)))
     }
     promise.future
   }

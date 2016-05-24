@@ -35,7 +35,6 @@ import mpservice.MPBridge
 import scala.collection.JavaConversions._
 import scala.concurrent._
 import scala.concurrent.duration._
-//import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 

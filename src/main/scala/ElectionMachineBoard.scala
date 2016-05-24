@@ -51,7 +51,6 @@ import akka.util.ByteString
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-//import scala.concurrent.ExecutionContext.Implicits.global
 import services._
 import models._
 import controllers._
@@ -372,8 +371,8 @@ trait ElectionMachine extends ElectionTrait
     Future {
       BaseImpl.create(id, bits) onComplete {
         case Success(election) =>
-          promise.success(election)
-          BoardPoster.create(election)
+          // the immutable log sets the election id, so we really need to write in the log before fulfilling the promise
+          promise.completeWith(BoardPoster.create(election))          
         case Failure(err) =>
           promise.failure(err)
       }
@@ -433,8 +432,11 @@ trait ElectionMachine extends ElectionTrait
     Future {
       BaseImpl.startVotes(in) onComplete {
         case Success(election) =>
+          println("== startVotes promise " + election.state.uid)
           promise.success(election)
-          BoardPoster.addVotes(election, List[String]())
+          BoardPoster.addVotes(election, List[String]()) map { e =>
+            println("== startVotes posted " + election.state.uid)
+          }
         case Failure(err) =>
           promise.failure(err)
       }

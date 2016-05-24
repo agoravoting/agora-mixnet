@@ -22,7 +22,6 @@ import mpservice.MPBridge
 
 import scala.collection.JavaConversions._
 import scala.concurrent.Future
-//import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 
@@ -46,7 +45,7 @@ trait DefaultElectionImpl extends ElectionTrait
   // val group = ECZModPrime.getInstance(ECZModPrimeParameters.SECP521r1)
       val generator = group.getDefaultGenerator()
       val cSettings = CryptoSettings(group, generator)
-      
+      // the immutable log is the one that fills in the election id, here we just set it to "0" temporarily
       new Election[W, Created](Created(id, cSettings, "0"))
     }
   }

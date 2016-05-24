@@ -12,6 +12,7 @@ import scala.concurrent.{Future, Promise}
 import scala.util.{Try, Success, Failure}
 import scala.concurrent.duration._
 import scala.util._
+import utils.Response
 import akka.stream.scaladsl.Source
 
 import akka.http.scaladsl.server._
@@ -23,42 +24,57 @@ import models._
 import app._
 import services.BoardConfig
 
-object Router
+
+object Router extends Response
 {
   implicit val system = ActorSystem()
   implicit val executor = system.dispatchers.lookup("my-blocking-dispatcher")
   implicit val materializer = ActorMaterializer()
   
+  private var voteFunc : (RequestContext, Long, String) => Future[HttpResponse]  =
+  {
+    (ctx, electionId, voterId) => Future { HttpResponse(status = 400, entity = Json.stringify(error(s"Not Implemented", ErrorCodes.EO_ERROR)) ) }
+  }
   
   val route : Route = {
     path("accumulate") {
       post {
         ctx =>
           ctx.complete {
-            val promise = Promise[HttpResponse]()
-            Future {
-              getString(ctx.request.entity) onComplete {
-                case Success(bodyStr) =>
-                  println(s"Router accumulate: $bodyStr")
-                  promise.completeWith(BoardReader.accumulate(bodyStr))
-                case Failure(e) =>
-                  promise.success(HttpResponse(400, entity = s"Error $e"))
-              }  
-            }
-            promise.future
+            BoardReader.accumulate(ctx.request)
           }
       }
     } ~
     path("api" / "election" / LongNumber) { electionId =>
       pathEnd {
         get { ctx =>
+          println(s"Router /api/election/$electionId")
           ctx.complete {
-            println(s"Router /api/election/$electionId")
             BoardReader.getElectionInfo(electionId)
           }
         }
       }
-    }
+    } ~
+    path("api" / "election" / LongNumber / "voter" / Segment) { (electionId, voterId) =>
+      pathEnd {
+        post { ctx =>
+          println(s"Router /api/election/$electionId/voter/$voterId")
+          ctx.complete {
+            voteFunc(ctx, electionId, voterId)
+          }
+        }
+      }
+    } ~
+    path(Segments) { segs =>
+        pathEnd {
+          post { ctx =>
+            println(s"Router segments " + segs.toString)
+            ctx.complete {
+              ""
+            }
+          }
+        }
+      }
   }
   
   private var portNumber = Promise[Int]()
@@ -67,16 +83,6 @@ object Router
     println("port is " + port)
   }
   
-  def getString(entity: HttpEntity) : Future[String] =  {
-    val promise = Promise[String]()
-    Future {
-      val future = entity.toStrict(5.seconds) map { st =>
-        st.data.decodeString("UTF-8")
-      }
-      promise.completeWith(future)
-    }
-    promise.future
-  }
   
   tryBindPortRange(BoardConfig.server.startPort, route,BoardConfig.server.portRange)
     
@@ -120,5 +126,9 @@ object Router
   
   def close() {
     system.terminate()
+  }
+  
+  def setVoteFunc(newFunc: (RequestContext, Long, String) => Future[HttpResponse]) = {
+    voteFunc = newFunc
   }
 }
