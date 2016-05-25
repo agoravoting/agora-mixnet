@@ -136,6 +136,14 @@ with EncryptionFormatter
       }
       
       startVotes map { started =>
+        votingElectionsMap.synchronized {
+          votingElectionsMap.get(started.state.uid) match {
+            case Some(election) =>
+              throw new java.lang.Error("Error, election already started")
+            case None =>
+              votingElectionsMap += (started.state.uid -> started)
+          }
+        }
         promise.success({})
       } recover { case err =>
         println("== Election Director error " + getMessageFromThrowable(err) )

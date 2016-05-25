@@ -24,7 +24,7 @@ trait ElectionMachine extends ElectionTrait
   implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
   implicit val materializer = ActorMaterializer()
   // create an election
-  def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = { 
+  def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = {
     val promise = Promise[Election[W, Created]]()
     Future {
       BaseImpl.create(id, bits) onComplete {
@@ -58,7 +58,7 @@ trait ElectionMachine extends ElectionTrait
     val index = ToInt[T].apply() +1
     val promise = Promise[Election[W, Shares[Succ[T]]]]
     Future {
-      BaseImpl.addShare(in, share, proverId) onComplete { 
+      BaseImpl.addShare(in, share, proverId) onComplete {
         case Success(election) =>
           promise.success(election)
           BoardPoster.addShare(election)
