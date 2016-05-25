@@ -13,6 +13,7 @@ import mpservice._
 import shapeless._
 import syntax.sized._
 import LT._
+import accumulator.BoardReader
 
 // N should be the predecessor of the number you want, I've been unable to use Pred[N] so I use Succ[N]
 class ElectionAuthority[W <: Nat : ToInt , N <: Nat : ToInt ]() (implicit r : N < W){

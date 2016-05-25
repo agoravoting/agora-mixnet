@@ -14,6 +14,7 @@ import controllers._
 import mpservice._
 import utils._
 import models.ErrorProcessing
+import accumulator.BoardReader
 
 class ElectionDirector[N <: Nat : ToInt](val totalVotes: Int)  
 extends Response  

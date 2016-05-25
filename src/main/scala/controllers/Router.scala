@@ -23,6 +23,7 @@ import play.api.libs.functional.syntax._
 import models._
 import app._
 import services.BoardConfig
+import accumulator.BoardReader
 
 
 object Router extends Response

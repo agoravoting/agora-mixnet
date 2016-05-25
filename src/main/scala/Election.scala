@@ -24,6 +24,7 @@ import scala.collection.JavaConversions._
 import scala.concurrent.Future
 import scala.reflect.runtime.universe._
 import controllers._
+import accumulator.BoardReader
 
 /**
  * An election is a typed, purely function state machine with an immutable history

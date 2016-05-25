@@ -21,6 +21,7 @@ import mpservice.MPBridgeS
 import mpservice.MPBridge
 import app._
 import controllers._
+import accumulator.BoardReader
 
 import scala.util.{Success, Failure}
 
