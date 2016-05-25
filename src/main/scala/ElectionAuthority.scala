@@ -6,14 +6,13 @@ import akka.stream.{ActorMaterializer, Materializer}
 import scala.concurrent.{blocking, Future, Promise}
 import shapeless._
 import nat._
-import shapeless.ops._
 import ops.nat._
-import controllers._
-import mpservice._
-import shapeless._
-import syntax.sized._
 import LT._
 import accumulator.BoardReader
+import election.Shares
+import election.Mixing
+import election.Election
+import election.Decryptions
 
 // N should be the predecessor of the number you want, I've been unable to use Pred[N] so I use Succ[N]
 class ElectionAuthority[W <: Nat : ToInt , N <: Nat : ToInt ]() (implicit r : N < W){

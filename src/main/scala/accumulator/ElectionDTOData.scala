@@ -2,11 +2,12 @@ package accumulator
 
 import shapeless._
 import ops.nat._
-
 import app._
 import models._
 import play.api.libs.json._
 import java.sql.Timestamp
+import election.Election
+import election.Combined
 
 object ElectionDTOData {
   val REGISTERED = "registered"

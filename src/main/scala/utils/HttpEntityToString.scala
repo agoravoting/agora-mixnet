@@ -5,9 +5,8 @@ import akka.stream.ActorMaterializer
 import akka.http.scaladsl.model._
 import scala.concurrent.duration._
 
-
 trait HttpEntityToString {
-import scala.concurrent.ExecutionContext
+  import scala.concurrent.ExecutionContext
   
   def getString(entity: HttpEntity) (implicit ec: ExecutionContext, fm: ActorMaterializer): Future[String] =  {
     val promise = Promise[String]()

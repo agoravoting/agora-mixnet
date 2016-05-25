@@ -9,6 +9,8 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.http.scaladsl.model._
 import utils._
+import election.JsElection
+import election.ElectionJsonFormatter
 
 trait PostOffice extends ElectionJsonFormatter with Response
 {  

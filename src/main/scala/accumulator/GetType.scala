@@ -5,6 +5,7 @@ import nat._
 import ops.nat._
 
 import app._
+import election._
 
 trait GetType {  
   def getElectionTypeCreated[W <: Nat : ToInt] (election: Election[W, Created]) : String = {

@@ -5,12 +5,13 @@ import models._
 import scala.concurrent.{Future, Promise}
 import play.api.libs.json._
 import play.api.libs.ws._
-
 import scala.util.{Try, Success, Failure}
 import akka.http.scaladsl.model._
-import services.BoardConfig
+import utils.BoardConfig
 import utils._
 import controllers._
+import election._
+import election.ElectionJsonFormatter
 
 object BoardReader
   extends ElectionJsonFormatter

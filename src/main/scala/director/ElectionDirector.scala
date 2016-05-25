@@ -9,20 +9,20 @@ import akka.http.scaladsl.server._
 import akka.http.scaladsl.model._
 import play.api.libs.json._
 import shapeless._
-import nat._
 import ops.nat._
 import controllers._
 import mpservice._
 import utils._
-import models.ErrorProcessing
 import accumulator.BoardReader
+import election._
+import models._
 
 class ElectionDirector[N <: Nat : ToInt](val totalVotes: Int)  
 extends AbstractElectionDirector 
 with Response  
-with HttpEntityToString 
-with ElectionJsonFormatter
+with HttpEntityToString
 with ErrorProcessing
+with EncryptionFormatter
 {
   implicit val system = ActorSystem()
   implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
@@ -35,7 +35,7 @@ with ErrorProcessing
   private val finishedElectionsMap = scala.collection.mutable.Map[String, Election[N, Decrypted]]()
   
   BoardReader.addElectionCreationListener { uid =>
-    println("--- listening " + uid)
+    println("director listening to uid " + uid)
    val subscriberCreatePromise = blocking { getOrAddCreateNotification(uid, Promise[Unit]()) }
    subscriberCreatePromise.success({})
    processStartElection(uid)

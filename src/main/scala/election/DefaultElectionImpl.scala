@@ -1,29 +1,19 @@
-package app
+package election
 
 import shapeless._
-import nat._
-import syntax.sized._
-import ops.nat._
-import LT._
-import com.github.nscala_time.time.Imports._
-import com.typesafe.config.ConfigFactory
-
+import shapeless.syntax.sized._
+import shapeless.ops.nat._
+import shapeless.ops.nat.LT._
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
-import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
 import ch.bfh.unicrypt.math.algebra.general.classes.Pair
-import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
 import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
-import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
-import ch.bfh.unicrypt.math.algebra.general.abstracts.AbstractSet
-import ch.bfh.unicrypt.math.algebra.general.classes.ProductSet
-import mpservice.MPBridgeS
-import mpservice.MPBridge
-
-import scala.collection.JavaConversions._
 import scala.concurrent.Future
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.ActorMaterializer
+import models._
+import app._
+import utils.Util
 
 /**
  * The state machine transitions

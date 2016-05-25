@@ -1,9 +1,5 @@
 import shapeless._
 import nat._
-import syntax.sized._
-import ops.nat._
-import LT._
-import com.github.nscala_time.time.Imports._
 import com.typesafe.config.ConfigFactory
 import scala.concurrent._
 import scala.concurrent.duration.Duration
@@ -12,18 +8,14 @@ import akka.stream.{ActorMaterializer, Materializer}
 
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
-import ch.bfh.unicrypt.math.algebra.general.interfaces.Element
-import ch.bfh.unicrypt.math.algebra.general.classes.Pair
-import ch.bfh.unicrypt.math.algebra.general.classes.Tuple
-import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
-import ch.bfh.unicrypt.crypto.encoder.interfaces.Encoder
-import mpservice.MPBridgeS
-import mpservice.MPBridge
+import mpservice._
 import app._
-import controllers._
 import accumulator.BoardReader
 import director._
 import scala.util.{Success, Failure}
+import election._
+import models._
+import utils.Util
 
 object FiwareDemo extends App {
   

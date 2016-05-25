@@ -37,6 +37,20 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
+import election.VotesStopped
+import election.Shares
+import election.Mixing
+import election.Election
+import election.Decryptions
+import models.SigmaProofDTO
+import models.ShuffleResultDTO
+import models.ShuffleProofDTO
+import models.PermutationProofDTO
+import models.PartialDecryptionDTO
+import models.MixProofDTO
+import models.EncryptionKeyShareDTO
+import models.CryptoSettings
+import utils.Util
 
 case class PreShuffleData(mixer: ReEncryptionMixer, psi: PermutationElement, elGamal: ElGamalEncryptionScheme,
   challengeGenerator: SigmaChallengeGenerator, ecg: ChallengeGenerator, permutationCommitmentRandomizations: Tuple,

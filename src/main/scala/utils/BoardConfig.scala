@@ -1,4 +1,4 @@
-package services
+package utils
 
 import javax.inject._
 import com.typesafe.config.ConfigFactory

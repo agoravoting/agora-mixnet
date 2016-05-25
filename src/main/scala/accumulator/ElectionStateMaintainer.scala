@@ -4,15 +4,14 @@ import shapeless._
 import nat._
 import syntax.sized._
 import ops.nat._
-
-import app._
-import models._
 import play.api.libs.json._
 import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import java.math.BigInteger
 import scala.util.{Try, Success, Failure}
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
+import election._
+import models._
 
 class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
   extends ElectionJsonFormatter

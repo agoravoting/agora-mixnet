@@ -2,30 +2,15 @@ package controllers
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
 import akka.stream.{ActorMaterializer, Materializer}
-import akka.stream.scaladsl.Sink
-import akka.http.scaladsl.model.HttpMethods._
-import akka.http.scaladsl.model._
 import scala.concurrent.{Future, Promise}
-import scala.util.{Try, Success, Failure}
-import scala.concurrent.duration._
-import scala.util._
 import utils.Response
-import akka.stream.scaladsl.Source
 
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.Directives._
-import play.api.libs.json._
-import play.api.mvc.Results._
-import play.api.libs.functional.syntax._
-import models._
-import app._
-import services.BoardConfig
+import utils.BoardConfig
 import accumulator._
 import director._
-
 
 object Router extends Response
 {

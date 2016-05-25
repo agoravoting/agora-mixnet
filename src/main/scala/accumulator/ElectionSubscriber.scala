@@ -8,6 +8,7 @@ import scala.concurrent.{Future, Promise}
 import scala.util.{Try, Success, Failure}
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
+import election._
 
 class ElectionSubscriber[W <: Nat : ToInt](val uid : String) extends GetType {
   implicit val system = ActorSystem()
