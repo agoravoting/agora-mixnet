@@ -1,5 +1,6 @@
-package app
+package director
 
+import app._
 import scala.util.{Try, Success, Failure}
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
@@ -17,7 +18,8 @@ import models.ErrorProcessing
 import accumulator.BoardReader
 
 class ElectionDirector[N <: Nat : ToInt](val totalVotes: Int)  
-extends Response  
+extends AbstractElectionDirector 
+with Response  
 with HttpEntityToString 
 with ElectionJsonFormatter
 with ErrorProcessing
@@ -39,7 +41,7 @@ with ErrorProcessing
    processStartElection(uid)
   }
   
-  Router.setVoteFunc { addVote }
+  Router.setElectionDirector { this }
 
   private def getOrAddCreateNotification(key: String, promise: Promise[Unit]) : Promise[Unit] = {
     creationNotificationsMap.synchronized {
@@ -53,7 +55,7 @@ with ErrorProcessing
     }
   }
   
-  def addVote(ctx: RequestContext, electionId : Long, voterId : String) = {
+  def addVote(ctx: RequestContext, electionId : Long, voterId : String) : Future[HttpResponse] = {
     val promise = Promise[HttpResponse]()
     Future {
       votingElectionsMap.get(electionId.toString) match {

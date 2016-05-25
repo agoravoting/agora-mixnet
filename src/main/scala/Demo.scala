@@ -22,7 +22,7 @@ import mpservice.MPBridge
 import app._
 import controllers._
 import accumulator.BoardReader
-
+import director._
 import scala.util.{Success, Failure}
 
 object FiwareDemo extends App {

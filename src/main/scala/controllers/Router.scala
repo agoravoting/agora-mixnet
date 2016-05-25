@@ -23,7 +23,8 @@ import play.api.libs.functional.syntax._
 import models._
 import app._
 import services.BoardConfig
-import accumulator.BoardReader
+import accumulator._
+import director._
 
 
 object Router extends Response
@@ -32,10 +33,7 @@ object Router extends Response
   implicit val executor = system.dispatchers.lookup("my-blocking-dispatcher")
   implicit val materializer = ActorMaterializer()
   
-  private var voteFunc : (RequestContext, Long, String) => Future[HttpResponse]  =
-  {
-    (ctx, electionId, voterId) => Future { HttpResponse(status = 400, entity = Json.stringify(error(s"Not Implemented", ErrorCodes.EO_ERROR)) ) }
-  }
+  private var directorImpl : AbstractElectionDirector = new EmptyElectionDirector()
   
   val route : Route = {
     path("accumulate") {
@@ -61,7 +59,7 @@ object Router extends Response
         post { ctx =>
           println(s"Router /api/election/$electionId/voter/$voterId")
           ctx.complete {
-            voteFunc(ctx, electionId, voterId)
+            directorImpl.addVote(ctx, electionId, voterId)
           }
         }
       }
@@ -83,7 +81,6 @@ object Router extends Response
   portNumber.future onSuccess { case port =>
     println("port is " + port)
   }
-  
   
   tryBindPortRange(BoardConfig.server.startPort, route,BoardConfig.server.portRange)
     
@@ -111,7 +108,7 @@ object Router extends Response
         handler = myRoute, 
         interface = BoardConfig.server.interface,
         port = port) map 
-    { 
+    {
       future =>
         portNumber.success(port)
         future
@@ -129,7 +126,7 @@ object Router extends Response
     system.terminate()
   }
   
-  def setVoteFunc(newFunc: (RequestContext, Long, String) => Future[HttpResponse]) = {
-    voteFunc = newFunc
+  def setElectionDirector(director: AbstractElectionDirector) {
+    directorImpl = director
   }
 }
