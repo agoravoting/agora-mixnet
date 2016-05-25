@@ -58,7 +58,12 @@ with EncryptionFormatter
   def addVote(ctx: RequestContext, electionId : Long, voterId : String) : Future[HttpResponse] = {
     val promise = Promise[HttpResponse]()
     Future {
-      votingElectionsMap.get(electionId.toString) match {
+      val electionOpt = blocking {
+        votingElectionsMap.synchronized {
+          votingElectionsMap.get(electionId.toString)
+        }
+      }
+      electionOpt match {
         case None =>
           promise.success(HttpResponse(status = 400, entity = Json.stringify(response(s"Invalid election id $electionId")) ))
         case Some(election) =>
@@ -76,6 +81,11 @@ with EncryptionFormatter
                         )
               val vote = voteDTO.validate(pks, true, electionId, voterId)
               Election.addVote(election, vote) map { voted =>
+                blocking {
+                  votingElectionsMap.synchronized {
+                    votingElectionsMap += (electionId.toString -> voted)
+                  }
+                }
                 promise.success(HttpResponse(status = 200, entity = Json.stringify(response(voted.state.addVoteIndex)) ))
               }  recover { case err =>
                 promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
