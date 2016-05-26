@@ -37,7 +37,7 @@ object BoardReader
   }
   
   private def unsubscribe(id: String, ws: WSClient) = {
-    println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF unsubscribe")
+    println("GG unsubscribe")
     Router.getPort() map { port =>
       val unsubsReq = UnsubscribeRequest(id, s"http://localhost:${port}/accumulate")
       println(Json.stringify(Json.toJson(unsubsReq)))
@@ -59,7 +59,7 @@ object BoardReader
   def getSubscriptionId(ws: WSClient) : Future[String] =  {
     val promise = Promise[String]
     Future {
-      println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF getSubscriptionId")
+      println("GG getSubscriptionId")
       Router.getPort() onComplete { 
         case Success(port) =>
           val acc = SubscribeRequest("election", "#", s"http://localhost:${port}/accumulate")
@@ -84,9 +84,11 @@ object BoardReader
     }
     promise.future
   }
+  
   def accumulate(request: HttpRequest) : Future[HttpResponse] = {
     val promise = Promise[HttpResponse]()
     Future {
+      println(s"GG accumulate")
       getString(request.entity) map { bodyStr =>
         val json = Json.parse(bodyStr)
         json.validate[AccumulateRequest] match {
@@ -111,7 +113,7 @@ object BoardReader
                jsonError match {
                  case Some(e) =>
                    promise.success(HttpResponse(400, entity = e))
-                 case None => 
+                 case None =>
                    push(postSeq)
                    promise.success(HttpResponse(200, entity = s"{}"))
                }

@@ -19,7 +19,7 @@ import models._
 
 class ElectionDirector[N <: Nat : ToInt](val totalVotes: Int)  
 extends AbstractElectionDirector 
-with Response  
+with Response
 with HttpEntityToString
 with ErrorProcessing
 with EncryptionFormatter

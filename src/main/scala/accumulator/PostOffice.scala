@@ -40,8 +40,8 @@ trait PostOffice extends ElectionJsonFormatter with Response
   }
   
   def add(post: Post) {
+    println("GG PostOffice::add")
     queue.synchronized {
-      println("GG PostOffice:add")
       Try {
         post.board_attributes.index.toLong
       } map { postIndex =>
@@ -114,24 +114,29 @@ trait PostOffice extends ElectionJsonFormatter with Response
     }
   }
   
-  private def remove() {
-    println("GG PostOffice::remove")
-    var head : Option[Post] = None
+  private def getQueueHeadOpt() :Option[Post] = {
     queue.synchronized {
       if(queue.size > 0) {
         queue.head match {
           case Some(post) =>
             // TODO: here we should check the post hash and signature
-            head = queue.dequeue
             index = index + 1
-          case None => ;
+            queue.dequeue
+          case None =>
+            None
         }
+      } else {
+        None
       }
     }
-    head match {
-      case Some(post) =>
-        send(post)
-      case None => ;
+  }
+  
+  private def remove() {
+    println("GG PostOffice::remove")
+    var head = getQueueHeadOpt()
+    while (head != None) {
+      send(head.get)
+      head = getQueueHeadOpt()
     }
   }
   
