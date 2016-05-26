@@ -58,43 +58,54 @@ with EncryptionFormatter
   def addVote(ctx: RequestContext, electionId : Long, voterId : String) : Future[HttpResponse] = {
     val promise = Promise[HttpResponse]()
     Future {
-      val electionOpt = blocking {
-        votingElectionsMap.synchronized {
-          votingElectionsMap.get(electionId.toString)
+      val checkHMAC = HMACAuthCheck(voterId, "AuthEvent", electionId, "vote")
+      checkHMAC.check(ctx.request) map { checkResult =>
+        if(checkResult) {
+          println("addVote HMac check : " + checkResult)
+        } else {
+          throw new java.lang.Error("HMac check failed")
         }
-      }
-      electionOpt match {
-        case None =>
-          promise.success(HttpResponse(status = 400, entity = Json.stringify(response(s"Invalid election id $electionId")) ))
-        case Some(election) =>
-          getString(ctx.request.entity) map { strRequest =>
-          val jsInput = Json.parse(strRequest)
-          jsInput.validate[VoteDTO] match {
-            case JsError(errors) =>
-              promise.success(HttpResponse(status = 400, entity = Json.stringify(response(s"Invalid vote json $errors")) ))
-            case JsSuccess(voteDTO, jsPath) =>
-              val pks = PublicKey(
-                          q = BigInt( election.state.cSettings.group.getOrder().toString ),
-                          p = BigInt( election.state.cSettings.group.getModulus().toString ),
-                          y = BigInt( election.state.publicKey ),
-                          g = BigInt( election.state.cSettings.generator.getValue().toString )
-                        )
-              val vote = voteDTO.validate(pks, true, electionId, voterId)
-              Election.addVote(election, vote) map { voted =>
-                blocking {
-                  votingElectionsMap.synchronized {
-                    votingElectionsMap += (electionId.toString -> voted)
-                  }
-                }
-                promise.success(HttpResponse(status = 200, entity = Json.stringify(response(voted.state.addVoteIndex)) ))
-              }  recover { case err =>
-                promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
-              }
-            }
-          } recover { case err =>
-            promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
+      } map { aUnit =>
+        val electionOpt = blocking {
+          votingElectionsMap.synchronized {
+            votingElectionsMap.get(electionId.toString)
           }
-      }
+        }
+        electionOpt match {
+          case None =>
+            promise.success(HttpResponse(status = 400, entity = Json.stringify(response(s"Invalid election id $electionId")) ))
+          case Some(election) =>
+            getString(ctx.request.entity) map { strRequest =>
+            val jsInput = Json.parse(strRequest)
+            jsInput.validate[VoteDTO] match {
+              case JsError(errors) =>
+                promise.success(HttpResponse(status = 400, entity = Json.stringify(response(s"Invalid vote json $errors")) ))
+              case JsSuccess(voteDTO, jsPath) =>
+                val pks = PublicKey(
+                            q = BigInt( election.state.cSettings.group.getOrder().toString ),
+                            p = BigInt( election.state.cSettings.group.getModulus().toString ),
+                            y = BigInt( election.state.publicKey ),
+                            g = BigInt( election.state.cSettings.generator.getValue().toString )
+                          )
+                val vote = voteDTO.validate(pks, true, electionId, voterId)
+                Election.addVote(election, vote) map { voted =>
+                  blocking {
+                    votingElectionsMap.synchronized {
+                      votingElectionsMap += (electionId.toString -> voted)
+                    }
+                  }
+                  promise.success(HttpResponse(status = 200, entity = Json.stringify(response(voted.state.addVoteIndex)) ))
+                }  recover { case err =>
+                  promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
+                }
+              }
+            } recover { case err =>
+              promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
+            }
+        }
+      } recover { case err =>
+        promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
+      }      
     } recover { case err =>
       promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
     }
