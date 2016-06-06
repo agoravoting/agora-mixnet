@@ -13,8 +13,12 @@ class EmptyElectionDirector extends AbstractElectionDirector with Response {
   implicit val executor = system.dispatchers.lookup("my-blocking-dispatcher")
   implicit val materializer = ActorMaterializer()
   
-  def addVote(ctx: RequestContext, electionId : Long, voterId: String) : Future[HttpResponse] =
+  private def notImplemented() : Future[HttpResponse] =
   {
      Future { HttpResponse(status = 400, entity = Json.stringify(error(s"Not Implemented", ErrorCodes.EO_ERROR)) ) }
   }
+  
+  def addVote(ctx: RequestContext, electionId : Long, voterId: String) : Future[HttpResponse] = notImplemented()
+  
+  def createElection(ctx: RequestContext, electionId : Long) : Future[HttpResponse] = notImplemented()
 }

@@ -10,7 +10,7 @@ import java.util.Date
   * Utilities for json messaging
   *
   */
-trait Response {
+trait Response extends ElectionDTOFormatter {
   case class Response[T: Format](payload: T)
   case class Error(error: String, code: Int)
 
@@ -23,31 +23,8 @@ trait Response {
     val NO_ELECTION = 6
     val NO_PKS = 7
   }
-
-  val dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS")
-
-  implicit val formatTimestamp = new Format[Timestamp] {
-    def writes(ts: Timestamp): JsValue = {
-      JsString(dateFormat.format(ts))
-    }
-    def reads(ts: JsValue): JsResult[Timestamp] = {
-      try {
-        val date = dateFormat.parse(ts.as[String])
-        JsSuccess(new Timestamp(date.getTime))
-      } catch {
-        case e: IllegalArgumentException => JsError("Unable to parse timestamp")
-      }
-    }
-  }
   
   implicit val errorFormatter = Json.format[Error]
-  implicit val electionExtraFormatter = Json.format[ElectionExtra]
-  implicit val urlFormatter = Json.format[Url]
-  implicit val answerFormatter = Json.format[Answer]
-  implicit val questionFormatter = Json.format[Question]
-  implicit val electionPresentationFormatter = Json.format[ElectionPresentation]
-  implicit val electionConfigFormatter = Json.format[ElectionConfig]
-  implicit val electionDTOFormatter = Json.format[ElectionDTO]
 
   /** need to manually write reads/writes for generic types */
   implicit def responseReads[T: Format]: Reads[Response[T]] = new Reads[Response[T]] {

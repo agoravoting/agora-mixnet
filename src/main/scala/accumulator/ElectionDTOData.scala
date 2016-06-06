@@ -48,7 +48,7 @@ class ElectionDTOData(val id: Long, val numAuth: Int) {
             genAuthArray(),
             "Election title",
             "Election description",
-            Array(
+            Seq(
                 Question(
                     "Question 0",
                     "accordion",
@@ -59,13 +59,13 @@ class ElectionDTOData(val id: Long, val numAuth: Int) {
                     true,
                     "plurality-at-large",
                     "over-total-valid-votes",
-                    Array(
+                    Seq(
                       Answer(
                           0,
                           "",
                           "",
                           0,
-                          Array(),
+                          Seq(),
                           "voting option A"
                       ),
                       Answer(
@@ -73,7 +73,7 @@ class ElectionDTOData(val id: Long, val numAuth: Int) {
                           "",
                           "",
                           1,
-                          Array(),
+                          Seq(),
                           "voting option B"
                       )
                     )
@@ -84,7 +84,7 @@ class ElectionDTOData(val id: Long, val numAuth: Int) {
             ElectionPresentation(
                 "",
                 "default",
-                Array(),
+                Seq(),
                 "",
                 None
             ),

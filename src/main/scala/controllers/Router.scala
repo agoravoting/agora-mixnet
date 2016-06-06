@@ -39,6 +39,16 @@ object Router extends Response
         }
       }
     } ~
+    path("api" / "election" / LongNumber) { electionId =>
+      pathEnd {
+        post { ctx =>
+          println(s"Router create post /api/election/$electionId")
+          ctx.complete {
+            directorImpl.createElection(ctx, electionId)
+          }
+        }
+      }
+    } ~
     path("api" / "election" / LongNumber / "voter" / Segment) { (electionId, voterId) =>
       pathEnd {
         post { ctx =>

@@ -7,7 +7,7 @@ import ops.nat._
 import app._
 import election._
 
-trait GetType {  
+trait GetType {
   def getElectionTypeCreated[W <: Nat : ToInt] (election: Election[W, Created]) : String = {
     s"app.Election[shapeless.nat._${toInt[W]},app.Created]"
   }

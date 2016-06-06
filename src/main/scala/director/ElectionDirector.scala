@@ -112,6 +112,11 @@ with EncryptionFormatter
     promise.future
   }
   
+  def createElection(ctx: RequestContext, electionId : Long) : Future[HttpResponse] =
+  {
+    Future { HttpResponse(status = 400, entity = Json.stringify(error(s"Felix es el mejor", ErrorCodes.EO_ERROR)) ) }
+  }
+  
   def newElection() : Future[String] = {
     val promise = Promise[String]()
     Future {

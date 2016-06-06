@@ -8,11 +8,12 @@ import ch.bfh.unicrypt.math.algebra.multiplicative.classes.GStarModSafePrime
 import ch.bfh.unicrypt.crypto.schemes.encryption.classes.ElGamalEncryptionScheme
 import ch.bfh.unicrypt.math.algebra.general.classes.Pair
 import ch.bfh.unicrypt.crypto.encoder.classes.ZModPrimeToGStarModSafePrime
-import scala.concurrent.Future
+import scala.concurrent.{ Future, Promise }
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import models._
 import app._
+//import accumulator.ElectionDTOData
 import utils.Util
 
 /**
@@ -27,6 +28,7 @@ trait DefaultElectionImpl extends ElectionTrait
   implicit val materializer = ActorMaterializer()
   // create an election 
   def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = {
+    val promise = Promise[Election[W, Created]]()
     Future {
       println("Going to start a new Election!")
       val group = GStarModSafePrime.getFirstInstance(bits)
@@ -35,9 +37,13 @@ trait DefaultElectionImpl extends ElectionTrait
   // val group = ECZModPrime.getInstance(ECZModPrimeParameters.SECP521r1)
       val generator = group.getDefaultGenerator()
       val cSettings = CryptoSettings(group, generator)
+      //val defaultDto = new ElectionDTOData(id.toLong, ToInt[W].apply()) //id right now is a String and not a number and this will fail
       // the immutable log is the one that fills in the election id, here we just set it to "0" temporarily
-      new Election[W, Created](Created(id, cSettings, "0"))
+      promise.success(new Election[W, Created](Created(id, cSettings, "0"/*, defaultDto()*/)))
+    } recover { case err =>
+      promise.failure(err)
     }
+    promise.future
   }
 
   // now ready to receive shares

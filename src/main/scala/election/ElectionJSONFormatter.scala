@@ -16,10 +16,10 @@ case class JsVotesStopped(lastAddVoteIndex: Int, date: String)
 case class JsMixing(level: Int, mixes: ShuffleResultDTO)
 case class JsDecryptions(level: Int, decryption: PartialDecryptionDTO)
 case class JsDecrypted(decrypted: Seq[String])
-case class JsElection(level: Int, state: JsCreated)
+case class JsElection(level: Int, state: JsCreated/*, dto: ElectionDTO*/)
 case class JsMessage(messageType: String, message: JsValue)
 
-trait ElectionJsonFormatter {
+trait ElectionJsonFormatter extends ElectionDTOFormatter {
       
   implicit def tuple2Writes[A, B](implicit aWrites: Writes[A], bWrites: Writes[B]): Writes[Tuple2[A, B]] = new Writes[Tuple2[A, B]] {
     def writes(tuple: Tuple2[A, B]) = JsArray(Seq(aWrites.writes(tuple._1), bWrites.writes(tuple._2)))
@@ -33,7 +33,7 @@ trait ElectionJsonFormatter {
     } yield (a, b)
     case _ => JsError(Seq(JsPath() -> Seq(ValidationError("Expected array of two elements"))))
   }
-
+  
   implicit val JsSharesF = Json.format[JsShares]
   implicit val JsMessageF = Json.format[JsMessage]
   implicit val JsCryptoSettingsF = Json.format[JsCryptoSettings]
@@ -67,7 +67,9 @@ trait ElectionMachineJSONConverter
           input.state.cSettings.group.getModulus().toString(), 
           input.state.cSettings.generator.convertToString()
         )
-    ))
+       )/*,
+       input.state.dto*/
+    )
     val message = Json.stringify(Json.toJson(jsElection))
     println("GG Post message: ")
     PostRequest(message, UserAttributes("election", "create", None, None))
