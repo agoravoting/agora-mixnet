@@ -18,7 +18,7 @@ object BaseImpl extends DefaultElectionImpl {}
  *
  * Method signatures allow the compiler to enforce the state machine logic.
  */
-trait ElectionMachine extends ElectionTrait with ErrorProcessing
+trait ElectionMachine extends ElectionTrait
 {
   implicit val system = ActorSystem()
   implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
@@ -32,7 +32,6 @@ trait ElectionMachine extends ElectionTrait with ErrorProcessing
           // the immutable log sets the election id, so we really need to write in the log before fulfilling the promise
           promise.completeWith(BoardPoster.create(election))          
         case Failure(err) =>
-          println("create BaseImpl Failure")
           promise.failure(err)
       }
     } recover { case err => 

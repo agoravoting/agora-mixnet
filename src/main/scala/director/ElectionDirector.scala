@@ -116,6 +116,8 @@ with EncryptionFormatter
   {
     Future { HttpResponse(status = 400, entity = Json.stringify(error(s"Felix es el mejor", ErrorCodes.EO_ERROR)) ) }
   }
+  // hack
+  var electionCounter: Long = 0
   
   def newElection() : Future[String] = {
     val promise = Promise[String]()
@@ -123,7 +125,11 @@ with EncryptionFormatter
       // create the election,
       // we are using privacy level 2, two trustees of each kind
       // we are 2048 bits for the size of the group modulus
-      val start = Election.create[N]("my election", 2048)
+      
+      // hack
+      val counter = electionCounter
+      electionCounter = electionCounter + 1
+      val start = Election.create[N](counter.toString(), 2048)
       start onComplete {
         case Success(election) =>
           val subscriberCreatePromise = blocking { getOrAddCreateNotification(election.state.uid, Promise[Unit]()) }

@@ -20,7 +20,7 @@ class Election[+W <: Nat : ToInt, +S <: ElectionState] (val state: S) {
  * These types represent the state of the election and associated information
  *
  */
-case class Created(override val id: String, override val cSettings: CryptoSettings, override val uid: String/*, val dto: ElectionDTO*/) extends ElectionState(id, cSettings, uid)
+case class Created(override val id: String, override val cSettings: CryptoSettings, override val uid: String, val dto: ElectionDTO) extends ElectionState(id, cSettings, uid)
 case class Shares[T <: Nat : ToInt](val shares: Sized[List[(String, String)], T], prev: ElectionState) extends ElectionStateShares(prev, shares.toList) with HasHistory
 case class Combined(override val publicKey: String, prev: ElectionStateShares) extends ElectionStatePk(prev, publicKey) with HasHistory
 case class Votes(votes: List[String], addVoteIndex: Int, prev: ElectionStatePk) extends ElectionStatePk(prev, prev.publicKey) with HasHistory

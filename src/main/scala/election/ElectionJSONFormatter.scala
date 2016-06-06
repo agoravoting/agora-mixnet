@@ -16,7 +16,7 @@ case class JsVotesStopped(lastAddVoteIndex: Int, date: String)
 case class JsMixing(level: Int, mixes: ShuffleResultDTO)
 case class JsDecryptions(level: Int, decryption: PartialDecryptionDTO)
 case class JsDecrypted(decrypted: Seq[String])
-case class JsElection(level: Int, state: JsCreated/*, dto: ElectionDTO*/)
+case class JsElection(level: Int, state: JsCreated, dto: ElectionDTO)
 case class JsMessage(messageType: String, message: JsValue)
 
 trait ElectionJsonFormatter extends ElectionDTOFormatter {
@@ -67,8 +67,8 @@ trait ElectionMachineJSONConverter
           input.state.cSettings.group.getModulus().toString(), 
           input.state.cSettings.generator.convertToString()
         )
-       )/*,
-       input.state.dto*/
+       ),
+       input.state.dto
     )
     val message = Json.stringify(Json.toJson(jsElection))
     println("GG Post message: ")
