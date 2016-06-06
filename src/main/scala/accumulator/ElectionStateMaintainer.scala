@@ -501,7 +501,8 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
          post.user_attributes.group == "create") {
         jsMsg.validate[JsElection] match {
           case jSeqPost: JsSuccess[JsElection] =>
-            pushCreate(jSeqPost.get, post.board_attributes.index)
+            val jsElect = jSeqPost.get
+            pushCreate(jSeqPost.get, jsElect.state.id)
             dto.setState(ElectionDTOData.REGISTERED)
           case e: JsError => 
             println(s"\ElectionStateMaintainer JsError error: ${e} message ${post.message}")

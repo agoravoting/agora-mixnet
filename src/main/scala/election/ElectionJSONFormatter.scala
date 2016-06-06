@@ -62,7 +62,7 @@ trait ElectionMachineJSONConverter
     val jsElection = JsElection(
       ToInt[W].apply(),
       JsCreated(
-        input.state.id, 
+        input.state.uid, 
         JsCryptoSettings(
           input.state.cSettings.group.getModulus().toString(), 
           input.state.cSettings.generator.convertToString()
@@ -71,7 +71,7 @@ trait ElectionMachineJSONConverter
        input.state.dto
     )
     val message = Json.stringify(Json.toJson(jsElection))
-    println("GG Post message: ")
+    println("GG Post message with uid " + input.state.uid)
     PostRequest(message, UserAttributes("election", "create", None, None))
   }
   

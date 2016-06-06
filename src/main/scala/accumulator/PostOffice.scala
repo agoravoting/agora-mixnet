@@ -70,31 +70,26 @@ trait PostOffice extends ElectionJsonFormatter with Response
   private def send(post: Post) {
     if("election" == post.user_attributes.section) {
       val group : String = post.user_attributes.group
-      val electionIdStr = post.board_attributes.index
       if("create" == group) {
-        Try { electionIdStr.toLong } match {
-          case Success(electionId) =>
-            electionMap.get(electionId) match {
-              case Some(electionWrapper) =>
-                println(s"Error: duplicated Election Id: ${electionId}")
-              case None =>
-                val jsMsg = Json.parse(post.message)
-                jsMsg.validate[JsElection] match {
-                  case jSeqPost: JsSuccess[JsElection] =>
-                    val maintainer = new MaintainerWrapper(jSeqPost.get.level, electionIdStr)
-                    maintainer.push(post)
-                    electionMap += (electionId -> maintainer)
-                    callbackQueue.synchronized {
-                      callbackQueue foreach { func =>
-                        Future { func(electionIdStr) }
-                      }
-                    }
-                  case e: JsError => 
-                    println("Error: JsCreate format error")
+        val jsMsg = Json.parse(post.message)
+        jsMsg.validate[JsElection] match {
+          case jSeqPost: JsSuccess[JsElection] =>
+            val electionIdStr = jSeqPost.get.state.id
+            Try { electionIdStr.toLong } match {
+              case Success(electionId) =>
+                val maintainer = new MaintainerWrapper(jSeqPost.get.level, electionIdStr)
+                maintainer.push(post)
+                electionMap += (electionId -> maintainer)
+                callbackQueue.synchronized {
+                  callbackQueue foreach { func =>
+                    Future { func(electionIdStr) }
+                  }
                 }
+              case Failure(e) =>
+                println(s"Error: Election Id is not a number (but It should be): ${electionIdStr}")
             }
-          case Failure(e) =>
-            println(s"Error: Election Id is not a number (but It should be): ${electionIdStr}")
+          case e: JsError => 
+            println("Error: JsCreate format error")
         }
       } else {
         Try { group.toLong } match {

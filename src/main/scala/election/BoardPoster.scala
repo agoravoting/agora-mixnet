@@ -62,17 +62,15 @@ object BoardPoster extends ElectionMachineJSONConverter with BoardJSONFormatter
       .post(Json.toJson(CreatedToPostRequest(election)))
       
       futureResponse onFailure { case err =>
-        println("create BoardPoster Failure")
         promise.failure(err)
       }
       
       futureResponse onSuccess { case response =>
-        println("create BoardPoster Success")
        response.json.validate[BoardAttributes] match {
          case attr: JsSuccess[BoardAttributes] =>
-           println("Election creation posted to immutable log. Election id is " + attr.get.index)
+           println("Election creation posted to immutable log. Election id is " + attr.get.index + " and uid " + election.state.uid)
            // The post message index will be the unique id of the election
-           promise.success(new Election[W, Created](Created(election.state.id, election.state.cSettings, attr.get.index, election.state.dto)))
+           promise.success(new Election[W, Created](Created(attr.get.index, election.state.cSettings, election.state.uid, election.state.dto)))
          case JsError(e) =>
            promise.failure(new Error(s"$e"))
        }

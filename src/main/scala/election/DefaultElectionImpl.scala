@@ -39,7 +39,7 @@ trait DefaultElectionImpl extends ElectionTrait
       val cSettings = CryptoSettings(group, generator)
       val defaultDto = new ElectionDTOData(id.toLong, ToInt[W].apply()) //id right now is a String and not a number and this will fail
       // the immutable log is the one that fills in the election id, here we just set it to "0" temporarily
-      promise.success(new Election[W, Created](Created(id, cSettings, "0", defaultDto())))
+      promise.success(new Election[W, Created](Created("0", cSettings, id, defaultDto())))
     } recover { case err =>
       promise.failure(err)
     }

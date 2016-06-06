@@ -51,6 +51,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -67,6 +69,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -82,6 +86,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -99,6 +105,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -114,6 +122,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -129,6 +139,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -144,6 +156,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -159,6 +173,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -174,6 +190,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -189,6 +207,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -204,6 +224,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -219,6 +241,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }
@@ -234,6 +258,8 @@ trait ElectionMachine extends ElectionTrait
         case Failure(err) =>
           promise.failure(err)
       }
+    } recover { case err => 
+      promise.failure(err)
     }
     promise.future
   }

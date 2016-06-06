@@ -117,7 +117,7 @@ with EncryptionFormatter
     Future { HttpResponse(status = 400, entity = Json.stringify(error(s"Felix es el mejor", ErrorCodes.EO_ERROR)) ) }
   }
   // hack
-  var electionCounter: Long = 0
+  var electionCounter: Long = 3
   
   def newElection() : Future[String] = {
     val promise = Promise[String]()
