@@ -72,35 +72,40 @@ trait PostOffice extends ElectionJsonFormatter with Response
     if("election" == post.user_attributes.section) {
       val group : String = post.user_attributes.group
       if("create" == group) {
-        val jsMsg = Json.parse(post.message)
-        jsMsg.validate[JsElection] match {
-          case jSeqPost: JsSuccess[JsElection] =>
-            val electionIdStr = jSeqPost.get.state.id
-            Try { electionIdStr.toLong } match {
-              case Success(electionId) =>
-                val maintainer = new MaintainerWrapper(jSeqPost.get.level, electionIdStr)
-                maintainer.push(post)
-                electionMap += (electionId -> maintainer)
-                callbackQueue.synchronized {
-                  callbackQueue foreach { func =>
-                    Future { func(electionIdStr) }
+        electionMap.synchronized {
+          val jsMsg = Json.parse(post.message)
+          jsMsg.validate[JsElection] match {
+            case jSeqPost: JsSuccess[JsElection] =>
+              val electionIdStr = jSeqPost.get.state.id
+              Try { electionIdStr.toLong } match {
+                case Success(electionId) =>
+                  val maintainer = new MaintainerWrapper(jSeqPost.get.level, electionIdStr)
+                  maintainer.push(post)
+                  electionMap += (electionId -> maintainer)
+                  callbackQueue.synchronized {
+                    callbackQueue foreach { func =>
+                      Future { func(electionIdStr) }
+                    }
                   }
-                }
-              case Failure(e) =>
-                println(s"Error: Election Id is not a number (but It should be): ${electionIdStr}")
-            }
-          case e: JsError => 
-            println("Error: JsCreate format error")
+                case Failure(e) =>
+                  println(s"Error: Election Id is not a number (but It should be): ${electionIdStr}")
+              }
+            case e: JsError => 
+              println("Error: JsCreate format error")
+          }
         }
       } else {
         Try { group.toLong } match {
-          case Success(electionId) => 
-            electionMap.get(electionId) match {
+          case Success(electionId) =>
+            electionMap.synchronized {
+              electionMap.get(electionId) 
+            } match {
               case Some(electionWrapper) => 
                 electionWrapper.push(post)
               case None =>
                 println(s"Error: Election Id not found in db: ${electionId}, post is: " + post.toString())
             }
+            
           case Failure(e) => 
             println(s"Error: group is not a number : ${group}")
         }
