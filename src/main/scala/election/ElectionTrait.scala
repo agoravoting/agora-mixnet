@@ -12,7 +12,7 @@ import models._
  * Method signatures allow the compiler to enforce the state machine logic.
  */
 trait ElectionTrait {
-  def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]]
+  def create[W <: Nat : ToInt](id: String, bits: Int, config : Option[ElectionConfig]) : Future[Election[W, Created]]
   def startShares[W <: Nat : ToInt](in: Election[W, Created]) : Future[Election[W, Shares[_0]]]
   def addShare[W <: Nat : ToInt, T <: Nat : ToInt](in: Election[W, Shares[T]], share: EncryptionKeyShareDTO, proverId: String)(implicit ev: T < W) : Future[Election[W, Shares[Succ[T]]]]
   def combineShares[W <: Nat : ToInt](in: Election[W, Shares[W]]) : Future[Election[W, Combined]]

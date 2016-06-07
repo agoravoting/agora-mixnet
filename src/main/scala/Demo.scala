@@ -67,18 +67,6 @@ object FiwareDemo extends App {
             case _ =>
               throw new Error("Error, the number of authorities must be 2 to 9")
           }
-          director.newElection() map { uid =>
-            println("Election uid obtained: "+ uid)    
-          }
-          director.newElection() map { uid =>
-            println("Election uid obtained: "+ uid)    
-          }
-          director.newElection() map { uid =>
-            println("Election uid obtained: "+ uid)    
-          }
-          director.newElection() map { uid =>
-            println("Election uid obtained: "+ uid)    
-          }
           waitAll()
           
         case "authority" =>
@@ -190,7 +178,7 @@ object ElectionTest extends App {
   // create the election,
   // we are using privacy level 2, two trustees of each kind
   // we are 2048 bits for the size of the group modulus
-  val start = Election.create[_2]("my election", 2048)
+  val start = Election.create[_2]("my election", 2048, None)
     
   // get subscriber when we have the uid
   // then subscribe to the election creation
@@ -395,7 +383,7 @@ object ElectionTest3 extends App {
   val m3 = new MixerTrustee("mixer three")
 
   // privacy level 3, three trustees of each kind, 512 bits for the size of the group modulus
-  val start = Election.create[_3]("my election", 512)
+  val start = Election.create[_3]("my election", 512, None)
 
   val readyForShares = start flatMap {
     start => Election.startShares(start)
@@ -514,7 +502,7 @@ object ElectionTestSerial extends App {
   // create the election
   // we are using privacy level 2, two trustees of each kind
   // we are 2048 bits for the size of the group modulus
-  val start = Election.create[_2]("my election", 2048)
+  val start = Election.create[_2]("my election", 2048, None)
 
   // the election is now ready to receive key shares
   val readyForShares = start flatMap { start => 

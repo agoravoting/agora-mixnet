@@ -114,36 +114,66 @@ with EncryptionFormatter
   
   def createElection(ctx: RequestContext, electionId : Long) : Future[HttpResponse] =
   {
-    Future { HttpResponse(status = 400, entity = Json.stringify(error(s"Felix es el mejor", ErrorCodes.EO_ERROR)) ) }
-  }
-  // hack
-  var electionCounter: Long = 3
-  
-  def newElection() : Future[String] = {
-    val promise = Promise[String]()
+    val promise = Promise[HttpResponse]()
     Future {
-      // create the election,
-      // we are using privacy level 2, two trustees of each kind
-      // we are 2048 bits for the size of the group modulus
-      
-      // hack
-      val counter = electionCounter
-      electionCounter = electionCounter + 1
-      val start = Election.create[N](counter.toString(), 2048)
-      start onComplete {
-        case Success(election) =>
-          val subscriberCreatePromise = blocking { getOrAddCreateNotification(election.state.uid, Promise[Unit]()) }
-          subscriberCreatePromise.future onComplete {
-            case Success(d) =>
-              promise.success(election.state.uid)
-            case Failure(err) =>
-              promise.failure(err)
-          }
-        case Failure(err) =>
-          promise.failure(err)
+      println("createElection 0")
+      creationNotificationsMap.synchronized {
+        creationNotificationsMap.get(electionId.toString) match {
+          case Some(election) =>
+            throw new java.lang.Error("Error, election already exists")
+          case None =>
+            ; // continue
+        }
+      }
+      println("createElection 1")
+      val body = getString(ctx.request.entity) map { strRequest =>
+            println("createElection a")
+            var body = Json.parse(strRequest)
+            println("createElection b")
+            if (!body.as[JsObject].keys.contains("real")) {
+                body = body.as[JsObject] + ("real" -> Json.toJson(false))
+            }
+            println("createElection c")
+            if (!body.as[JsObject].keys.contains("extra_data")) {
+                body = body.as[JsObject] + ("extra_data" -> Json.toJson("{}"))
+            }
+            println("createElection d")
+            body
+      }
+      val electionConfig = body map { jsBody =>
+        println("createElection 2")
+        jsBody.validate[ElectionConfig]
+      }
+      electionConfig map { electionConfig => 
+        println("createElection 3")
+        electionConfig match {
+          case JsError(errors) =>
+            println(s"Invalid config json, $errors")
+            promise.success(HttpResponse(status = 400, entity = Json.stringify(error(s"Invalid config json " + JsError(errors))) ))
+          
+          case JsSuccess(config, path) =>
+            println("createElection 4")
+            val start = Election.create[N](electionId.toString, 2048, Some(config))
+            start onComplete {
+              case Success(election) =>
+                val subscriberCreatePromise = blocking { getOrAddCreateNotification(election.state.uid, Promise[Unit]()) }
+                subscriberCreatePromise.future onComplete {
+                  case Success(d) =>
+                    promise.success(HttpResponse(status = 200, entity = Json.stringify(response(election.state.uid)) ))
+                  case Failure(err) =>
+                    promise.success(HttpResponse(status = 400, entity = Json.stringify(error(s"Error creating election " + getMessageFromThrowable(err))) ))
+                }
+              case Failure(err) =>
+                promise.success(HttpResponse(status = 400, entity = Json.stringify(error(s"Error creating election " + getMessageFromThrowable(err))) ))
+            }
+        }
+      } recover { case err =>
+        println("createElection 5 " + getMessageFromThrowable(err))
+        promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
       }
     } recover { case err =>
-      promise.tryFailure(err)
+      println("createElection 6 " + getMessageFromThrowable(err))
+      promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
     }
     promise.future
   }

@@ -24,10 +24,10 @@ trait ElectionMachine extends ElectionTrait
   implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
   implicit val materializer = ActorMaterializer()
   // create an election
-  def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = {
+  def create[W <: Nat : ToInt](id: String, bits: Int, config : Option[ElectionConfig]) : Future[Election[W, Created]] = {
     val promise = Promise[Election[W, Created]]()
     Future {
-      BaseImpl.create(id, bits) onComplete {
+      BaseImpl.create(id, bits, config) onComplete {
         case Success(election) =>
           // the immutable log sets the election id, so we really need to write in the log before fulfilling the promise
           promise.completeWith(BoardPoster.create(election))          

@@ -68,6 +68,7 @@ trait PostOffice extends ElectionJsonFormatter with Response
   }
   
   private def send(post: Post) {
+    println("send post index: " + post.board_attributes.index)
     if("election" == post.user_attributes.section) {
       val group : String = post.user_attributes.group
       if("create" == group) {
@@ -98,7 +99,7 @@ trait PostOffice extends ElectionJsonFormatter with Response
               case Some(electionWrapper) => 
                 electionWrapper.push(post)
               case None =>
-                println(s"Error: Election Id not found in db: ${electionId}")
+                println(s"Error: Election Id not found in db: ${electionId}, post is: " + post.toString())
             }
           case Failure(e) => 
             println(s"Error: group is not a number : ${group}")

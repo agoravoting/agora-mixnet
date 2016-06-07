@@ -27,7 +27,7 @@ trait DefaultElectionImpl extends ElectionTrait
   implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
   implicit val materializer = ActorMaterializer()
   // create an election 
-  def create[W <: Nat : ToInt](id: String, bits: Int) : Future[Election[W, Created]] = {
+  def create[W <: Nat : ToInt](id: String, bits: Int, configOpt : Option[ElectionConfig]) : Future[Election[W, Created]] = {
     val promise = Promise[Election[W, Created]]()
     Future {
       println("Going to start a new Election!")
@@ -37,9 +37,28 @@ trait DefaultElectionImpl extends ElectionTrait
   // val group = ECZModPrime.getInstance(ECZModPrimeParameters.SECP521r1)
       val generator = group.getDefaultGenerator()
       val cSettings = CryptoSettings(group, generator)
-      val defaultDto = new ElectionDTOData(id.toLong, ToInt[W].apply()) //id right now is a String and not a number and this will fail
+      val dto = configOpt match {
+        case None => 
+          val defaultDto = new ElectionDTOData(id.toLong, ToInt[W].apply())
+          defaultDto()
+        case Some(config) =>
+          import java.sql.Timestamp
+          val startDate = new Timestamp(2015, 1, 27, 16, 0, 0, 1)
+          ElectionDTO(
+              id.toLong,
+              config,
+              ElectionDTOData.REGISTERED,
+              startDate,
+              startDate,
+              None,
+              None,
+              None,
+              false
+          )
+      }
+      val defaultDto = new ElectionDTOData(id.toLong, ToInt[W].apply())
       // the immutable log is the one that fills in the election id, here we just set it to "0" temporarily
-      promise.success(new Election[W, Created](Created("0", cSettings, id, defaultDto())))
+      promise.success(new Election[W, Created](Created("0", cSettings, id, dto)))
     } recover { case err =>
       promise.failure(err)
     }
