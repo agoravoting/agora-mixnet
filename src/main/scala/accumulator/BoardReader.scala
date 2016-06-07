@@ -18,7 +18,6 @@ object BoardReader
   with PostOffice
   with FiwareJSONFormatter
   with BoardJSONFormatter
-  with ErrorProcessing
   with HttpEntityToString
 {
 

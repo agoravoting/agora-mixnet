@@ -261,9 +261,13 @@ with EncryptionFormatter
       }
       
       electionDone map { electionDone => 
+        var str : String = s"Decrypted size ${electionDone.state.decrypted.length}\n"
+        electionDone.state.decrypted foreach { a =>
+          str += a + "\n"
+        }
         // lets check that everything went well
         // println(s"Plaintexts $plaintexts")
-        // println(s"Decrypted ${electionDone.state.decrypted}")
+        println(str)
         // println("ok: " + (plaintexts.sorted == electionDone.state.decrypted.map(_.toInt).sorted))
   
         val mixTime = (mixingEnd - mixingStart) / 1000.0

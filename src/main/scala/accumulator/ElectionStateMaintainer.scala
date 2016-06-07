@@ -25,9 +25,12 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
   private val subscriber = new ElectionSubscriber[W](uid)
   private val dto = new ElectionDTOData(uid.toLong, toInt[W])
   
-  
   def getElectionInfo() : ElectionDTO = {
     dto()
+  }
+  
+  def getResults() : Option[String] = {
+    dto().results
   }
   
   def startShares(in: Election[W, Created]) : Election[W, Shares[_0]] = {
@@ -97,6 +100,11 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
       case Success(decryption) =>
         val election = combineDecryptions(decryption, jsDecrypted.decrypted)
         subscriber.push(election, getElectionTypeDecrypted(election))
+        var results : String = ""
+        election.state.decrypted foreach { case vote =>
+          results += "\"" + vote +"\"\n"
+        }
+        dto.setResults(results)
       case Failure(err) =>
         println(s"Future error: ${getMessageFromThrowable(err)}")
     }
@@ -331,7 +339,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
         case Success(date) =>
           val futureVotes = subscriber.addVotes(jsVotesStopped.lastAddVoteIndex)
           futureVotes onComplete {
-            case Success(votes) => 
+            case Success(votes) =>
               val election = stopVotes(votes, jsVotesStopped.lastAddVoteIndex, date)
               subscriber.push(election, getElectionTypeVotesStopped(election))
             case Failure(err) =>

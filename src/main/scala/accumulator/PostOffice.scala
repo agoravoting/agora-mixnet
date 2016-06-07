@@ -12,7 +12,7 @@ import utils._
 import election.JsElection
 import election.ElectionJsonFormatter
 
-trait PostOffice extends ElectionJsonFormatter with Response
+trait PostOffice extends ElectionJsonFormatter with Response with ErrorProcessing
 {  
   implicit val system = ActorSystem()
   implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
@@ -35,13 +35,32 @@ trait PostOffice extends ElectionJsonFormatter with Response
         case None =>
           promise.success(HttpResponse(status = 400, entity = Json.stringify(error(s"Election $electionId not found", ErrorCodes.EO_ERROR)) ))
       }
+    } recover { case err => 
+      promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(error(getMessageFromThrowable(err), ErrorCodes.EO_ERROR)) ))
     }
     promise.future
   }
   
    def getResults(electionId: Long) : Future[HttpResponse] = {
-     Future { HttpResponse(status = 400, entity = Json.stringify(error("Not implemented yet", ErrorCodes.EO_ERROR)) )}
-   }
+     val promise = Promise[HttpResponse]()
+     Future {
+      electionMap.get(electionId) match {
+        case Some(electionWrapper) =>
+          electionWrapper.getResults() match {
+            case Some(results) =>
+              promise.success(HttpResponse(status = 200, entity = Json.stringify(response( results )) ))
+            case None =>
+              promise.success(HttpResponse(status = 400, entity = Json.stringify(error(s"Election $electionId has no results yet", ErrorCodes.EO_ERROR)) ))
+          }
+          
+        case None =>
+          promise.success(HttpResponse(status = 400, entity = Json.stringify(error(s"Election $electionId not found", ErrorCodes.EO_ERROR)) ))
+      }
+    } recover { case err => 
+      promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(error(getMessageFromThrowable(err), ErrorCodes.EO_ERROR)) ))
+    }
+    promise.future
+  }
   
   def add(post: Post) {
     println("GG PostOffice::add")

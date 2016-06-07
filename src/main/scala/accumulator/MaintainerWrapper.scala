@@ -39,4 +39,8 @@ class MaintainerWrapper(level: Int, uid: String) {
   def getElectionInfo() = {
     maintainer.getElectionInfo()
   }
+  
+  def getResults() : Option[String] = {
+    maintainer.getResults()
+  }
 }

@@ -116,6 +116,21 @@ class ElectionDTOData(val id: Long, val numAuth: Int) {
       )
   }
   
+  def setResults(results: String) {
+    state = 
+      ElectionDTO(
+          state.id,
+          state.configuration,
+          state.state,
+          state.startDate,
+          state.endDate,
+          state.pks,
+          Some(results),
+          state.resultsUpdated,
+          state.real
+      )
+  }
+  
   def setPublicKeys[W <: Nat : ToInt](combined: Election[W, Combined]) {
     
     val jsPk : JsValue = 
