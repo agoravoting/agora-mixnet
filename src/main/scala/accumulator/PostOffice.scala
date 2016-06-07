@@ -39,6 +39,10 @@ trait PostOffice extends ElectionJsonFormatter with Response
     promise.future
   }
   
+   def getResults(electionId: Long) : Future[HttpResponse] = {
+     Future { HttpResponse(status = 400, entity = Json.stringify(error("Not implemented yet", ErrorCodes.EO_ERROR)) )}
+   }
+  
   def add(post: Post) {
     println("GG PostOffice::add")
     queue.synchronized {

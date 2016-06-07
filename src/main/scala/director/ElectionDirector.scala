@@ -116,7 +116,6 @@ with EncryptionFormatter
   {
     val promise = Promise[HttpResponse]()
     Future {
-      println("createElection 0")
       creationNotificationsMap.synchronized {
         creationNotificationsMap.get(electionId.toString) match {
           case Some(election) =>
@@ -125,34 +124,26 @@ with EncryptionFormatter
             ; // continue
         }
       }
-      println("createElection 1")
       val body = getString(ctx.request.entity) map { strRequest =>
-            println("createElection a")
             var body = Json.parse(strRequest)
-            println("createElection b")
             if (!body.as[JsObject].keys.contains("real")) {
                 body = body.as[JsObject] + ("real" -> Json.toJson(false))
             }
-            println("createElection c")
             if (!body.as[JsObject].keys.contains("extra_data")) {
                 body = body.as[JsObject] + ("extra_data" -> Json.toJson("{}"))
             }
-            println("createElection d")
             body
       }
       val electionConfig = body map { jsBody =>
-        println("createElection 2")
         jsBody.validate[ElectionConfig]
       }
       electionConfig map { electionConfig => 
-        println("createElection 3")
         electionConfig match {
           case JsError(errors) =>
             println(s"Invalid config json, $errors")
             promise.success(HttpResponse(status = 400, entity = Json.stringify(error(s"Invalid config json " + JsError(errors))) ))
           
           case JsSuccess(config, path) =>
-            println("createElection 4")
             val start = Election.create[N](electionId.toString, 2048, Some(config))
             start onComplete {
               case Success(election) =>
@@ -168,11 +159,24 @@ with EncryptionFormatter
             }
         }
       } recover { case err =>
-        println("createElection 5 " + getMessageFromThrowable(err))
         promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
       }
     } recover { case err =>
-      println("createElection 6 " + getMessageFromThrowable(err))
+      promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
+    }
+    promise.future
+  }
+  
+  def stopElection(ctx: RequestContext, electionId : Long) : Future[HttpResponse] = {
+    val promise = Promise[HttpResponse]()
+    Future {
+      processStopElection(electionId.toString) onComplete {
+        case Success(u) =>
+          promise.success(HttpResponse(status = 200, entity = Json.stringify(response("")) ))
+        case Failure(err) =>
+          promise.success(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
+      }
+    } recover { case err =>
       promise.trySuccess(HttpResponse(status = 400, entity = Json.stringify(response(getMessageFromThrowable(err))) ))
     }
     promise.future

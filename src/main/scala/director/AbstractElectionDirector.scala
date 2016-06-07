@@ -7,4 +7,5 @@ import akka.http.scaladsl.model._
 trait AbstractElectionDirector {
   def addVote(ctx: RequestContext, electionId : Long, voterId: String) : Future[HttpResponse]
   def createElection(ctx: RequestContext, electionId : Long) : Future[HttpResponse]
+  def stopElection(ctx: RequestContext, electionId : Long) : Future[HttpResponse]
 }

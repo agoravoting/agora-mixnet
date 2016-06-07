@@ -21,4 +21,6 @@ class EmptyElectionDirector extends AbstractElectionDirector with Response {
   def addVote(ctx: RequestContext, electionId : Long, voterId: String) : Future[HttpResponse] = notImplemented()
   
   def createElection(ctx: RequestContext, electionId : Long) : Future[HttpResponse] = notImplemented()
+  
+  def stopElection(ctx: RequestContext, electionId : Long) : Future[HttpResponse] = notImplemented()
 }
