@@ -101,6 +101,10 @@ class ElectionDTOData(val id: Long, val numAuth: Int) {
     )
   }
   
+  def setDTO(dto: ElectionDTO) = {
+    state = dto
+  }
+  
   def setState(newState: String) {
     state = 
       ElectionDTO(

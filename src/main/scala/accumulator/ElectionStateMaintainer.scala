@@ -500,6 +500,7 @@ class ElectionStateMaintainer[W <: Nat : ToInt](val uid : String)
     if (jsElection.level == ToInt[W].apply()) {
       val election = 
         new Election[W, Created](Created(jsElection.state.id, cSettings, uid, jsElection.dto))
+      dto.setDTO(jsElection.dto)
       subscriber.push(election, getElectionTypeCreated(election))
     } else {
       println("Error, mismatched levels")
