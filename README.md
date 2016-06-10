@@ -66,3 +66,31 @@ If you wish to attach a profiler (like visualvm), you may need to add the switch
 #### Cluster mode
 
 TODO
+
+### Production deployment
+
+The recommended production deployment method is to use docker for orion and mongodb. Docker can have persistence of the data using volumes as mentioned [in the documentation](https://docs.docker.com/engine/userguide/containers/dockervolumes/). To do so, follow these steps:
+
+Create a data volume for mongodb:
+
+     sudo docker create -v /data/db --name mongodb_data mongo:3.2
+
+Start orion and mongodb docker images:
+
+    sudo docker run --name mongodb --volumes-from mongodb_data -d mongo:3.2 --smallfiles --nojournal
+    sudo docker run -d --name orion1 --link mongodb:mongodb -p 1026:1026 fiware/orion -dbhost mongodb
+
+Create a backup:
+
+    sudo docker run --volumes-from mongodb_data -v $(pwd):/backup busybox tar cvf /backup/backup.tar /data/db
+    
+Once a backup has been done, you can stop the docker container and even remove it:
+
+    sudo docker stop mongodb orion1
+    sudo docker rm -f mongodb orion1
+
+Because you can run it and restore it later from the backup:
+
+    sudo docker run -v /data/db --name mongodb_data2 mongo:3.2 /bin/bash
+    sudo docker run --rm --volumes-from mongodb_data2 -v $(pwd):/backup mongo:3.2 bash -c "cd /data/db && tar xvf /backup/backup.tar --strip 2"
+    sudo docker run --name mongodb --volumes-from mongodb_data2 -d mongo:3.2 --smallfiles --nojournal
