@@ -34,23 +34,13 @@ import mpservice.MPBridgeS
 import mpservice.MPBridge
 import scala.collection.JavaConversions._
 import scala.concurrent._
-import scala.concurrent.duration._
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
-import election.VotesStopped
-import election.Shares
-import election.Mixing
-import election.Election
-import election.Decryptions
-import models.SigmaProofDTO
-import models.ShuffleResultDTO
-import models.ShuffleProofDTO
-import models.PermutationProofDTO
-import models.PartialDecryptionDTO
-import models.MixProofDTO
-import models.EncryptionKeyShareDTO
-import models.CryptoSettings
+import models._
+import election._
 import utils.Util
+import java.io._
+import com.github.nscala_time.time.Imports._
 
 case class PreShuffleData(mixer: ReEncryptionMixer, psi: PermutationElement, elGamal: ElGamalEncryptionScheme,
   challengeGenerator: SigmaChallengeGenerator, ecg: ChallengeGenerator, permutationCommitmentRandomizations: Tuple,
@@ -62,11 +52,25 @@ case class PreShuffleData(mixer: ReEncryptionMixer, psi: PermutationElement, elG
  * Mixes in the KeyMaker trait (below) as well as managing an identity and private shares
  */
 class KeyMakerTrustee(val id: String, privateShares: MutableMap[String, String] = MutableMap()) extends KeyMaker {
+  private val date: DateTime = DateTime.now
+  
+  private def savePrivateKey(privateKey: String, uid: String) {
+    val name = "data/private-keys-" + id.replace("keymaker ", "authority-") + "-" + uid + "-"+ date.toString()
+    val file = new File(name)
+    val p = new PrintWriter(file)
+    try {
+      p.write(privateKey)
+    } finally {
+      p.close()
+    }
+  }
+  
   def createKeyShare(e: Election[_, Shares[_]]) : Future[EncryptionKeyShareDTO] = {
     println("KeyMaker creating share..")
     
     createShare(id, e.state.cSettings) map { case (encryptionKeyShareDTO, privateKey)  =>
       privateShares += (e.state.id -> privateKey)
+      savePrivateKey(privateKey, e.state.uid)
       encryptionKeyShareDTO
     }
 
@@ -462,7 +466,7 @@ trait Mixer extends ProofSettings {
       spg.getResponse(mixProof).convertToString(),
       eValues2.map(x => x.convertToString).toSeq)
 
-    val permutationProofDTO = Await.result(permutationProofFuture, Duration.Inf)
+    val permutationProofDTO = Await.result(permutationProofFuture, scala.concurrent.duration.Duration.Inf)
 
     val shuffleProofDTO = ShuffleProofDTO(mixProofDTO, permutationProofDTO, permutationCommitment.convertToString)
 

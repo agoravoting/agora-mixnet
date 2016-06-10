@@ -19,6 +19,15 @@ class ElectionAuthority[W <: Nat : ToInt , N <: Nat : ToInt ]() (implicit r : N 
   implicit val system = ActorSystem()
   implicit val executor = system.dispatchers.lookup("my-other-dispatcher")
   implicit val materializer = ActorMaterializer()
+  
+  
+  // create the keymakers
+  // these are responsible for distributed key generation and joint decryption
+  val kn = new KeyMakerTrustee("keymaker " + toInt[Succ[N]])
+  // create the mixers
+  // these are responsible for shuffling the votes
+  val mn = new MixerTrustee("mixer " + toInt[Succ[N]])
+
   BoardReader.addElectionCreationListener{ uid =>
    processElection(uid)
   }
@@ -26,12 +35,6 @@ class ElectionAuthority[W <: Nat : ToInt , N <: Nat : ToInt ]() (implicit r : N 
   private def processElection(uid: String) = {
     val promise = Promise[Unit]()
     Future {
-      // create the keymakers
-      // these are responsible for distributed key generation and joint decryption
-      val kn = new KeyMakerTrustee("keymaker " + toInt[Succ[N]] + " for election " + uid)
-      // create the mixers
-      // these are responsible for shuffling the votes
-      val mn = new MixerTrustee("mixer " + toInt[Succ[N]] + " for election " + uid)
       
       val subscriber = BoardReader.getSubscriber(uid)
       val addShare = subscriber.addShare[N]()
