@@ -141,6 +141,15 @@ Then restart nginx:
 To create and administrate an election we do it through the administrative interface. Because the administrative interface is not integrated with the new backend yet, we have to configure the administrative interface to use the old api. To do so, edit the file /home/agoragui/agora-gui-admin/avConfig.js and change the electionsAPI accordingly:
 
      sudo sed -i -e 's/electionsAPI: "\(.*\)\/elections\/api\/",$/electionsAPI: "\1\/elections-old\/api\/",/g' /home/agoragui/agora-gui-admin/avConfig.js 
+     su - agoragui
+     /home/agoragui/build.sh
+     exit
+
+Finally, we have to configure agora-elections to use the new port for agora-elections, 14444 instead of 14443:
+
+     sudo sed -i -e 's/app.api.root\(.*\):14443"$/app.api.root\1:14444"/g' /home/agoraelections/agora-elections/conf/application.local.conf
+     sudo sed -i -e 's/app.datastore.root\(.*\):14443"$/app.datastore.root\1:14444"/g' /home/agoraelections/agora-elections/conf/application.local.conf
+     sudo supervisorctl restart agora-elections
 
 In the agora machine, on the folder /agora, clone the github projects agora-board and agora-mixnet:
 
@@ -270,3 +279,4 @@ Because you can run it and restore it later from the backup:
     sudo docker run -v /data/db --name mongodb_data2 mongo:3.2 /bin/bash
     sudo docker run --rm --volumes-from mongodb_data2 -v $(pwd):/backup mongo:3.2 bash -c "cd /data/db && tar xvf /backup/backup.tar --strip 2"
     sudo docker run --name mongodb --volumes-from mongodb_data2 -d mongo:3.2 --smallfiles --nojournal
+    sudo docker run -d --name orion1 --link mongodb:mongodb -p 1026:1026 fiware/orion -dbhost mongodb
